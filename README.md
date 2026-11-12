@@ -7,7 +7,8 @@
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
 [![React 19](https://img.shields.io/badge/React-19.0-61dafb?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Bun](https://img.shields.io/badge/Bun-1.4+-fbf0df?style=for-the-badge&logo=bun&logoColor=black)](https://bun.sh/)
+[![SQLite](https://img.shields.io/badge/SQLite-3-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![Prisma ORM](https://img.shields.io/badge/Prisma-ORM-2D3748?style=for-the-badge&logo=prisma&logoColor=white)](https://www.prisma.io/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38bdf8?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
@@ -25,9 +26,9 @@ Traditional accounting software focuses heavily on backward-looking accrual book
 **FinFlow** bridges this divide by acting as a modern financial operations cockpit for SMEs:
 * **Forward Liquidity Forecasting:** Algorithmic 30-day cumulative rolling cash curve mapping receivables to contractual due dates (weighted by historical client latency) and deducting scheduled expenses.
 * **Cash Deficit Alerts:** Early warning signals identifying the exact calendar day an SME will breach its liquid safety buffer.
-* **Atomic Multi-Currency Invoicing:** Instant multi-line invoice issuance backed by PostgreSQL ACID transactions and spot exchange rates.
+* **Atomic Multi-Currency Invoicing:** Instant multi-line invoice issuance backed by ACID transactions and spot exchange rates.
 * **Public Tokenized Payment Portal:** Unauthenticated guest link (`/pay/[token]`) allowing clients to view and download invoices without hitting business login walls.
-* **Real-Time Asynchronous Operations:** Optimistic UI state mutations, zero-flicker Recharts re-renders, and 1-click automated collection reminders.
+* **Zero-Friction Local Persistence:** Backed by an ACID-compliant **SQLite** database via Prisma ORM for 100% offline portability and instant academic evaluation, with seamless one-line migration to PostgreSQL for cloud production.
 
 ---
 
@@ -39,11 +40,15 @@ FinFlow is architected as an industrial-grade **Domain-Driven Modular Monolith (
 finflow/
 ├── next.config.ts                # Next.js 16 Config (cacheComponents: true, Turbopack)
 ├── proxy.ts                      # Next.js 16 Request Interceptor (Node.js runtime)
+├── prisma/
+│   ├── schema.prisma             # Relational 3NF SQLite Database Schema
+│   └── dev.db                    # Zero-config local SQLite database
 ├── src/
 │   ├── app/                      # Next.js 16 App Router (RSC, Async Route Handlers, Layouts)
 │   │   ├── (auth)/               # Tenant authentication route group
 │   │   ├── (dashboard)/          # Authenticated cockpit application shell
 │   │   ├── pay/                  # Public tokenized invoice portal (/pay/[token])
+│   │   ├── dev/ui/               # UI Design System Component Kit
 │   │   └── api/                  # REST & SSE stream endpoints
 │   ├── modules/                  # Autonomous Domain Modules
 │   │   ├── auth/                 # Domain 1: Multi-Tenant Identity & RBAC
@@ -66,7 +71,7 @@ finflow/
 ### 1. Multi-Tenant Identity & Workspace Isolation
 * Tenant isolation with company-scoped workspaces.
 * Secure authentication using salted bcrypt password hashing, encrypted HTTP-only session cookies, and `proxy.ts` request interception.
-* Configurable workspace parameters: Base currency (USD, PKR, EUR, GBP), opening liquid cash, and explicit safety buffer threshold.
+* Configurable workspace parameters: Base currency (PKR, USD, EUR, GBP), opening liquid cash, and explicit safety buffer threshold.
 
 ### 2. Client CRM & Accounts Receivable Ledger
 * Scoped customer profiles with contact records and contractual payment terms (Net-15, Net-30, Net-60).
@@ -75,7 +80,7 @@ finflow/
 
 ### 3. Atomic Multi-Currency Invoicing Engine
 * Dynamic multi-row invoice builder with server-side validation and atomic database commits (`prisma.$transaction`).
-* Multi-currency support fetching spot exchange rates via ExchangeRate-API with normalized base currency storage (`Decimal(18, 8)` precision).
+* Multi-currency support fetching spot exchange rates via ExchangeRate-API with normalized base currency calculations.
 * Atomic sequential invoice numbering generator per tenant/year (`INV-YYYY-XXXX`).
 
 ### 4. Expense & Scheduled Outflow Management
@@ -85,7 +90,7 @@ finflow/
 ### 5. 30-Day Forward Cash Flow Intelligence
 * Mathematical liquidity projection incorporating opening cash, the Day-0 overdue recovery pool (with risk haircut), maturing receivables (weighted by historical client latency), and scheduled expenses:
   $$\text{Projected Balance}(t) = \text{Liquid Reserve}_0 + \text{Overdue Pool} + \sum_{d=1}^{t} \text{Expected Inflows}(d) - \sum_{d=1}^{t} \text{Scheduled Outflows}(d)$$
-* Interactive **Recharts Area Chart** visualizing liquidity trajectory against the company's designated safety buffer.
+* Interactive **Chart.js** liquidity visualization against the company's designated safety buffer.
 * Automated deficit markers alerting finance managers before reserves dip below safe operational levels.
 
 ### 6. Document Engine & Public Tokenized Portal
@@ -94,10 +99,10 @@ finflow/
 
 ### 7. Interactive Due-Date Financial Calendar
 * FullCalendar.js view mapping receivables and expense spikes across month, week, and list views.
-* Color-coded statuses: Emerald Green (Paid), Sapphire Blue (Upcoming), Crimson Red (Overdue), Amber (Scheduled Outflow).
+* Standardized status styling matching the FinFlow design tokens.
 
 ### 8. Real-Time State Sync & Client Reminders
-* Zero-refresh optimistic UI mutations powered by React 19 `useOptimistic` and Next.js 16 `updateTag()`.
+* Zero-refresh optimistic UI mutations powered by React 19 and Next.js 16 `updateTag()`.
 * 1-click automated payment reminders dispatched directly to client inboxes via EmailJS with valid public payment links.
 
 ---
@@ -107,20 +112,21 @@ finflow/
 | Tier | Technology | Description |
 | :--- | :--- | :--- |
 | **Framework** | **Next.js 16** | App Router, Turbopack, React 19 Server Components, and Server Actions |
+| **Runtime & PM** | **Bun 1.4+** | Fast package management, script execution, and development runtime |
 | **Language** | **TypeScript 5.x** | Strict end-to-end type safety |
-| **Database** | **PostgreSQL 15+** | ACID-compliant relational persistence, decimal precision, 3NF schema |
-| **ORM** | **Prisma ORM 6.x** | Type-safe migrations, connection pooling singleton, `$transaction` |
-| **Math Precision** | **`decimal.js` / Prisma.Decimal** | Arbitrary-precision math for financial integrity |
-| **Styling & UI** | **Tailwind CSS + shadcn/ui** | Modern, accessible Radix UI primitives |
-| **Charts** | **Recharts** | Reactive SVG liquidity trajectory and deficit curves |
+| **Database** | **SQLite 3** | ACID-compliant relational persistence, foreign keys, zero-config local `dev.db` file (100% offline viva-ready, 1-line portable to PostgreSQL) |
+| **ORM** | **Prisma ORM 7.x / 8.x** | Type-safe schema, migrations, connection singleton, `$transaction` |
+| **Math Precision** | **`decimal.js`** | Arbitrary-precision math for all currency and treasury calculations |
+| **Styling & UI** | **Tailwind CSS v4 + shadcn/ui** | Modern, light-only banking-grade UI strictly bound to `FINFLOW_UI_DESIGN_SYSTEM.md` |
+| **Charts** | **Chart.js + react-chartjs-2** | Responsive SVG/Canvas liquidity trajectory and safety buffer reference curves |
 | **Calendar** | **FullCalendar.js (React)** | Interactive billing and maturity schedule |
-| **PDF Generation** | **jsPDF + AutoTable** | Browser-side instant vector PDF export with UTF-8 support |
-| **External APIs** | **ExchangeRate-API & EmailJS** | Spot foreign exchange rates and browser transactional emails |
+| **PDF Generation** | **jsPDF + AutoTable** | Client-side instant vector PDF export with UTF-8 support |
+| **External APIs** | **ExchangeRate-API & EmailJS** | Spot foreign exchange rates and transactional reminder emails |
 | **Testing** | **Vitest + Playwright** | Unit, integration, and end-to-end browser test suites |
 
 ---
 
-## 🗄️ Database Architecture (PostgreSQL 3NF)
+## 🗄️ Database Architecture (Relational 3NF)
 
 ```mermaid
 erDiagram
@@ -138,68 +144,68 @@ erDiagram
     INVOICES ||--o{ REMINDER_LOGS : "tracks"
 
     COMPANIES {
-        uuid id PK
-        varchar name
-        varchar base_currency
-        numeric liquid_reserve
-        numeric safety_buffer
-        timestamp created_at
+        string id PK
+        string name
+        string base_currency
+        float liquid_reserve
+        float safety_buffer
+        datetime created_at
     }
     USERS {
-        uuid id PK
-        uuid company_id FK
-        varchar email
-        varchar role
+        string id PK
+        string company_id FK
+        string email
+        string role
     }
     CLIENTS {
-        uuid id PK
-        uuid company_id FK
-        varchar client_name
-        varchar email
+        string id PK
+        string company_id FK
+        string client_name
+        string email
         int payment_terms_days
-        timestamp deleted_at
+        datetime deleted_at
     }
     INVOICES {
-        uuid id PK
-        uuid company_id FK
-        uuid client_id FK
-        varchar invoice_number
-        uuid view_token
-        date issue_date
-        date due_date
-        numeric total_amount
-        numeric base_total_amount
-        numeric paid_amount
-        varchar status
-        timestamp paid_at
+        string id PK
+        string company_id FK
+        string client_id FK
+        string invoice_number
+        string view_token
+        datetime issue_date
+        datetime due_date
+        float total_amount
+        float base_total_amount
+        float paid_amount
+        string status
+        datetime paid_at
     }
     INVOICE_ITEMS {
-        uuid id PK
-        uuid company_id FK
-        uuid invoice_id FK
-        varchar description
-        int quantity
-        numeric unit_price
-        numeric line_total
+        string id PK
+        string company_id FK
+        string invoice_id FK
+        string description
+        float quantity
+        float unit_price
+        float line_total
     }
     EXPENSES {
-        uuid id PK
-        uuid company_id FK
-        varchar title
-        varchar category
-        numeric amount
-        date due_date
-        varchar recurrence
+        string id PK
+        string company_id FK
+        string title
+        string category
+        float amount
+        datetime due_date
+        string recurrence
         boolean is_paid
     }
     TRANSACTIONS {
-        uuid id PK
-        uuid company_id FK
-        uuid invoice_id FK
-        varchar type
-        numeric amount
-        date transaction_date
-        varchar category
+        string id PK
+        string company_id FK
+        string invoice_id FK
+        string type
+        float amount
+        datetime transaction_date
+        string category
     }
 ```
 
@@ -208,8 +214,7 @@ erDiagram
 ## 🚀 Getting Started
 
 ### Prerequisites
-* **Node.js:** `v20+` or **Bun:** `v1.4+`
-* **PostgreSQL:** `15+` (Local instance or hosted via Supabase / Neon)
+* **Bun:** `v1.4+` (or **Node.js:** `v20+`)
 * **Git:** Latest version
 
 ### Installation & Local Setup
@@ -222,14 +227,14 @@ erDiagram
 
 2. **Install dependencies:**
    ```bash
-   npm install
+   bun install
    ```
 
 3. **Configure Environment Variables:**
    Create a `.env` file in the root directory:
    ```env
-   # Database (PostgreSQL)
-   DATABASE_URL="postgresql://username:password@localhost:5432/finflow_db?schema=public"
+   # Database (Local SQLite - zero config, works 100% offline)
+   DATABASE_URL="file:./dev.db"
 
    # Authentication
    SESSION_SECRET="your-super-secret-random-key-at-least-32-chars"
@@ -242,14 +247,14 @@ erDiagram
    NEXT_PUBLIC_EMAILJS_PUBLIC_KEY=""
    ```
 
-4. **Run Database Migrations:**
+4. **Initialize Database Schema:**
    ```bash
-   npx prisma migrate dev --name init
+   bunx prisma db push
    ```
 
 5. **Start Development Server (with Turbopack):**
    ```bash
-   npm run dev
+   bun dev
    ```
    Open [http://localhost:3000](http://localhost:3000) to view the application.
 
@@ -259,7 +264,7 @@ erDiagram
 
 Development follows a strict **Phase Gate Protocol** where each domain module must meet 100% of its Definition of Done (DoD) and pass automated tests before progressing:
 
-- [ ] **Phase 0:** Infrastructure, Base Scaffolding & PostgreSQL Connection Singleton
+- [ ] **Phase 0:** Infrastructure, Base Scaffolding & SQLite Prisma Connection Singleton
 - [ ] **Phase 1:** Multi-Tenant Identity & Auth Service (`auth-tenant`)
 - [ ] **Phase 2:** Client Directory & Accounts Receivable Ledger (`clients-crm`)
 - [ ] **Phase 3:** Invoicing Engine & Multi-Currency Calculation Service (`invoicing`)
