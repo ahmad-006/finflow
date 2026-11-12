@@ -39,8 +39,9 @@ yarn-error.log*
 
 # env files
 .env
-.env*.local
-!.env.example
+.env*
+*.env
+.env.example
 
 # vercel
 .vercel
@@ -48,3 +49,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# internal specs, architecture plans & agent instructions
+*PLAN*.md
+*Plan*.md
+*DESIGN*.md
+AGENTS.md
+AGENTS*.md
+.jules/
+.github/ISSUE_TEMPLATE/agent-task.md
