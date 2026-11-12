@@ -1,7 +1,7 @@
 import * as React from "react";
 import { redirect } from "next/navigation";
 import { getSession, getCurrentUser, logoutAction } from "@/modules/auth";
-import { Sidebar, TopBar } from "@/components/shell";
+import { TopNav } from "@/components/shell";
 
 export const instant = false;
 
@@ -37,30 +37,20 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-canvas">
-      {/* Desktop sidebar (248px, hidden below lg) */}
-      <Sidebar
+    <div className="flex min-h-screen flex-col bg-canvas text-ink">
+      {/* Tideline Top Navigation Header (72px) */}
+      <TopNav
         user={user}
         company={company}
         onSignOut={handleSignOut}
-        className="hidden lg:flex"
       />
 
-      <div className="flex flex-1 flex-col min-w-0">
-        {/* Mobile / tablet top bar (56px, visible below lg) */}
-        <TopBar
-          user={user}
-          company={company}
-          onSignOut={handleSignOut}
-        />
-
-        {/* Content area: max-w-[1200px] on desktop, max-w-[1320px] on wide, left-aligned */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">
-          <div className="w-full max-w-[1200px] xl:max-w-[1320px]">
-            {children}
-          </div>
-        </main>
-      </div>
+      {/* Main Content Area (Left-aligned asymmetric 12-column grid) */}
+      <main className="flex-1 w-full max-w-[1360px] mx-auto px-6 lg:px-10 py-10">
+        <div className="w-full max-w-[1240px]">
+          {children}
+        </div>
+      </main>
     </div>
   );
 }

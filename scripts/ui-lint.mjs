@@ -11,24 +11,33 @@ const checks = [
     regex: /(backdrop-blur|backdrop-filter|blur-)/i,
   },
   {
-    name: "Heavy shadows",
-    regex: /shadow-(md|lg|xl|2xl|inner)/i,
+    name: "Shadows",
+    regex: /shadow-(?!float|none\b)[a-z0-9-]+/i,
   },
   {
     name: "Oversized radii",
     regex: /rounded-(xl|2xl|3xl)/i,
   },
   {
-    name: "Rounded full outside Avatar",
+    name: "Rounded full outside Avatar and RulerMarker",
     regex: /rounded-full/i,
-    filter: (file) => !file.toLowerCase().includes("avatar") && !file.toLowerCase().includes("user"),
+    filter: (file) =>
+      !file.toLowerCase().includes("avatar") &&
+      !file.toLowerCase().includes("user") &&
+      !file.toLowerCase().includes("rulermarker"),
   },
   {
     name: "Motion tells",
     regex: /(animate-(bounce|ping|spin|pulse)|hover:scale|hover:-translate|transition-all)/i,
     filter: (file, match, line) => {
       // allow animate-spin for loader in button or skeleton
-      if (line.includes("animate-spin") && (file.includes("button") || file.includes("Loader") || file.includes("Spinner") || file.includes("Skeleton"))) {
+      if (
+        line.includes("animate-spin") &&
+        (file.includes("button") ||
+          file.includes("Loader") ||
+          file.includes("Spinner") ||
+          file.includes("Skeleton"))
+      ) {
         return false;
       }
       return true;
@@ -40,10 +49,10 @@ const checks = [
   },
   {
     name: "Default palette",
-    regex: /(bg|text|border)-(slate|gray|zinc|neutral|stone|red|green|blue|indigo|violet|purple|emerald|sky)-[0-9]/i,
+    regex: /(bg|text|border|ring|fill|stroke)-(slate|gray|zinc|neutral|stone|red|green|blue|indigo|violet|purple|emerald|teal|sky|cyan)-[0-9]/i,
   },
   {
-    name: "Uppercase labels",
+    name: "Uppercase and tracking",
     regex: /\b(uppercase|tracking-(wide|wider|widest))\b/i,
     filter: (file, match, line) => {
       // Exclude JavaScript method call .toUpperCase()
@@ -61,7 +70,7 @@ const checks = [
   },
   {
     name: "Forbidden copy",
-    regex: /\b(Oops|Welcome back|Lorem|John Doe|Acme|Seamless|Unleash|Supercharge|Elevate)\b/i,
+    regex: /\b(Oops|Welcome back|Lorem|John Doe|Acme|Seamless|Unleash|Supercharge|Elevate|Powerful)\b/i,
   },
   {
     name: "Arrow buttons",

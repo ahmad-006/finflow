@@ -30,11 +30,11 @@ export function Money({
     <span
       className={cn(
         "num inline-block whitespace-nowrap",
-        variant === "hero" && "font-serif text-[44px] leading-[48px] font-medium text-ink",
-        variant === "total" && "font-serif text-[32px] leading-[40px] font-medium text-ink",
+        variant === "hero" && "text-[48px] lg:text-[64px] font-extralight tracking-[-0.04em] leading-none text-ink",
+        variant === "total" && "text-[36px] leading-[40px] font-light tracking-[-0.02em] text-ink",
         variant === "table" && "text-right font-normal",
-        variant === "body" && "text-[14px]",
-        isNegative && "text-negative font-medium",
+        variant === "body" && "text-[15px]",
+        isNegative && "text-ebb font-medium",
         isZero && "text-ink-3",
         className
       )}

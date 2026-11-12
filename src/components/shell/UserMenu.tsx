@@ -97,7 +97,7 @@ export function UserMenu({
         <div
           role="menu"
           className={cn(
-            "absolute bottom-full mb-2 z-50 min-w-[220px] rounded-[12px] border border-line bg-surface p-1 shadow-pop",
+            "absolute bottom-full mb-2 z-50 min-w-[220px] rounded-[16px] border border-line bg-sheet p-1 shadow-float",
             collapsed ? "left-0" : "left-0 right-0"
           )}
         >
@@ -142,10 +142,10 @@ export function UserMenu({
             >
               <button
                 type="submit"
-                className="flex w-full items-center gap-2.5 rounded-[6px] px-3 py-2 text-[13px] font-medium text-negative hover:bg-negative-tint transition-colors text-left"
+                className="flex w-full items-center gap-2.5 rounded-[6px] px-3 py-2 text-[13px] font-medium text-ebb hover:bg-ebb-tint transition-colors text-left"
                 role="menuitem"
               >
-                <LogOut className="h-4 w-4 text-negative" strokeWidth={1.5} />
+                <LogOut className="h-4 w-4 text-ebb" strokeWidth={1.5} />
                 <span>Sign out</span>
               </button>
             </form>

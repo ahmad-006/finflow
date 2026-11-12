@@ -4,25 +4,25 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[6px] text-[14px] font-medium transition-colors outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand disabled:pointer-events-none disabled:bg-sunken disabled:text-ink-3 disabled:border-transparent select-none cursor-pointer",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[10px] text-[15px] font-medium transition-colors outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lagoon-ink disabled:pointer-events-none disabled:bg-sunken disabled:text-ink-3 disabled:border-transparent select-none cursor-pointer",
   {
     variants: {
       variant: {
         primary:
-          "bg-brand text-white hover:bg-brand-hover active:bg-brand-hover border-transparent",
+          "bg-ink text-white hover:bg-ink-hover active:bg-ink-hover border-transparent",
         secondary:
-          "bg-surface text-ink border border-line-strong hover:bg-sunken active:bg-sunken",
+          "bg-transparent text-ink border border-line-strong hover:bg-sunken active:bg-sunken",
         ghost:
           "bg-transparent text-ink-2 hover:bg-sunken active:bg-sunken border-transparent",
         destructive:
-          "bg-negative text-white hover:opacity-90 active:opacity-90 border-transparent",
+          "bg-ebb text-white hover:opacity-90 active:opacity-90 border-transparent",
         link:
-          "bg-transparent text-brand underline-offset-4 hover:underline p-0 h-auto border-transparent",
+          "bg-transparent text-ink underline underline-offset-4 decoration-line-strong hover:decoration-lagoon p-0 h-auto border-transparent",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        compact: "h-8 px-3 text-[13px]",
-        icon: "h-10 w-10 p-0",
+        default: "h-11 px-5 py-2",
+        compact: "h-9 px-3.5 text-[14px]",
+        icon: "h-11 w-11 p-0",
       },
     },
     defaultVariants: {

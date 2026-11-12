@@ -1,4 +1,3 @@
-export * from "./Sidebar";
-export * from "./TopBar";
+export * from "./TopNav";
 export * from "./UserMenu";
 export * from "./PageHeader";

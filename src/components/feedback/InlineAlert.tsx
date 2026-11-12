@@ -9,10 +9,10 @@ export interface InlineAlertProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const variantStyles = {
-  negative: "bg-negative-tint text-ink",
-  caution: "bg-caution-tint text-ink",
-  brand: "bg-brand-tint text-ink",
-  positive: "bg-positive-tint text-ink",
+  negative: "bg-ebb-tint text-ink",
+  caution: "bg-amber-tint text-ink",
+  brand: "bg-foam text-ink",
+  positive: "bg-foam text-ink",
 };
 
 const iconMap = {
@@ -23,10 +23,10 @@ const iconMap = {
 };
 
 const iconColors = {
-  negative: "text-negative",
-  caution: "text-caution",
-  brand: "text-brand",
-  positive: "text-positive",
+  negative: "text-ebb",
+  caution: "text-amber",
+  brand: "text-lagoon-ink",
+  positive: "text-lagoon-ink",
 };
 
 export function InlineAlert({
@@ -43,7 +43,7 @@ export function InlineAlert({
     <div
       role="alert"
       className={cn(
-        "flex items-start gap-2.5 rounded-[6px] px-4 py-3 text-[13px] leading-[18px]",
+        "flex items-start gap-2.5 rounded-[10px] px-4 py-3 text-[13px] leading-[18px]",
         variantStyles[variant],
         className
       )}

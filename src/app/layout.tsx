@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { plexSans, sourceSerif } from "./fonts";
+import { hanken } from "./fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,10 +14,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${plexSans.variable} ${sourceSerif.variable} h-full antialiased`}
-    >
+    <html lang="en" className={`${hanken.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-canvas text-ink font-sans">
         {children}
       </body>
