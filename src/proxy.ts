@@ -53,9 +53,13 @@ function handleProxy(request: NextRequest): NextResponse {
   if (isRootRoute) {
     if (session) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
-    } else {
-      return NextResponse.redirect(new URL("/login", request.url));
     }
+    // Allow public landing page for unauthenticated visitors
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
   }
 
   // If an already authenticated user visits /login or /register, redirect directly to /dashboard
