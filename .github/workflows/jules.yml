@@ -1,0 +1,42 @@
+name: Google Jules Autonomous Coding Agent
+
+on:
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      task_prompt:
+        description: "Task instruction for Jules (e.g., 'Implement Phase 0 scaffolding')"
+        required: true
+        type: string
+      target_branch:
+        description: "Branch to branch off from and target"
+        default: "main"
+        required: false
+        type: string
+
+jobs:
+  run-jules:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'issues' && github.event.label.name == 'agent-task')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Dispatch Google Jules Session
+        uses: google-labs-code/jules-invoke@v1
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          starting_branch: ${{ inputs.target_branch || 'main' }}
+          prompt: |
+            ${{ inputs.task_prompt || github.event.issue.body }}
+            
+            IMPORTANT CONSTRAINTS:
+            - Refer strictly to AGENTS.md, FINFLOW_UI_DESIGN_SYSTEM.md, and FINFLOW_NEXTJS_POSTGRES_MASTER_PLAN.md.
+            - Tech stack: Next.js 16 (Turbopack, React 19) + PostgreSQL (Prisma).
+            - Run `npm run build` and `npm test` before opening the Pull Request.
