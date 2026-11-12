@@ -1,0 +1,210 @@
+// FinFlow Relational Database Schema (SQLite 3NF)
+// Configured for local, zero-friction, 100% offline development and academic evaluation.
+// Fully portable: changing provider to "postgresql" enables seamless cloud migration.
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ==========================================
+// 1. WORKSPACE & IDENTITY (Multi-Tenant)
+// ==========================================
+
+model Company {
+  id            String   @id @default(uuid())
+  name          String
+  baseCurrency  String   @default("PKR")
+  liquidReserve Float    @default(0.0) // Opening cash balance
+  safetyBuffer  Float    @default(0.0) // Red-alert cash threshold
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  users        User[]
+  clients      Client[]
+  invoices     Invoice[]
+  invoiceItems InvoiceItem[]
+  expenses     Expense[]
+  transactions Transaction[]
+  auditLogs    AuditLog[]
+
+  @@map("companies")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  role         String   @default("OWNER") // OWNER, ADMIN, MEMBER, VIEWER
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([companyId])
+  @@map("users")
+}
+
+// ==========================================
+// 2. CLIENT CRM & ACCOUNTS RECEIVABLE
+// ==========================================
+
+model Client {
+  id                String    @id @default(uuid())
+  companyId         String
+  company           Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  clientName        String
+  email             String
+  phone             String?
+  address           String?
+  paymentTermsDays  Int       @default(30) // Net 15, Net 30, Net 60
+  riskStatus        String    @default("HEALTHY") // HEALTHY, WATCHLIST, CRITICAL
+  deletedAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  invoices Invoice[]
+
+  @@index([companyId])
+  @@index([companyId, deletedAt])
+  @@map("clients")
+}
+
+// ==========================================
+// 3. ATOMIC INVOICING & MULTI-CURRENCY
+// ==========================================
+
+model Invoice {
+  id              String    @id @default(uuid())
+  companyId       String
+  company         Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  clientId        String
+  client          Client    @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  invoiceNumber   String
+  viewToken       String    @unique @default(uuid()) // Unauthenticated portal link (/pay/[token])
+  currency        String    @default("PKR")
+  exchangeRate    Float     @default(1.0) // Spot FX rate to base currency
+  issueDate       DateTime
+  dueDate         DateTime
+  subtotal        Float     @default(0.0)
+  taxRate         Float     @default(0.0)
+  taxAmount       Float     @default(0.0)
+  totalAmount     Float     @default(0.0)
+  baseTotalAmount Float     @default(0.0) // Normalized to company baseCurrency
+  paidAmount      Float     @default(0.0)
+  status          String    @default("DRAFT") // DRAFT, SENT, PAID, OVERDUE, CANCELLED
+  notes           String?
+  paidAt          DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  items        InvoiceItem[]
+  transactions Transaction[]
+  reminders    ReminderLog[]
+
+  @@unique([companyId, invoiceNumber])
+  @@index([companyId, status])
+  @@index([companyId, dueDate])
+  @@index([viewToken])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          String   @id @default(uuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Float    @default(1.0)
+  unitPrice   Float    @default(0.0)
+  lineTotal   Float    @default(0.0)
+  createdAt   DateTime @default(now())
+
+  @@index([companyId])
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+// ==========================================
+// 4. EXPENSE & OUTFLOW MANAGEMENT
+// ==========================================
+
+model Expense {
+  id         String    @id @default(uuid())
+  companyId  String
+  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title      String
+  category   String    // PAYROLL, RENT, UTILITIES, SUPPLIERS, SOFTWARE, TAX, OTHER
+  amount     Float
+  dueDate    DateTime
+  recurrence String    @default("NONE") // NONE, WEEKLY, MONTHLY, QUARTERLY, ANNUALLY
+  isPaid     Boolean   @default(false)
+  paidAt     DateTime?
+  notes      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([companyId, dueDate])
+  @@index([companyId, isPaid])
+  @@map("expenses")
+}
+
+// ==========================================
+// 5. TRANSACTIONS & DOUBLE-ENTRY LEDGER
+// ==========================================
+
+model Transaction {
+  id              String   @id @default(uuid())
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invoiceId       String?
+  invoice         Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  type            String   // INFLOW, OUTFLOW
+  amount          Float
+  baseAmount      Float
+  transactionDate DateTime @default(now())
+  category        String
+  paymentMethod   String   @default("BANK_TRANSFER")
+  reference       String?
+  createdAt       DateTime @default(now())
+
+  @@index([companyId, transactionDate])
+  @@map("transactions")
+}
+
+// ==========================================
+// 6. REMINDER AUDIT & COMPLIANCE LOGS
+// ==========================================
+
+model ReminderLog {
+  id             String   @id @default(uuid())
+  invoiceId      String
+  invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  recipientEmail String
+  status         String   // SENT, FAILED
+  sentAt         DateTime @default(now())
+
+  @@index([invoiceId])
+  @@map("reminder_logs")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId     String?
+  entityType String   // INVOICE, CLIENT, EXPENSE, WORKSPACE
+  entityId   String
+  action     String   // CREATE, UPDATE, DELETE, STATUS_CHANGE, PAYMENT_RECORDED
+  details    String?  // Serialized JSON of changes
+  timestamp  DateTime @default(now())
+
+  @@index([companyId, timestamp])
+  @@map("audit_logs")
+}
