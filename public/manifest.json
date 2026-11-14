@@ -1,0 +1,26 @@
+{
+  "name": "FinFlow Treasury Systems",
+  "short_name": "FinFlow",
+  "description": "Business cash flow intelligence and dynamic multi-currency invoicing for SMEs.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#0F3D2E",
+  "icons": [
+    {
+      "src": "/finflow-favicon-64.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    },
+    {
+      "src": "/finflow-icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/finflow-icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
