@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Settings, LogOut, ChevronUp } from "lucide-react";
+import { SlidersHorizontal, LogOut, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface UserMenuProps {
@@ -19,6 +19,7 @@ export interface UserMenuProps {
   } | null;
   onSignOut?: () => Promise<void> | void;
   collapsed?: boolean;
+  className?: string;
 }
 
 export function UserMenu({
@@ -26,6 +27,7 @@ export function UserMenu({
   company,
   onSignOut,
   collapsed = false,
+  className,
 }: UserMenuProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
@@ -41,21 +43,23 @@ export function UserMenu({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const fullName = user?.fullName || "User";
+  const fullName = user?.fullName || "Treasury User";
   const email = user?.email || "";
-  const companyName = company?.name || "Company";
+  const companyName = company?.name || "Apex Technologies";
+  const baseCurrency = company?.baseCurrency || "PKR";
 
   // Initials (max 2 characters)
-  const initials = fullName
-    .split(" ")
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase() || "FF";
+  const initials =
+    fullName
+      .split(" ")
+      .filter(Boolean)
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "TU";
 
   return (
-    <div className="relative" ref={menuRef}>
+    <div className={cn("relative", className)} ref={menuRef}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -63,28 +67,21 @@ export function UserMenu({
         aria-haspopup="true"
         aria-label="User menu"
         className={cn(
-          "flex w-full items-center gap-3 rounded-[6px] p-2 text-left transition-colors hover:bg-sunken",
-          collapsed && "justify-center p-1"
+          "flex items-center gap-2 rounded-md p-1.5 text-xs text-zinc-700 hover:text-gray-900 hover:bg-zinc-100 transition-colors select-none",
+          collapsed && "justify-center"
         )}
       >
-        {/* Avatar: 32px on sunken with ink-2 text */}
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sunken text-[13px] font-medium text-ink-2 select-none">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-[10px] font-medium text-gray-900 select-none">
           {initials}
-        </div>
-
+        </span>
         {!collapsed && (
           <>
-            <div className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate text-[13px] font-medium text-ink leading-[18px]">
-                {fullName}
-              </span>
-              <span className="truncate text-[12px] text-ink-3 leading-[16px]">
-                {companyName}
-              </span>
-            </div>
-            <ChevronUp
+            <span className="max-w-[120px] truncate text-xs font-medium text-gray-900">
+              {fullName}
+            </span>
+            <ChevronDown
               className={cn(
-                "h-4 w-4 shrink-0 text-ink-3 transition-transform",
+                "h-3.5 w-3.5 text-zinc-500 transition-transform",
                 isOpen && "rotate-180"
               )}
               strokeWidth={1.5}
@@ -96,59 +93,60 @@ export function UserMenu({
       {isOpen && (
         <div
           role="menu"
-          className={cn(
-            "absolute bottom-full mb-2 z-50 min-w-[220px] rounded-[16px] border border-line bg-sheet p-1 shadow-float",
-            collapsed ? "left-0" : "left-0 right-0"
-          )}
+          className="absolute right-0 bottom-full mb-2 z-50 min-w-[220px] rounded-md border border-zinc-200 bg-white p-2 shadow-[0_16px_36px_-12px_rgba(17,24,39,0.08)] select-none"
         >
           {/* User & Company summary */}
-          <div className="border-b border-line px-3 py-2.5">
-            <p className="truncate text-[13px] font-semibold text-ink leading-[18px]">
+          <div className="border-b border-zinc-200 px-2.5 py-2">
+            <p className="truncate text-xs font-semibold text-gray-900">
               {fullName}
             </p>
             {email && (
-              <p className="truncate text-[12px] text-ink-3 leading-[16px]">
+              <p className="truncate text-[11px] font-mono text-zinc-500 mt-0.5">
                 {email}
               </p>
             )}
-            <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-ink-2">
-              <span className="font-medium text-ink truncate">{companyName}</span>
-              {company?.baseCurrency && (
-                <span className="rounded-[3px] bg-sunken px-1.5 py-0.5 font-medium text-ink-3">
-                  {company.baseCurrency}
-                </span>
-              )}
+            <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-zinc-600">
+              <span className="truncate font-medium">{companyName}</span>
+              <span className="font-mono text-[10px] text-zinc-400">·</span>
+              <span className="font-mono text-[10px] text-zinc-500">{baseCurrency}</span>
             </div>
           </div>
 
-          <div className="py-1">
+          <div className="pt-1">
             <Link
               href="/settings"
               onClick={() => setIsOpen(false)}
-              className="flex w-full items-center gap-2.5 rounded-[6px] px-3 py-2 text-[13px] font-medium text-ink hover:bg-sunken transition-colors"
+              className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs text-zinc-700 hover:text-gray-900 hover:bg-zinc-100 transition-colors"
               role="menuitem"
             >
-              <Settings className="h-4 w-4 text-ink-2" strokeWidth={1.5} />
+              <SlidersHorizontal className="h-3.5 w-3.5 stroke-[1.5]" />
               <span>Settings</span>
             </Link>
 
-            <form
-              action={async () => {
-                setIsOpen(false);
-                if (onSignOut) {
-                  await onSignOut();
-                }
-              }}
-            >
+            {onSignOut ? (
               <button
-                type="submit"
-                className="flex w-full items-center gap-2.5 rounded-[6px] px-3 py-2 text-[13px] font-medium text-ebb hover:bg-ebb-tint transition-colors text-left"
+                type="button"
+                onClick={async () => {
+                  setIsOpen(false);
+                  await onSignOut();
+                }}
+                className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs text-red-700 hover:bg-red-50 transition-colors text-left"
                 role="menuitem"
               >
-                <LogOut className="h-4 w-4 text-ebb" strokeWidth={1.5} />
-                <span>Sign out</span>
+                <LogOut className="h-3.5 w-3.5 stroke-[1.5]" />
+                <span>Log out</span>
               </button>
-            </form>
+            ) : (
+              <Link
+                href="/login"
+                onClick={() => setIsOpen(false)}
+                className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs text-red-700 hover:bg-red-50 transition-colors text-left"
+                role="menuitem"
+              >
+                <LogOut className="h-3.5 w-3.5 stroke-[1.5]" />
+                <span>Log out</span>
+              </Link>
+            )}
           </div>
         </div>
       )}
