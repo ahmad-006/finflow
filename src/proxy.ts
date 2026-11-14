@@ -14,7 +14,7 @@ export const config = {
   ],
 };
 
-function handleProxy(request: NextRequest): NextResponse {
+async function handleProxy(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
 
   // 1. Sanitize incoming request headers to prevent client header injection attacks
@@ -25,7 +25,7 @@ function handleProxy(request: NextRequest): NextResponse {
 
   // 2. Read and verify session cookie
   const sessionToken = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-  const session = sessionToken ? verifySessionToken(sessionToken) : null;
+  const session = sessionToken ? await verifySessionToken(sessionToken) : null;
 
   // 3. If authenticated, inject verified tenant identity into downstream request headers
   if (session) {
@@ -92,8 +92,8 @@ function handleProxy(request: NextRequest): NextResponse {
   });
 }
 
-export default function proxy(request: NextRequest) {
-  return handleProxy(request);
+export default async function proxy(request: NextRequest): Promise<NextResponse> {
+  return await handleProxy(request);
 }
 
 export { handleProxy as proxy };

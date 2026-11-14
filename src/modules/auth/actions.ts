@@ -157,7 +157,7 @@ export async function getSession(): Promise<SessionPayload | null> {
   try {
     const token = await getSessionTokenFromCookies();
     if (!token) return null;
-    return verifySessionToken(token);
+    return await verifySessionToken(token);
   } catch {
     return null;
   }

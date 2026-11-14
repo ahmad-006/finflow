@@ -80,7 +80,7 @@ export async function registerUserAndCompany(rawInput: RegisterInput): Promise<A
     expiresAt: Date.now() + SESSION_MAX_AGE_SECONDS * 1000,
   };
 
-  const token = signSession(sessionPayload);
+  const token = await signSession(sessionPayload);
 
   const safeUser: SafeUser = {
     id: result.user.id,
@@ -139,7 +139,7 @@ export async function loginUser(rawInput: LoginInput): Promise<AuthSessionData> 
     expiresAt: Date.now() + SESSION_MAX_AGE_SECONDS * 1000,
   };
 
-  const token = signSession(sessionPayload);
+  const token = await signSession(sessionPayload);
 
   const safeUser: SafeUser = {
     id: user.id,
