@@ -4,27 +4,44 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[10px] text-[15px] font-medium transition-colors outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lagoon-ink disabled:pointer-events-none disabled:bg-sunken disabled:text-ink-3 disabled:border-transparent select-none cursor-pointer",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-xs font-medium transition-colors outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:pointer-events-none disabled:opacity-40 select-none cursor-pointer",
   {
     variants: {
       variant: {
         primary:
-          "bg-ink text-white hover:bg-ink-hover active:bg-ink-hover border-transparent",
+          "bg-zinc-900 text-white tracking-tight hover:bg-zinc-800 active:bg-zinc-950",
         secondary:
-          "bg-transparent text-ink border border-line-strong hover:bg-sunken active:bg-sunken",
+          "bg-white border border-zinc-300 text-gray-900 hover:border-zinc-900 hover:bg-zinc-50",
         ghost:
-          "bg-transparent text-ink-2 hover:bg-sunken active:bg-sunken border-transparent",
+          "bg-white border border-zinc-300 text-gray-900 hover:border-zinc-900 hover:bg-zinc-50",
+        action:
+          "bg-white border border-zinc-200 text-[11px] text-zinc-700 hover:border-zinc-900 hover:text-gray-900",
         destructive:
-          "bg-ebb text-white hover:opacity-90 active:opacity-90 border-transparent",
+          "bg-red-700 text-white hover:bg-red-800 active:bg-red-900",
         link:
-          "bg-transparent text-ink underline underline-offset-4 decoration-line-strong hover:decoration-lagoon p-0 h-auto border-transparent",
+          "bg-transparent text-zinc-600 hover:text-gray-900 underline-offset-4 hover:underline p-0 h-auto",
       },
       size: {
-        default: "h-11 px-5 py-2",
-        compact: "h-9 px-3.5 text-[14px]",
-        icon: "h-11 w-11 p-0",
+        default: "h-[38px] px-4",
+        secondary: "h-[38px] px-3.5",
+        compact: "h-8 px-3",
+        action: "h-7 px-2.5 text-[11px]",
+        hero: "h-11 px-6 text-sm",
+        icon: "h-[38px] w-[38px] p-0",
       },
     },
+    compoundVariants: [
+      {
+        variant: "secondary",
+        size: "default",
+        className: "px-3.5",
+      },
+      {
+        variant: "action",
+        size: "default",
+        className: "h-7 px-2.5 text-[11px]",
+      },
+    ],
     defaultVariants: {
       variant: "primary",
       size: "default",
@@ -47,7 +64,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(buttonVariants({ variant, size }), className)}
         {...props}
       >
-        {isLoading && <Loader2 className="h-4 w-4 animate-spin text-current" />}
+        {isLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-current" />}
         {children}
       </button>
     );

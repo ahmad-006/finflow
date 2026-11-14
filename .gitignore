@@ -50,7 +50,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# internal specs, architecture plans & agent instructions
+# documentation & internal specs
+docs/
+/docs/
 *PLAN*.md
 *Plan*.md
 *DESIGN*.md

@@ -3,95 +3,205 @@
 :root {
   color-scheme: light;
 
-  --canvas: #EDF1EE;
-  --sheet: #FBFCFA;
-  --sunken: #E4EAE6;
-  --line: #D9E1DD;
-  --line-strong: #C2CDC8;
-  --ink: #0B2B2F;
-  --ink-hover: #14393E;
-  --ink-2: #35484B;
-  --ink-3: #55696C;
-  --lagoon: #0E9680;
-  --lagoon-ink: #0A6D5D;
-  --foam: #E1F0EB;
-  --ebb: #B23A2E;
-  --ebb-tint: #F8E7E3;
-  --amber: #8A5A12;
-  --amber-tint: #F6ECD6;
-  --chart-outflow: #D9604F;
+  /* Section 2.1: Surface & Canvas Tokens */
+  --bg-paper: #FAFAFA;
+  --bg-surface: #FFFFFF;
+  --bg-hover: #F4F4F5;
+  --bg-active: #E4E4E7;
 
-  /* shadcn/ui mapping */
-  --background: var(--canvas);
-  --foreground: var(--ink);
-  --card: var(--sheet);
-  --card-foreground: var(--ink);
-  --popover: var(--sheet);
-  --popover-foreground: var(--ink);
-  --primary: var(--ink);
-  --primary-foreground: #FFFFFF;
-  --secondary: var(--sheet);
-  --secondary-foreground: var(--ink);
-  --muted: var(--sunken);
-  --muted-foreground: var(--ink-3);
-  --accent: var(--foam);
-  --accent-foreground: var(--ink);
-  --destructive: var(--ebb);
-  --border: var(--line);
-  --input: var(--line-strong);
-  --ring: var(--lagoon-ink);
+  /* Section 2.2: Border & Hairline Tokens */
+  --border-hairline: #E4E4E7;
+  --border-strong: #D4D4D8;
+  --border-focus: #18181B;
 
-  --radius-badge: 6px;
-  --radius-control: 10px;
-  --radius-sheet: 20px;
-  --radius-overlay: 24px;
+  /* Section 2.3: Ink (Typography) Tokens */
+  --ink-primary: #111827;
+  --ink-secondary: #52525B;
+  --ink-muted: #A1A1AA;
+  --ink-inverse: #FFFFFF;
 
-  --shadow-float: 0 24px 48px -16px rgba(11, 43, 47, 0.20), 0 2px 6px rgba(11, 43, 47, 0.06);
+  /* Section 2.4: Brand & Semantic Tokens */
+  --brand-obsidian: #18181B;
+  --brand-emerald: #0F3D2E;
+  --status-paid: #15803D;
+  --status-pending: #B45309;
+  --status-overdue: #B91C1C;
+  --status-draft: #A1A1AA;
 
-  --ease: cubic-bezier(0.2, 0, 0, 1);
-  --dur-fast: 120ms;
-  --dur-base: 200ms;
+  /* Backwards compatibility aliases */
+  --white: var(--bg-surface);
+  --fog: var(--bg-paper);
+  --fog-2: var(--bg-hover);
+  --line: var(--border-hairline);
+  --line-strong: var(--border-strong);
+  --ink: var(--ink-primary);
+  --ink-hover: var(--border-focus);
+  --ink-2: var(--ink-secondary);
+  --ink-3: var(--ink-muted);
+  --ember: var(--status-overdue);
+  --ember-ink: var(--status-overdue);
+  --ember-tint: #FEF2F2;
+  --moss: var(--status-paid);
+  --moss-tint: #F0FDF4;
+  --amber: var(--status-pending);
+  --amber-tint: #FFFBEB;
+
+  /* Common radii & shadows */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  /* shadcn mapping */
+  --background: var(--bg-surface);
+  --foreground: var(--ink-primary);
+  --primary: var(--brand-obsidian);
+  --primary-foreground: var(--ink-inverse);
+  --secondary: var(--bg-paper);
+  --secondary-foreground: var(--ink-primary);
+  --muted: var(--bg-hover);
+  --muted-foreground: var(--ink-secondary);
+  --accent: var(--bg-hover);
+  --accent-foreground: var(--ink-primary);
+  --destructive: var(--status-overdue);
+  --border: var(--border-hairline);
+  --input: var(--border-strong);
+  --ring: var(--brand-obsidian);
+  --card: var(--bg-surface);
+  --card-foreground: var(--ink-primary);
+  --popover: var(--bg-surface);
+  --popover-foreground: var(--ink-primary);
 }
 
 @theme inline {
-  --color-canvas: var(--canvas);
-  --color-sheet: var(--sheet);
-  --color-sunken: var(--sunken);
+  --font-serif: var(--font-serif), Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-sans: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-mono), monospace;
+
+  --color-bg-paper: var(--bg-paper);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-hover: var(--bg-hover);
+  --color-bg-active: var(--bg-active);
+
+  --color-border-hairline: var(--border-hairline);
+  --color-border-strong: var(--border-strong);
+  --color-border-focus: var(--border-focus);
+
+  --color-ink-primary: var(--ink-primary);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-inverse: var(--ink-inverse);
+
+  --color-brand-obsidian: var(--brand-obsidian);
+  --color-brand-emerald: var(--brand-emerald);
+
+  --color-status-paid: var(--status-paid);
+  --color-status-pending: var(--status-pending);
+  --color-status-overdue: var(--status-overdue);
+  --color-status-draft: var(--status-draft);
+
+  /* aliases */
+  --color-white: var(--white);
+  --color-fog: var(--fog);
+  --color-fog-2: var(--fog-2);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
   --color-ink: var(--ink);
   --color-ink-hover: var(--ink-hover);
   --color-ink-2: var(--ink-2);
   --color-ink-3: var(--ink-3);
-  --color-lagoon: var(--lagoon);
-  --color-lagoon-ink: var(--lagoon-ink);
-  --color-foam: var(--foam);
-  --color-ebb: var(--ebb);
-  --color-ebb-tint: var(--ebb-tint);
+  --color-ember: var(--ember);
+  --color-ember-ink: var(--ember-ink);
+  --color-ember-tint: var(--ember-tint);
+  --color-moss: var(--moss);
+  --color-moss-tint: var(--moss-tint);
   --color-amber: var(--amber);
   --color-amber-tint: var(--amber-tint);
-  --color-chart-outflow: var(--chart-outflow);
-  --font-sans: var(--font-hanken), system-ui, sans-serif;
-  --radius-badge: var(--radius-badge);
-  --radius-control: var(--radius-control);
-  --radius-sheet: var(--radius-sheet);
-  --radius-overlay: var(--radius-overlay);
-  --shadow-float: var(--shadow-float);
 }
 
 html {
-  background: var(--canvas);
-  color: var(--ink);
+  background: var(--bg-surface);
+  color: var(--ink-primary);
   font-family: var(--font-sans);
 }
 
 body {
-  font-size: 15px;
-  line-height: 22px;
-  font-variant-numeric: lining-nums;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
+/* Mandatory Tabular Numerals Rule (Section 3.2) */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "cv05" 1;
+}
+
 .num {
-  font-variant-numeric: tabular-nums lining-nums;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "cv05" 1;
+}
+
+::selection {
+  background: var(--brand-obsidian);
+  color: #ffffff;
+}
+
+/* Section 5.8: FullCalendar CSS Overrides */
+.fc {
+  --fc-border-color: #E4E4E7;
+  --fc-page-bg-color: #FFFFFF;
+  --fc-neutral-bg-color: #FAFAFA;
+  --fc-today-bg-color: #FAFAFA;
+  font-family: var(--font-sans);
+}
+
+.fc .fc-toolbar-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: #111827;
+}
+
+.fc .fc-button-primary {
+  background-color: #FFFFFF !important;
+  border: 1px solid #D4D4D8 !important;
+  color: #111827 !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+  padding: 0.375rem 0.75rem !important;
+}
+
+.fc .fc-button-primary:hover {
+  border-color: #18181B !important;
+  background-color: #FAFAFA !important;
+}
+
+.fc .fc-col-header-cell-cushion {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #71717A;
+  padding: 10px 0;
+}
+
+.fc .fc-daygrid-day-number {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: #52525B;
+  padding: 8px;
+}
+
+.fc .fc-daygrid-event {
+  border-radius: 3px !important;
+  border: 1px solid #E4E4E7 !important;
+  border-left-width: 3px !important;
+  background-color: #FFFFFF !important;
+  color: #111827 !important;
+  font-size: 11px !important;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 6px !important;
+  margin: 2px 4px !important;
 }

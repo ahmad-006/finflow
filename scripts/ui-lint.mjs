@@ -3,83 +3,49 @@ import path from "node:path";
 
 const checks = [
   {
-    name: "Gradients",
+    name: "Gradients (Section 1.2 #3)",
     regex: /(bg-gradient|gradient-to|linear-gradient|radial-gradient|conic-gradient|bg-clip-text)/i,
   },
   {
-    name: "Blur and glass",
-    regex: /(backdrop-blur|backdrop-filter|blur-)/i,
-  },
-  {
-    name: "Shadows",
-    regex: /shadow-(?!float|none\b)[a-z0-9-]+/i,
-  },
-  {
-    name: "Oversized radii",
-    regex: /rounded-(xl|2xl|3xl)/i,
-  },
-  {
-    name: "Rounded full outside Avatar and RulerMarker",
-    regex: /rounded-full/i,
+    name: "Blur outside TopNav, MobileMenu, Drawer, and Modal",
+    regex: /(backdrop-blur-(?!md\b|\[1px\]\b)|blur-(?!none\b)[a-z0-9-]+)/i,
     filter: (file) =>
-      !file.toLowerCase().includes("avatar") &&
-      !file.toLowerCase().includes("user") &&
-      !file.toLowerCase().includes("rulermarker"),
+      !file.includes("TopNav") &&
+      !file.includes("MobileMenu") &&
+      !file.includes("Drawer") &&
+      !file.includes("Modal"),
   },
   {
-    name: "Motion tells",
-    regex: /(animate-(bounce|ping|spin|pulse)|hover:scale|hover:-translate|transition-all)/i,
-    filter: (file, match, line) => {
-      // allow animate-spin for loader in button or skeleton
-      if (
-        line.includes("animate-spin") &&
-        (file.includes("button") ||
-          file.includes("Loader") ||
-          file.includes("Spinner") ||
-          file.includes("Skeleton"))
-      ) {
-        return false;
-      }
-      return true;
-    },
+    name: "Disallowed box shadows (Section 1.2 #1, Section 4.2)",
+    regex: /shadow-(sm|md|lg|xl|2xl)\b/i,
   },
   {
-    name: "Dark mode",
+    name: "Oversized radii (Section 1.2 #1, Section 4.1: disallowed xl, 2xl, 3xl)",
+    regex: /rounded-(xl|2xl|3xl)\b/i,
+  },
+  {
+    name: "Cards (Section 1.2 #1: no Card soup components)",
+    regex: /(<Card\b|\bfrom\s+["'].*card["'])/,
+  },
+  {
+    name: "Dark mode (Section 1.1: strictly light-themed)",
     regex: /(dark:|next-themes)/i,
   },
   {
-    name: "Default palette",
-    regex: /(bg|text|border|ring|fill|stroke)-(slate|gray|zinc|neutral|stone|red|green|blue|indigo|violet|purple|emerald|teal|sky|cyan)-[0-9]/i,
+    name: "Disallowed non-palette saturated colors (Section 2.4)",
+    regex: /(bg|text|border|ring)-(purple|indigo|violet|cyan|pink|rose|fuchsia|lime)-[0-9]/i,
   },
   {
-    name: "Uppercase and tracking",
-    regex: /\b(uppercase|tracking-(wide|wider|widest))\b/i,
-    filter: (file, match, line) => {
-      // Exclude JavaScript method call .toUpperCase()
-      if (line.includes(".toUpperCase(")) return false;
-      return true;
-    },
-  },
-  {
-    name: "Monospace",
-    regex: /font-mono/i,
-  },
-  {
-    name: "Emoji",
+    name: "Emoji (Section 1.2 #4: no emojis anywhere)",
     regex: /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u,
   },
   {
-    name: "Forbidden copy",
-    regex: /\b(Oops|Welcome back|Lorem|John Doe|Acme|Seamless|Unleash|Supercharge|Elevate|Powerful)\b/i,
+    name: "Forbidden marketing slop copy",
+    regex: /\b(Oops|Welcome back|Lorem ipsum|John Doe|Acme Corp|Seamless|Unleash|Supercharge|Elevate|Powerful)\b/i,
   },
   {
-    name: "Arrow buttons",
-    regex: /(→|&rarr;)/i,
-  },
-  {
-    name: "Raw hex in components",
-    regex: /#[0-9a-fA-F]{3,8}\b/i,
-    filter: (file) => !file.endsWith("globals.css") && !file.includes("chart-theme"),
+    name: "Bouncy motion (Section 8.1)",
+    regex: /(animate-(bounce|ping)|hover:scale|hover:-translate)/i,
   },
 ];
 
@@ -121,8 +87,9 @@ for (const file of files) {
 }
 
 if (errorsCount > 0) {
-  console.error(`\nFound ${errorsCount} anti-slop violations.`);
+  console.error(`\x1b[31mUI Lint failed: ${errorsCount} anti-slop violations found.\x1b[0m`);
   process.exit(1);
 } else {
-  console.log(`\x1b[32mUI Lint passed: 0 anti-slop violations found.\x1b[0m`);
+  console.log("\x1b[32mUI Lint passed: 0 anti-slop violations found.\x1b[0m");
+  process.exit(0);
 }

@@ -14,7 +14,7 @@ export function Panel({
   return (
     <Component
       className={cn(
-        "bg-sheet border border-line rounded-[20px] p-8 max-sm:p-5 text-ink overflow-hidden",
+        "bg-white border border-zinc-200 rounded-md p-6 sm:p-8 text-gray-900 overflow-hidden",
         className
       )}
       {...props}

@@ -14,10 +14,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         ref={ref}
         disabled={disabled}
         className={cn(
-          "flex h-11 w-full rounded-[10px] border bg-sheet px-3.5 py-2.5 text-[15px] text-ink placeholder:text-ink-3 transition-colors",
-          "border-line-strong focus-visible:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lagoon-ink",
-          "disabled:cursor-not-allowed disabled:bg-sunken disabled:text-ink-3",
-          isInvalid && "border-ebb focus-visible:outline-ebb",
+          "w-full h-[38px] px-3 rounded-md bg-white border border-zinc-300 text-sm text-gray-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 transition-colors",
+          "disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400 disabled:opacity-60",
+          isInvalid && "border-red-700 text-red-700 focus:border-red-700",
           className
         )}
         {...props}

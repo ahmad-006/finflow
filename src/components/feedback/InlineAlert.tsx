@@ -9,10 +9,10 @@ export interface InlineAlertProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const variantStyles = {
-  negative: "bg-ebb-tint text-ink",
+  negative: "bg-ember-tint text-ink",
   caution: "bg-amber-tint text-ink",
-  brand: "bg-foam text-ink",
-  positive: "bg-foam text-ink",
+  brand: "bg-fog text-ink",
+  positive: "bg-moss-tint text-ink",
 };
 
 const iconMap = {
@@ -23,10 +23,10 @@ const iconMap = {
 };
 
 const iconColors = {
-  negative: "text-ebb",
+  negative: "text-ember-ink",
   caution: "text-amber",
-  brand: "text-lagoon-ink",
-  positive: "text-lagoon-ink",
+  brand: "text-ink",
+  positive: "text-moss",
 };
 
 export function InlineAlert({
@@ -43,19 +43,19 @@ export function InlineAlert({
     <div
       role="alert"
       className={cn(
-        "flex items-start gap-2.5 rounded-[10px] px-4 py-3 text-[13px] leading-[18px]",
+        "flex items-start gap-3 rounded-[14px] px-5 py-4 text-[15px] leading-[22px]",
         variantStyles[variant],
         className
       )}
       {...props}
     >
       <IconComponent
-        className={cn("h-4 w-4 shrink-0 mt-0.5", iconColors[variant])}
+        className={cn("h-5 w-5 shrink-0 mt-0.5", iconColors[variant])}
         strokeWidth={1.5}
         aria-hidden="true"
       />
       <div className="flex-1">
-        {title && <span className="font-semibold text-ink mr-1.5">{title}</span>}
+        {title && <span className="font-semibold text-ink mr-2">{title}</span>}
         <span className="text-ink-2">{message || children}</span>
       </div>
     </div>
