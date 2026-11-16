@@ -93,33 +93,33 @@ export function UserMenu({
       {isOpen && (
         <div
           role="menu"
-          className="absolute right-0 bottom-full mb-2 z-50 min-w-[220px] rounded-md border border-zinc-200 bg-white p-2 shadow-[0_16px_36px_-12px_rgba(17,24,39,0.08)] select-none"
+          className="absolute right-0 top-full mt-2 z-50 min-w-[220px] rounded-[18px] border border-line bg-white p-2 shadow-float select-none"
         >
           {/* User & Company summary */}
-          <div className="border-b border-zinc-200 px-2.5 py-2">
-            <p className="truncate text-xs font-semibold text-gray-900">
+          <div className="border-b border-line px-3 py-2.5">
+            <p className="truncate text-[14px] font-semibold text-ink">
               {fullName}
             </p>
             {email && (
-              <p className="truncate text-[11px] font-mono text-zinc-500 mt-0.5">
+              <p className="truncate text-[12px] text-ink-3 mt-0.5">
                 {email}
               </p>
             )}
-            <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-zinc-600">
+            <div className="mt-1.5 flex items-center gap-1.5 text-[12px] text-ink-2">
               <span className="truncate font-medium">{companyName}</span>
-              <span className="font-mono text-[10px] text-zinc-400">·</span>
-              <span className="font-mono text-[10px] text-zinc-500">{baseCurrency}</span>
+              <span className="text-ink-3">·</span>
+              <span className="text-ink-3">{baseCurrency}</span>
             </div>
           </div>
 
-          <div className="pt-1">
+          <div className="pt-1.5">
             <Link
               href="/settings"
               onClick={() => setIsOpen(false)}
-              className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs text-zinc-700 hover:text-gray-900 hover:bg-zinc-100 transition-colors"
+              className="flex w-full items-center gap-2 rounded-full px-3 py-2 text-[14px] text-ink-2 hover:text-ink hover:bg-fog transition-colors"
               role="menuitem"
             >
-              <SlidersHorizontal className="h-3.5 w-3.5 stroke-[1.5]" />
+              <SlidersHorizontal className="h-4 w-4 stroke-[1.5]" />
               <span>Settings</span>
             </Link>
 
@@ -130,20 +130,20 @@ export function UserMenu({
                   setIsOpen(false);
                   await onSignOut();
                 }}
-                className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs text-red-700 hover:bg-red-50 transition-colors text-left"
+                className="flex w-full items-center gap-2 rounded-full px-3 py-2 text-[14px] text-ember-ink hover:bg-ember-tint transition-colors text-left"
                 role="menuitem"
               >
-                <LogOut className="h-3.5 w-3.5 stroke-[1.5]" />
+                <LogOut className="h-4 w-4 stroke-[1.5]" />
                 <span>Log out</span>
               </button>
             ) : (
               <Link
                 href="/login"
                 onClick={() => setIsOpen(false)}
-                className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs text-red-700 hover:bg-red-50 transition-colors text-left"
+                className="flex w-full items-center gap-2 rounded-full px-3 py-2 text-[14px] text-ember-ink hover:bg-ember-tint transition-colors text-left"
                 role="menuitem"
               >
-                <LogOut className="h-3.5 w-3.5 stroke-[1.5]" />
+                <LogOut className="h-4 w-4 stroke-[1.5]" />
                 <span>Log out</span>
               </Link>
             )}

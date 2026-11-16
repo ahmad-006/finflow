@@ -3,8 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { UserMenu } from "./UserMenu";
+import { Button } from "@/components/ui/button";
 
 export interface TopNavProps {
   user?: {
@@ -20,193 +23,233 @@ export interface TopNavProps {
   } | null;
   onSignOut?: () => Promise<void> | void;
   className?: string;
+  isMarketing?: boolean;
 }
 
-/**
- * Custom 20x20 SVG geometric ledger monogram:
- * #0F3D2E vertical bars of ascending height inside a 1px frame.
- */
-export function FinFlowMark({ className }: { className?: string }) {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 20 20"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={cn("inline-block shrink-0", className)}
-      aria-hidden="true"
-    >
-      <rect x="0.5" y="0.5" width="19" height="19" rx="3.5" stroke="#E4E4E7" fill="#FAFAFA" />
-      <rect x="4" y="11" width="2.5" height="5" rx="0.5" fill="#0F3D2E" />
-      <rect x="8.75" y="8" width="2.5" height="8" rx="0.5" fill="#0F3D2E" />
-      <rect x="13.5" y="4" width="2.5" height="12" rx="0.5" fill="#0F3D2E" />
-    </svg>
-  );
-}
-
-export function TopNav({ className }: TopNavProps) {
+export function TopNav({
+  user,
+  company,
+  onSignOut,
+  className,
+  isMarketing = false,
+}: TopNavProps) {
+  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const [isScrolled, setIsScrolled] = React.useState(false);
+  const [scrollProgress, setScrollProgress] = React.useState(0);
+
+  // Wayfinding ruler on scroll for marketing
+  React.useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      setIsScrolled(scrollY > 8);
+
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      if (maxScroll > 0) {
+        setScrollProgress(Math.min(1, Math.max(0, scrollY / maxScroll)));
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const inAppLinks = [
+    { label: "Overview", href: "/dashboard", active: pathname === "/dashboard" },
+    { label: "Invoices", href: "/invoices", active: pathname.startsWith("/invoices") },
+    { label: "Clients", href: "/clients", active: pathname.startsWith("/clients") },
+    { label: "Cash flow", href: "/cash-flow", active: pathname.startsWith("/cash-flow") },
+    { label: "Calendar", href: "/calendar", active: pathname.startsWith("/calendar") },
+  ];
 
   return (
     <header
       className={cn(
-        "h-16 sticky top-0 z-30 bg-[#FAFAFA]/90 backdrop-blur-md border-b border-zinc-200 select-none",
+        "sticky top-0 z-20 h-14 w-full bg-white/80 backdrop-blur-[20px] transition-colors select-none",
+        isScrolled && "border-b border-line",
         className
       )}
     >
-      <div className="max-w-[1360px] mx-auto h-full px-6 md:px-10 flex items-center justify-between">
-        {/* Left: Brand lockup with /finflow-icon.png + FinFlow */}
+      <div className="mx-auto flex h-full max-w-[1200px] items-center justify-between px-[var(--gutter)]">
+        {/* Left: Wordmark */}
         <Link
-          href="/"
-          className="flex items-center gap-2.5 transition-opacity hover:opacity-90"
-          aria-label="FinFlow home"
+          href={user ? "/dashboard" : "/"}
+          className="flex items-center gap-2 text-ink hover:opacity-90 transition-opacity"
         >
           <Image
             src="/finflow-icon.png"
             alt="FinFlow"
             width={24}
             height={24}
-            className="w-6 h-6 rounded-sm object-contain shrink-0"
+            className="h-6 w-6 rounded-md object-contain shrink-0"
             priority
           />
-          <span className="font-semibold text-base tracking-tight text-gray-900">
+          <span className="font-semibold text-lg tracking-tight text-ink">
             FinFlow
           </span>
         </Link>
 
-        {/* Center Links (Desktop) */}
-        <nav className="hidden lg:flex items-center gap-7" aria-label="Marketing navigation">
-          <Link
-            href="/#product"
-            className="text-xs font-medium text-zinc-600 hover:text-gray-900 transition-colors"
-          >
-            Product
-          </Link>
-          <Link
-            href="/#forecasting"
-            className="text-xs font-medium text-zinc-600 hover:text-gray-900 transition-colors"
-          >
-            Forecasting Engine
-          </Link>
-          <Link
-            href="/#multi-currency"
-            className="text-xs font-medium text-zinc-600 hover:text-gray-900 transition-colors"
-          >
-            Multi-Currency
-          </Link>
-          <Link
-            href="/#comparison"
-            className="text-xs font-medium text-zinc-600 hover:text-gray-900 transition-colors"
-          >
-            Comparison
-          </Link>
-          <Link
-            href="/#security"
-            className="text-xs font-medium text-zinc-600 hover:text-gray-900 transition-colors"
-          >
-            Security & Specs
-          </Link>
-          <Link
-            href="/#faq"
-            className="text-xs font-medium text-zinc-600 hover:text-gray-900 transition-colors"
-          >
-            FAQ
-          </Link>
-        </nav>
+        {/* Center Links (App) */}
+        {!isMarketing && user ? (
+          <nav className="hidden md:flex items-center gap-8" aria-label="Application navigation">
+            {inAppLinks.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "text-[15px] transition-colors",
+                  item.active
+                    ? "font-semibold text-ink"
+                    : "font-medium text-ink-2 hover:text-ink"
+                )}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
 
         {/* Right Actions */}
         <div className="flex items-center gap-4">
-          <Link
-            href="/login"
-            className="text-xs font-medium text-zinc-700 hover:text-gray-900 transition-colors"
-          >
-            Log in
-          </Link>
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center justify-center gap-2 h-[38px] px-4 rounded-md bg-zinc-900 text-white text-xs font-medium tracking-tight hover:bg-zinc-800 active:bg-zinc-950 transition-colors"
-          >
-            Open Treasury
-          </Link>
+          {isMarketing ? (
+            <>
+              {user ? (
+                <Link
+                  href="/dashboard"
+                  className="hidden sm:inline-flex items-center justify-center h-9 px-[18px] rounded-full bg-ink text-white text-[15px] font-medium hover:bg-ink-hover transition-colors"
+                >
+                  Open dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="text-[15px] font-medium text-ink hover:underline decoration-line-strong hover:decoration-ink transition-colors"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="inline-flex items-center justify-center h-9 px-[18px] rounded-full bg-ink text-white text-[15px] font-medium hover:bg-ink-hover transition-colors"
+                  >
+                    Create workspace
+                  </Link>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              <Link
+                href="/invoices/new"
+                className="hidden sm:inline-flex items-center justify-center h-9 px-[18px] rounded-full bg-ink text-white text-[15px] font-medium hover:bg-ink-hover active:scale-[0.98] transition-all"
+              >
+                New invoice
+              </Link>
+              <UserMenu user={user} company={company} onSignOut={onSignOut} />
+            </>
+          )}
 
-          {/* Mobile hamburger menu toggle */}
+          {/* Mobile hamburger button */}
           <button
             type="button"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Toggle navigation menu"
-            aria-expanded={mobileMenuOpen}
-            className="md:hidden p-1.5 -mr-1.5 rounded-md text-zinc-600 hover:text-gray-900 hover:bg-zinc-100 transition-colors"
+            onClick={() => setMobileMenuOpen(true)}
+            aria-label="Open menu"
+            className="md:hidden flex flex-col justify-center items-center w-8 h-8 gap-1.5 p-1 text-ink"
           >
-            {mobileMenuOpen ? (
-              <X className="w-5 h-5 stroke-[1.5]" />
-            ) : (
-              <Menu className="w-5 h-5 stroke-[1.5]" />
-            )}
+            <span className="w-5 h-[1.5px] bg-ink block" />
+            <span className="w-5 h-[1.5px] bg-ink block" />
           </button>
         </div>
       </div>
 
-      {/* Mobile Navigation Dropdown */}
+      {/* Homepage Scroll Ruler along bottom edge */}
+      {isMarketing && (
+        <div className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-line overflow-hidden">
+          <div
+            className="h-full bg-ink transition-all duration-75"
+            style={{ width: `${(scrollProgress * 100).toFixed(1)}%` }}
+          />
+        </div>
+      )}
+
+      {/* Mobile Full-Screen Overlay */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-b border-zinc-200 bg-[#FAFAFA] px-6 py-4 flex flex-col gap-3">
-          <Link
-            href="/#product"
-            onClick={() => setMobileMenuOpen(false)}
-            className="text-xs font-medium text-zinc-600 hover:text-gray-900 transition-colors py-1"
-          >
-            Product Architecture
-          </Link>
-          <Link
-            href="/#forecasting"
-            onClick={() => setMobileMenuOpen(false)}
-            className="text-xs font-medium text-zinc-600 hover:text-gray-900 transition-colors py-1"
-          >
-            Forecasting Engine
-          </Link>
-          <Link
-            href="/#multi-currency"
-            onClick={() => setMobileMenuOpen(false)}
-            className="text-xs font-medium text-zinc-600 hover:text-gray-900 transition-colors py-1"
-          >
-            Multi-Currency & FX
-          </Link>
-          <Link
-            href="/#comparison"
-            onClick={() => setMobileMenuOpen(false)}
-            className="text-xs font-medium text-zinc-600 hover:text-gray-900 transition-colors py-1"
-          >
-            Ledger Comparison
-          </Link>
-          <Link
-            href="/#security"
-            onClick={() => setMobileMenuOpen(false)}
-            className="text-xs font-medium text-zinc-600 hover:text-gray-900 transition-colors py-1"
-          >
-            Security & Specifications
-          </Link>
-          <Link
-            href="/#faq"
-            onClick={() => setMobileMenuOpen(false)}
-            className="text-xs font-medium text-zinc-600 hover:text-gray-900 transition-colors py-1"
-          >
-            FAQ
-          </Link>
-          <div className="pt-3 border-t border-zinc-200 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex flex-col justify-between bg-white p-8">
+          <div className="flex items-center justify-between">
             <Link
-              href="/login"
+              href="/"
               onClick={() => setMobileMenuOpen(false)}
-              className="text-xs font-medium text-zinc-700 hover:text-gray-900 transition-colors"
+              className="flex items-center gap-2 text-ink font-semibold text-lg"
             >
-              Log in
+              <Image
+                src="/finflow-icon.png"
+                alt="FinFlow"
+                width={24}
+                height={24}
+                className="h-6 w-6 rounded-md object-contain"
+              />
+              <span>FinFlow</span>
             </Link>
-            <Link
-              href="/dashboard"
+            <button
+              type="button"
               onClick={() => setMobileMenuOpen(false)}
-              className="inline-flex items-center justify-center gap-2 h-[38px] px-4 rounded-md bg-zinc-900 text-white text-xs font-medium hover:bg-zinc-800 transition-colors"
+              aria-label="Close menu"
+              className="p-2 text-ink hover:opacity-70 transition-opacity"
             >
-              Open Treasury
-            </Link>
+              <X className="h-6 w-6 stroke-[1.5]" />
+            </button>
+          </div>
+
+          <nav className="flex flex-col gap-5 my-auto" aria-label="Mobile navigation">
+            {(user ? inAppLinks : [
+              { label: "Overview", href: "/#overview", active: false },
+              { label: "Story", href: "/#story", active: false },
+              { label: "Product", href: "/#product", active: false },
+              { label: "Capabilities", href: "/#more", active: false },
+            ]).map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-4xl font-semibold text-ink tracking-tight hover:opacity-70 transition-opacity"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="flex flex-col gap-3 pt-6 border-t border-line">
+            {user ? (
+              <Button
+                variant="primary"
+                size="default"
+                className="w-full"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  if (onSignOut) onSignOut();
+                }}
+              >
+                Sign out
+              </Button>
+            ) : (
+              <>
+                <Link
+                  href="/register"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="inline-flex items-center justify-center h-12 w-full rounded-full bg-ink text-white font-medium text-[17px]"
+                >
+                  Create workspace
+                </Link>
+                <Link
+                  href="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="inline-flex items-center justify-center h-12 w-full rounded-full bg-fog text-ink font-medium text-[17px]"
+                >
+                  Sign in
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}
