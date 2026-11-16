@@ -4,17 +4,21 @@ import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { InlineAlert } from "@/components/feedback/InlineAlert";
 import { registerAction } from "@/modules/auth/actions";
+import { cn } from "@/lib/utils";
 
 export default function RegisterPage() {
   const router = useRouter();
   const [password, setPassword] = React.useState("");
-  const [baseCurrency, setBaseCurrency] = React.useState("PKR");
   const [error, setError] = React.useState<string | null>(null);
   const [isPending, setIsPending] = React.useState(false);
 
-  // Live password checklist validation
+  // Live password checklist validation (Section 9.1)
   const hasMinLength = password.length >= 8;
   const hasUpperAndLower = /[A-Z]/.test(password) && /[a-z]/.test(password);
   const hasNumberAndSpecial = /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password);
@@ -34,7 +38,6 @@ export default function RegisterPage() {
       const form = e.currentTarget;
       const formData = new FormData(form);
 
-      // Ensure fullName meets server schema requirement if omitted
       if (!formData.get("fullName")) {
         const company = formData.get("companyName")?.toString().trim() || "Workspace";
         formData.set("fullName", `${company} Admin`);
@@ -60,296 +63,214 @@ export default function RegisterPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Registration failed. Please check the details provided."
+          : "Unable to create workspace. Please check your connection."
       );
       setIsPending(false);
     }
   };
 
   return (
-    <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2 bg-white">
-      {/* 1. Left Form Column */}
-      <div className="p-8 md:p-16 flex flex-col justify-between">
-        {/* Top: FinFlow logo lockup linking to / */}
-        <div>
-          <Link href="/" className="inline-block focus:outline-none">
-            <Image
-              src="/finflow-logo.png"
-              alt="FinFlow"
-              width={130}
-              height={30}
-              className="h-7 w-auto object-contain"
-              priority
-            />
-          </Link>
-        </div>
+    <div className="relative min-h-screen flex flex-col justify-between bg-white px-6 py-10 overflow-hidden font-sans">
+      {/* Top Left Wordmark */}
+      <div className="w-full max-w-[1200px] mx-auto">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-ink hover:opacity-80 transition-opacity"
+        >
+          <Image
+            src="/finflow-icon.png"
+            alt="FinFlow"
+            width={24}
+            height={24}
+            className="h-6 w-6 rounded-md object-contain"
+            priority
+          />
+          <span className="font-semibold text-lg tracking-tight">FinFlow</span>
+        </Link>
+      </div>
 
-        {/* Center: Serif Headline & Vertical Form */}
-        <div className="w-full max-w-[360px] mx-auto my-8">
-          <h1 className="font-serif text-3xl text-gray-900 tracking-tight">
-            Initialize your workspace
-          </h1>
-          <p className="text-xs text-zinc-500 mt-2">
-            Configure your corporate ledger and opening liquidity.
-          </p>
+      {/* Centered Single Column Auth Form (Template E: 440px wide) */}
+      <div className="w-full max-w-[440px] mx-auto my-auto py-8">
+        <h1 className="text-3xl sm:text-4xl font-semibold tracking-[-0.04em] text-ink text-center leading-tight">
+          Create workspace
+        </h1>
+        <p className="text-[17px] text-ink-2 text-center mt-2 mb-8">
+          Start forecasting your cash 30 days ahead.
+        </p>
 
-          <form onSubmit={handleSubmit} className="space-y-4 mt-8">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+          {/* Section: Business */}
+          <div className="flex flex-col gap-4">
+            <h2 className="text-[20px] font-semibold text-ink tracking-tight pb-1 border-b border-line">
+              Business
+            </h2>
+
             <div>
-              <label
-                htmlFor="companyName"
-                className="block text-xs font-medium text-zinc-700 mb-1.5"
-              >
-                Business Name
-              </label>
-              <input
+              <Label htmlFor="companyName">Company name</Label>
+              <Input
                 id="companyName"
                 name="companyName"
-                type="text"
-                placeholder="e.g. Indus Manufacturing"
+                placeholder="Rehman and Sons Trading"
                 required
-                className="w-full h-[42px] px-3 rounded-md bg-white border border-zinc-300 text-sm text-gray-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 transition-colors"
+                autoComplete="organization"
               />
             </div>
 
             <div>
-              <label
-                htmlFor="email"
-                className="block text-xs font-medium text-zinc-700 mb-1.5"
-              >
-                Work Email
-              </label>
-              <input
+              <Label htmlFor="baseCurrency">Base currency</Label>
+              <Select id="baseCurrency" name="baseCurrency" defaultValue="PKR">
+                <option value="PKR">PKR — Pakistani Rupee</option>
+                <option value="USD">USD — US Dollar</option>
+                <option value="EUR">EUR — Euro</option>
+                <option value="GBP">GBP — British Pound</option>
+              </Select>
+            </div>
+          </div>
+
+          {/* Section: Account */}
+          <div className="flex flex-col gap-4">
+            <h2 className="text-[20px] font-semibold text-ink tracking-tight pb-1 border-b border-line">
+              Account
+            </h2>
+
+            <div>
+              <Label htmlFor="fullName" optional>Full name</Label>
+              <Input
+                id="fullName"
+                name="fullName"
+                placeholder="Tariq Rehman"
+                autoComplete="name"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="email">Business email</Label>
+              <Input
                 id="email"
                 name="email"
                 type="email"
-                placeholder="finance@indusmfg.com"
+                placeholder="finance@rehmansons.pk"
                 required
                 autoComplete="email"
-                className="w-full h-[42px] px-3 rounded-md bg-white border border-zinc-300 text-sm text-gray-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 transition-colors"
               />
             </div>
 
             <div>
-              <label
-                htmlFor="password"
-                className="block text-xs font-medium text-zinc-700 mb-1.5"
-              >
-                Password
-              </label>
-              <input
+              <Label htmlFor="password">Password</Label>
+              <Input
                 id="password"
                 name="password"
                 type="password"
+                required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
-                required
                 autoComplete="new-password"
-                className="w-full h-[42px] px-3 rounded-md bg-white border border-zinc-300 text-sm text-gray-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 transition-colors"
               />
-              {password.length > 0 && (
-                <div className="space-y-1 mt-2 text-[11px]">
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        hasMinLength ? "bg-emerald-700" : "bg-zinc-300"
-                      }`}
-                    />
-                    <span
-                      className={
-                        hasMinLength ? "text-gray-900 font-medium" : "text-zinc-500"
-                      }
-                    >
-                      At least 8 characters
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        hasUpperAndLower ? "bg-emerald-700" : "bg-zinc-300"
-                      }`}
-                    />
-                    <span
-                      className={
-                        hasUpperAndLower ? "text-gray-900 font-medium" : "text-zinc-500"
-                      }
-                    >
-                      Uppercase and lowercase letters
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        hasNumberAndSpecial ? "bg-emerald-700" : "bg-zinc-300"
-                      }`}
-                    />
-                    <span
-                      className={
-                        hasNumberAndSpecial ? "text-gray-900 font-medium" : "text-zinc-500"
-                      }
-                    >
-                      Number and special character
-                    </span>
-                  </div>
-                </div>
-              )}
+
+              {/* Password checklist beneath the field turning --moss as each is met */}
+              <div className="mt-3 flex flex-col gap-1 text-[13px] text-ink-3">
+                <p className={cn("transition-colors", hasMinLength && "text-moss font-medium")}>
+                  • At least 8 characters
+                </p>
+                <p className={cn("transition-colors", hasUpperAndLower && "text-moss font-medium")}>
+                  • Both uppercase and lowercase letters
+                </p>
+                <p className={cn("transition-colors", hasNumberAndSpecial && "text-moss font-medium")}>
+                  • At least one number and special symbol
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Section: Opening position */}
+          <div className="flex flex-col gap-4">
+            <h2 className="text-[20px] font-semibold text-ink tracking-tight pb-1 border-b border-line">
+              Opening position
+            </h2>
+
+            <div>
+              <Label htmlFor="liquidReserve">Opening liquid cash</Label>
+              <Input
+                id="liquidReserve"
+                name="liquidReserve"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="4380250.00"
+                defaultValue="4380250.00"
+                required
+              />
+              <p className="mt-1 text-[13px] text-ink-3">
+                Total available cash in your bank accounts today.
+              </p>
             </div>
 
             <div>
-              <label
-                htmlFor="baseCurrency"
-                className="block text-xs font-medium text-zinc-700 mb-1.5"
-              >
-                Base Currency
-              </label>
-              <div className="relative">
-                <select
-                  id="baseCurrency"
-                  name="baseCurrency"
-                  value={baseCurrency}
-                  onChange={(e) => setBaseCurrency(e.target.value)}
-                  className="w-full h-[42px] px-3 pr-8 rounded-md bg-white border border-zinc-300 text-sm text-gray-900 focus:outline-none focus:border-zinc-900 transition-colors appearance-none cursor-pointer"
-                >
-                  <option value="PKR">PKR — Pakistani Rupee</option>
-                  <option value="USD">USD — US Dollar</option>
-                  <option value="EUR">EUR — Euro</option>
-                  <option value="GBP">GBP — British Pound</option>
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-zinc-500">
-                  <ChevronDown className="h-4 w-4 stroke-[1.5]" />
-                </div>
-              </div>
+              <Label htmlFor="safetyBuffer" optional>Safety buffer</Label>
+              <Input
+                id="safetyBuffer"
+                name="safetyBuffer"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="1200000.00"
+                defaultValue="1200000.00"
+              />
+              <p className="mt-1 text-[13px] text-ink-3">
+                The minimum cash buffer to maintain before warning of a breach.
+              </p>
             </div>
+          </div>
 
-            <div>
-              <label
-                htmlFor="liquidReserve"
-                className="block text-xs font-medium text-zinc-700 mb-1.5"
-              >
-                Opening Cash Balance
-              </label>
-              <div className="flex items-center h-[42px] rounded-md border border-zinc-300 bg-white focus-within:border-zinc-900 overflow-hidden transition-colors">
-                <span className="px-3 h-full flex items-center bg-[#FAFAFA] border-r border-zinc-200 font-mono text-xs text-zinc-600 select-none">
-                  {baseCurrency}
-                </span>
-                <input
-                  id="liquidReserve"
-                  name="liquidReserve"
-                  type="number"
-                  step="any"
-                  min="0"
-                  placeholder="0.00"
-                  defaultValue="0"
-                  className="flex-1 h-full px-3 text-sm text-right tabular-nums text-gray-900 placeholder:text-zinc-400 focus:outline-none bg-transparent"
-                />
-              </div>
-            </div>
+          {error && (
+            <InlineAlert
+              variant="negative"
+              message={error}
+            />
+          )}
 
-            {error && (
-              <div className="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-700 shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
+          <Button
+            type="submit"
+            variant="primary"
+            size="default"
+            className="w-full h-12 rounded-full text-[17px] font-medium"
+            isLoading={isPending}
+          >
+            Create workspace
+          </Button>
 
-            <button
-              type="submit"
-              disabled={isPending}
-              className="w-full h-11 rounded-md bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-            >
-              {isPending ? "Initializing..." : "Initialize Workspace"}
-            </button>
-          </form>
-
-          {/* Bottom: Link toggle */}
-          <div className="mt-8 text-center text-xs text-zinc-600">
-            <span>Already have an account?</span>{" "}
+          <div className="text-center">
+            <span className="text-[15px] text-ink-2">Already have a workspace? </span>
             <Link
               href="/login"
-              className="font-medium text-gray-900 underline underline-offset-4 hover:text-black"
+              className="text-[15px] font-medium text-ink underline underline-offset-4 decoration-line-strong hover:decoration-ink transition-colors"
             >
               Sign in
             </Link>
           </div>
-        </div>
-
-        {/* Subtle left column balance spacer */}
-        <div aria-hidden="true" className="h-6" />
+        </form>
       </div>
 
-      {/* 2. Right Editorial Column */}
-      <div className="hidden lg:flex bg-[#FAFAFA] border-l border-zinc-200 p-16 flex-col justify-between">
-        {/* Top eyebrow */}
-        <div>
-          <p className="font-mono text-[11px] tracking-[0.12em] text-[#0F3D2E] uppercase">
-            TREASURY DISCIPLINE
-          </p>
-        </div>
-
-        {/* Center: Quote + 4-column KPI strip */}
-        <div className="max-w-[480px]">
-          <blockquote className="font-serif text-3xl leading-snug text-gray-900">
-            &ldquo;Cash runway is the only metric that cannot be faked.&rdquo;
-          </blockquote>
-
-          {/* Static miniature preview of the 4-column KPI strip */}
-          <div className="mt-10 border border-zinc-200 bg-white grid grid-cols-2 divide-x divide-y divide-zinc-200">
-            <div className="p-4">
-              <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-zinc-500">
-                Live Cash Position
-              </p>
-              <p className="text-xl font-semibold tracking-tight tabular-nums text-gray-900 mt-1">
-                PKR 6,420,500
-              </p>
-              <p className="text-[11px] text-emerald-700 tabular-nums mt-0.5">
-                +PKR 480k this week
-              </p>
-            </div>
-
-            <div className="p-4">
-              <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-zinc-500">
-                30D Velocity
-              </p>
-              <p className="text-xl font-semibold tracking-tight tabular-nums text-gray-900 mt-1">
-                +PKR 1,850,000
-              </p>
-              <p className="text-[11px] text-zinc-500 tabular-nums mt-0.5">
-                Inflow 3.2M · Out 1.35M
-              </p>
-            </div>
-
-            <div className="p-4">
-              <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-zinc-500">
-                Unpaid Receivables
-              </p>
-              <p className="text-xl font-semibold tracking-tight tabular-nums text-gray-900 mt-1">
-                PKR 2,940,000
-              </p>
-              <p className="text-[11px] text-zinc-500 tabular-nums mt-0.5">
-                11 open invoices
-              </p>
-            </div>
-
-            <div className="p-4">
-              <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-zinc-500">
-                Overdue Exposure
-              </p>
-              <p className="text-xl font-semibold tracking-tight tabular-nums text-red-700 mt-1">
-                3 Invoices
-              </p>
-              <p className="text-[11px] text-red-700/80 tabular-nums mt-0.5">
-                PKR 615,000 past due
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom footnote */}
-        <div>
-          <p className="text-xs text-zinc-500 font-sans">
-            FinFlow Treasury Intelligence · Built for SME Cash Clarity
-          </p>
-        </div>
+      {/* Static line along the bottom 26vh, aria-hidden, no ruler, no buffer */}
+      <div
+        className="w-full max-w-4xl mx-auto h-[26vh] max-h-48 opacity-30 pointer-events-none select-none"
+        aria-hidden="true"
+      >
+        <svg
+          viewBox="0 0 1000 120"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-full h-full"
+          preserveAspectRatio="none"
+        >
+          <path
+            d="M0 90 C150 90 200 40 350 40 C500 40 550 95 700 95 C800 95 850 50 1000 45"
+            stroke="var(--ink)"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            fill="none"
+          />
+        </svg>
       </div>
     </div>
   );
