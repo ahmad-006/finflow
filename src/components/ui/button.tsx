@@ -4,44 +4,28 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-xs font-medium transition-colors outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:pointer-events-none disabled:opacity-40 select-none cursor-pointer",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-medium transition-colors outline-none focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-ink disabled:pointer-events-none disabled:bg-fog disabled:text-ink-3 select-none cursor-pointer",
   {
     variants: {
       variant: {
         primary:
-          "bg-zinc-900 text-white tracking-tight hover:bg-zinc-800 active:bg-zinc-950",
+          "bg-ink text-white hover:bg-ink-hover active:scale-[0.98]",
         secondary:
-          "bg-white border border-zinc-300 text-gray-900 hover:border-zinc-900 hover:bg-zinc-50",
+          "bg-fog text-ink hover:bg-fog-2 border-0 active:scale-[0.98]",
         ghost:
-          "bg-white border border-zinc-300 text-gray-900 hover:border-zinc-900 hover:bg-zinc-50",
-        action:
-          "bg-white border border-zinc-200 text-[11px] text-zinc-700 hover:border-zinc-900 hover:text-gray-900",
-        destructive:
-          "bg-red-700 text-white hover:bg-red-800 active:bg-red-900",
+          "bg-transparent text-ink-2 hover:bg-fog hover:text-ink active:scale-[0.98]",
         link:
-          "bg-transparent text-zinc-600 hover:text-gray-900 underline-offset-4 hover:underline p-0 h-auto",
+          "bg-transparent text-ink underline underline-offset-4 decoration-line-strong hover:decoration-ink p-0 h-auto",
+        destructive:
+          "bg-ember-ink text-white hover:bg-ember active:scale-[0.98]",
       },
       size: {
-        default: "h-[38px] px-4",
-        secondary: "h-[38px] px-3.5",
-        compact: "h-8 px-3",
-        action: "h-7 px-2.5 text-[11px]",
-        hero: "h-11 px-6 text-sm",
-        icon: "h-[38px] w-[38px] p-0",
+        default: "h-12 px-7 text-[17px]",
+        compact: "h-9 px-[18px] text-[15px]",
+        hero: "h-14 px-8 text-[18px]",
+        icon: "h-9 w-9 p-0",
       },
     },
-    compoundVariants: [
-      {
-        variant: "secondary",
-        size: "default",
-        className: "px-3.5",
-      },
-      {
-        variant: "action",
-        size: "default",
-        className: "h-7 px-2.5 text-[11px]",
-      },
-    ],
     defaultVariants: {
       variant: "primary",
       size: "default",
@@ -64,7 +48,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(buttonVariants({ variant, size }), className)}
         {...props}
       >
-        {isLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-current" />}
+        {isLoading && <Loader2 className="h-4 w-4 animate-spin text-current" />}
         {children}
       </button>
     );

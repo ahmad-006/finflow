@@ -15,13 +15,13 @@ export function Label({
   return (
     <label
       className={cn(
-        "block text-xs font-medium text-zinc-700 mb-1.5",
+        "block text-[14px] font-medium text-ink-2 mb-2",
         className
       )}
       {...props}
     >
       {children}
-      {optional && <span className="ml-1 text-[11px] font-normal text-zinc-400">(optional)</span>}
+      {optional && <span className="ml-1 text-[13px] font-normal text-ink-3">(optional)</span>}
     </label>
   );
 }

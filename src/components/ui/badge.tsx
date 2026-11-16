@@ -11,84 +11,72 @@ export type BadgeVariant =
   | "watchlist"
   | "critical";
 
-const variantConfig: Record<
-  BadgeVariant,
-  { dot: string; text: string; label?: string }
-> = {
-  paid: {
-    dot: "bg-emerald-700",
-    text: "text-gray-900",
-    label: "Paid",
+const variantStyles: Record<BadgeVariant, { bg: string; text: string; defaultLabel: string }> = {
+  draft: {
+    bg: "bg-fog",
+    text: "text-ink-3",
+    defaultLabel: "Draft",
   },
   sent: {
-    dot: "bg-amber-600",
-    text: "text-zinc-700",
-    label: "Sent",
+    bg: "bg-fog",
+    text: "text-ink",
+    defaultLabel: "Sent",
+  },
+  paid: {
+    bg: "bg-moss-tint",
+    text: "text-moss",
+    defaultLabel: "Paid",
   },
   overdue: {
-    dot: "bg-red-700",
-    text: "text-red-700",
-    label: "Overdue",
-  },
-  draft: {
-    dot: "bg-zinc-400",
-    text: "text-zinc-500",
-    label: "Draft",
+    bg: "bg-ember-tint",
+    text: "text-ember-ink",
+    defaultLabel: "Overdue",
   },
   cancelled: {
-    dot: "bg-zinc-400",
-    text: "text-zinc-500",
-    label: "Cancelled",
+    bg: "bg-fog",
+    text: "text-ink-3",
+    defaultLabel: "Cancelled",
   },
   healthy: {
-    dot: "bg-emerald-700",
-    text: "text-gray-900",
-    label: "Healthy",
+    bg: "bg-moss-tint",
+    text: "text-moss",
+    defaultLabel: "Healthy",
   },
   watchlist: {
-    dot: "bg-amber-600",
-    text: "text-zinc-700",
-    label: "Watchlist",
+    bg: "bg-amber-tint",
+    text: "text-amber",
+    defaultLabel: "Watchlist",
   },
   critical: {
-    dot: "bg-red-700",
-    text: "text-red-700",
-    label: "Critical",
+    bg: "bg-ember-tint",
+    text: "text-ember-ink",
+    defaultLabel: "Critical",
   },
 };
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: BadgeVariant;
-  dotClassName?: string;
 }
 
 export function Badge({
   className,
   variant = "draft",
-  dotClassName,
   children,
   ...props
 }: BadgeProps) {
-  const config = variantConfig[variant] || variantConfig.draft;
+  const style = variantStyles[variant] || variantStyles.draft;
 
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-2 text-xs font-medium select-none",
-        config.text,
+        "inline-flex items-center justify-center h-[26px] px-3 rounded-full text-[13px] font-medium border-0 select-none whitespace-nowrap",
+        style.bg,
+        style.text,
         className
       )}
       {...props}
     >
-      <span
-        className={cn(
-          "w-1.5 h-1.5 rounded-full shrink-0",
-          config.dot,
-          dotClassName
-        )}
-        aria-hidden="true"
-      />
-      <span>{children ?? config.label}</span>
+      {children ?? style.defaultLabel}
     </span>
   );
 }

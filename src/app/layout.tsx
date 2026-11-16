@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { instrumentSerif, jakartaSans, jetBrainsMono } from "./fonts";
+import { hanken } from "./fonts";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 export const viewport: Viewport = {
-  themeColor: "#0F3D2E",
+  themeColor: "#0D1B2A",
   width: "device-width",
   initialScale: 1,
 };
@@ -137,7 +137,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${instrumentSerif.variable} ${jakartaSans.variable} ${jetBrainsMono.variable} scroll-smooth`}
+      className={`${hanken.variable} scroll-smooth`}
     >
       <head>
         <script
@@ -145,7 +145,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className="bg-white text-gray-900 font-sans min-h-screen antialiased selection:bg-zinc-900 selection:text-white">
+      <body className="bg-white text-ink font-sans min-h-screen antialiased selection:bg-ink selection:text-white">
         {children}
       </body>
     </html>

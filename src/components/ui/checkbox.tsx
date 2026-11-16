@@ -23,7 +23,7 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
       <label
         htmlFor={id}
         className={cn(
-          "inline-flex items-center gap-2.5 select-none cursor-pointer text-xs font-medium text-zinc-700",
+          "inline-flex items-center gap-2.5 select-none cursor-pointer text-sm font-medium text-ink",
           disabled && "cursor-not-allowed opacity-60",
           className
         )}
@@ -41,9 +41,9 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
           />
           <span
             className={cn(
-              "flex h-4 w-4 items-center justify-center rounded-md border border-zinc-300 bg-white transition-colors",
-              "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-1 peer-focus-visible:outline-zinc-900",
-              resolvedChecked && "border-zinc-900 bg-zinc-900 text-white"
+              "flex h-4 w-4 items-center justify-center rounded-[4px] border border-line-strong bg-white transition-colors",
+              "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-1 peer-focus-visible:outline-ink",
+              resolvedChecked && "border-ink bg-ink text-white"
             )}
           >
             {resolvedChecked && (

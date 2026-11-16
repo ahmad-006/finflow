@@ -2,105 +2,60 @@
 
 :root {
   color-scheme: light;
+  --white: #FFFFFF;
+  --fog: #F5F6F7;
+  --fog-2: #ECEEF0;
+  --line: #E3E6EA;
+  --line-strong: #CDD2D9;
+  --ink: #0D1B2A;
+  --ink-hover: #1B2D42;
+  --ink-2: #3B4654;
+  --ink-3: #5F6B7A;
+  --ember: #E5391F;
+  --ember-ink: #C42E16;
+  --ember-tint: #FCE9E5;
+  --moss: #1E7A55;
+  --moss-tint: #E6F3EC;
+  --amber: #8A5A12;
+  --amber-tint: #F7EEDB;
 
-  /* Section 2.1: Surface & Canvas Tokens */
-  --bg-paper: #FAFAFA;
-  --bg-surface: #FFFFFF;
-  --bg-hover: #F4F4F5;
-  --bg-active: #E4E4E7;
+  --radius-pill: 999px;
+  --radius-field: 14px;
+  --radius-row: 14px;
+  --radius-overlay: 28px;
 
-  /* Section 2.2: Border & Hairline Tokens */
-  --border-hairline: #E4E4E7;
-  --border-strong: #D4D4D8;
-  --border-focus: #18181B;
+  --shadow-float: 0 30px 80px -24px rgba(13, 27, 42, 0.28);
+  --shadow-thumb: 0 1px 2px rgba(13, 27, 42, 0.14);
 
-  /* Section 2.3: Ink (Typography) Tokens */
-  --ink-primary: #111827;
-  --ink-secondary: #52525B;
-  --ink-muted: #A1A1AA;
-  --ink-inverse: #FFFFFF;
+  --ease: cubic-bezier(0.28, 0.11, 0.32, 1);
+  --dur-fast: 150ms;
+  --dur-base: 280ms;
 
-  /* Section 2.4: Brand & Semantic Tokens */
-  --brand-obsidian: #18181B;
-  --brand-emerald: #0F3D2E;
-  --status-paid: #15803D;
-  --status-pending: #B45309;
-  --status-overdue: #B91C1C;
-  --status-draft: #A1A1AA;
-
-  /* Backwards compatibility aliases */
-  --white: var(--bg-surface);
-  --fog: var(--bg-paper);
-  --fog-2: var(--bg-hover);
-  --line: var(--border-hairline);
-  --line-strong: var(--border-strong);
-  --ink: var(--ink-primary);
-  --ink-hover: var(--border-focus);
-  --ink-2: var(--ink-secondary);
-  --ink-3: var(--ink-muted);
-  --ember: var(--status-overdue);
-  --ember-ink: var(--status-overdue);
-  --ember-tint: #FEF2F2;
-  --moss: var(--status-paid);
-  --moss-tint: #F0FDF4;
-  --amber: var(--status-pending);
-  --amber-tint: #FFFBEB;
-
-  /* Common radii & shadows */
-  --radius-xs: 2px;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  --gutter: clamp(20px, 5vw, 64px);
+  --content: 1200px;
 
   /* shadcn mapping */
-  --background: var(--bg-surface);
-  --foreground: var(--ink-primary);
-  --primary: var(--brand-obsidian);
-  --primary-foreground: var(--ink-inverse);
-  --secondary: var(--bg-paper);
-  --secondary-foreground: var(--ink-primary);
-  --muted: var(--bg-hover);
-  --muted-foreground: var(--ink-secondary);
-  --accent: var(--bg-hover);
-  --accent-foreground: var(--ink-primary);
-  --destructive: var(--status-overdue);
-  --border: var(--border-hairline);
-  --input: var(--border-strong);
-  --ring: var(--brand-obsidian);
-  --card: var(--bg-surface);
-  --card-foreground: var(--ink-primary);
-  --popover: var(--bg-surface);
-  --popover-foreground: var(--ink-primary);
+  --background: var(--white);
+  --foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: #FFFFFF;
+  --secondary: var(--fog);
+  --secondary-foreground: var(--ink);
+  --muted: var(--fog);
+  --muted-foreground: var(--ink-3);
+  --accent: var(--fog);
+  --accent-foreground: var(--ink);
+  --destructive: var(--ember-ink);
+  --border: var(--line);
+  --input: var(--fog);
+  --ring: var(--ink);
+  --card: var(--white);
+  --card-foreground: var(--ink);
+  --popover: var(--white);
+  --popover-foreground: var(--ink);
 }
 
 @theme inline {
-  --font-serif: var(--font-serif), Georgia, Cambria, "Times New Roman", Times, serif;
-  --font-sans: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: var(--font-mono), monospace;
-
-  --color-bg-paper: var(--bg-paper);
-  --color-bg-surface: var(--bg-surface);
-  --color-bg-hover: var(--bg-hover);
-  --color-bg-active: var(--bg-active);
-
-  --color-border-hairline: var(--border-hairline);
-  --color-border-strong: var(--border-strong);
-  --color-border-focus: var(--border-focus);
-
-  --color-ink-primary: var(--ink-primary);
-  --color-ink-secondary: var(--ink-secondary);
-  --color-ink-muted: var(--ink-muted);
-  --color-ink-inverse: var(--ink-inverse);
-
-  --color-brand-obsidian: var(--brand-obsidian);
-  --color-brand-emerald: var(--brand-emerald);
-
-  --color-status-paid: var(--status-paid);
-  --color-status-pending: var(--status-pending);
-  --color-status-overdue: var(--status-overdue);
-  --color-status-draft: var(--status-draft);
-
-  /* aliases */
   --color-white: var(--white);
   --color-fog: var(--fog);
   --color-fog-2: var(--fog-2);
@@ -117,91 +72,56 @@
   --color-moss-tint: var(--moss-tint);
   --color-amber: var(--amber);
   --color-amber-tint: var(--amber-tint);
+  --font-sans: var(--font-hanken), -apple-system, "Segoe UI", sans-serif;
+  --radius-pill: var(--radius-pill);
+  --radius-field: var(--radius-field);
+  --radius-row: var(--radius-row);
+  --radius-overlay: var(--radius-overlay);
+  --shadow-float: var(--shadow-float);
+  --shadow-thumb: var(--shadow-thumb);
 }
 
 html {
-  background: var(--bg-surface);
-  color: var(--ink-primary);
+  background: var(--white);
+  color: var(--ink);
   font-family: var(--font-sans);
 }
 
 body {
-  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 26px;
   -webkit-font-smoothing: antialiased;
-}
-
-/* Mandatory Tabular Numerals Rule (Section 3.2) */
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum" 1, "cv05" 1;
+  font-variant-numeric: lining-nums;
 }
 
 .num {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+.tabular-nums {
   font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum" 1, "cv05" 1;
+  font-feature-settings: "tnum" 1;
 }
 
 ::selection {
-  background: var(--brand-obsidian);
+  background: var(--ink);
   color: #ffffff;
 }
 
-/* Section 5.8: FullCalendar CSS Overrides */
-.fc {
-  --fc-border-color: #E4E4E7;
-  --fc-page-bg-color: #FFFFFF;
-  --fc-neutral-bg-color: #FAFAFA;
-  --fc-today-bg-color: #FAFAFA;
-  font-family: var(--font-sans);
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
-.fc .fc-toolbar-title {
-  font-size: 1.125rem;
-  font-weight: 600;
-  letter-spacing: -0.015em;
-  color: #111827;
-}
-
-.fc .fc-button-primary {
-  background-color: #FFFFFF !important;
-  border: 1px solid #D4D4D8 !important;
-  color: #111827 !important;
-  font-size: 0.75rem !important;
-  font-weight: 500 !important;
-  border-radius: 6px !important;
-  box-shadow: none !important;
-  padding: 0.375rem 0.75rem !important;
-}
-
-.fc .fc-button-primary:hover {
-  border-color: #18181B !important;
-  background-color: #FAFAFA !important;
-}
-
-.fc .fc-col-header-cell-cushion {
-  font-size: 11px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #71717A;
-  padding: 10px 0;
-}
-
-.fc .fc-daygrid-day-number {
-  font-variant-numeric: tabular-nums;
-  font-size: 12px;
-  color: #52525B;
-  padding: 8px;
-}
-
-.fc .fc-daygrid-event {
-  border-radius: 3px !important;
-  border: 1px solid #E4E4E7 !important;
-  border-left-width: 3px !important;
-  background-color: #FFFFFF !important;
-  color: #111827 !important;
-  font-size: 11px !important;
-  font-variant-numeric: tabular-nums;
-  padding: 2px 6px !important;
-  margin: 2px 4px !important;
+@media (prefers-reduced-motion: no-preference) {
+  .ink-line {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: draw 1400ms var(--ease) 200ms both;
+  }
 }

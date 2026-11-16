@@ -34,7 +34,7 @@ export function Money({
         variant === "total" && "text-[36px] leading-[40px] font-light tracking-[-0.02em] text-ink",
         variant === "table" && "text-right font-normal",
         variant === "body" && "text-[15px]",
-        isNegative && "text-ebb font-medium",
+        isNegative && "text-ember-ink font-medium",
         isZero && "text-ink-3",
         className
       )}
