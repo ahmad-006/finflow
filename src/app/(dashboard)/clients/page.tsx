@@ -1,8 +1,9 @@
 import * as React from "react";
 import { redirect } from "next/navigation";
 import { getSession, getCurrentUser } from "@/modules/auth";
-import { getClients, getARAgingBuckets } from "@/modules/clients/service";
+import { getCachedClients, getCachedARAgingBuckets } from "@/modules/clients/service";
 import { ClientDirectoryView } from "@/components/clients/ClientDirectoryView";
+import { ClientDirectorySkeleton } from "@/components/clients/ClientDirectorySkeleton";
 import { Band } from "@/components/shell/Band";
 
 export const metadata = {
@@ -10,7 +11,12 @@ export const metadata = {
   description: "Client directory, payment latency intelligence, and accounts receivable aging ledger.",
 };
 
-export default async function ClientsPage() {
+/**
+ * Async data streaming component: runs inside Suspense boundary.
+ * Dynamic request cookies, session verification, and DB queries are deferred here,
+ * allowing Next.js to statically prerender the outer page shell and skeleton.
+ */
+async function ClientDirectoryDataLoader() {
   const session = await getSession();
 
   if (!session) {
@@ -20,20 +26,27 @@ export default async function ClientsPage() {
   const currentUser = await getCurrentUser();
   const currency = currentUser?.company?.baseCurrency || "PKR";
 
-  // Fetch company-scoped clients and A/R aging schedule directly on the server
   const [clients, aging] = await Promise.all([
-    getClients(session.companyId),
-    getARAgingBuckets(session.companyId),
+    getCachedClients(session.companyId),
+    getCachedARAgingBuckets(session.companyId),
   ]);
 
   return (
+    <ClientDirectoryView
+      initialClients={clients}
+      aging={aging}
+      currency={currency}
+    />
+  );
+}
+
+export default function ClientsPage() {
+  return (
     <main className="min-h-screen bg-white">
       <Band tone="white" className="py-8 md:py-12">
-        <ClientDirectoryView
-          initialClients={clients}
-          aging={aging}
-          currency={currency}
-        />
+        <React.Suspense fallback={<ClientDirectorySkeleton />}>
+          <ClientDirectoryDataLoader />
+        </React.Suspense>
       </Band>
     </main>
   );

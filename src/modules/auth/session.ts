@@ -1,6 +1,8 @@
+import { cache } from "react";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import type { SessionPayload } from "./types";
+import { getUserWithCompany } from "./service";
+import type { SessionPayload, SafeUser } from "./types";
 
 export const SESSION_COOKIE_NAME = "finflow_session";
 export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days in seconds
@@ -75,3 +77,35 @@ export async function getSessionTokenFromCookies(): Promise<string | null> {
   const cookieStore = await cookies();
   return cookieStore.get(SESSION_COOKIE_NAME)?.value ?? null;
 }
+
+/**
+ * Deduplicated session lookup (React.cache).
+ * Within a single request render tree, verifies JWT only once.
+ */
+export const getSession = cache(async (): Promise<SessionPayload | null> => {
+  try {
+    const token = await getSessionTokenFromCookies();
+    if (!token) return null;
+    return await verifySessionToken(token);
+  } catch {
+    return null;
+  }
+});
+
+/**
+ * Deduplicated user & company lookup (React.cache).
+ * Within a single request render tree, queries Neon DB only once.
+ */
+export const getCurrentUser = cache(
+  async (): Promise<(SafeUser & { company: { id: string; name: string; baseCurrency: string } }) | null> => {
+    try {
+      const session = await getSession();
+      if (!session) return null;
+      return (await getUserWithCompany(session.userId)) as (SafeUser & {
+        company: { id: string; name: string; baseCurrency: string };
+      }) | null;
+    } catch {
+      return null;
+    }
+  }
+);

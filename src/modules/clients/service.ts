@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
+import { unstable_cache } from "next/cache";
 import { createClientSchema, updateClientSchema, type ClientFilterSchemaInput } from "./validation";
 import type {
   ClientRecord,
@@ -452,4 +453,55 @@ export async function getARAgingBuckets(companyId: string): Promise<ARAgingBucke
   buckets.totalOverdue = Math.round(buckets.totalOverdue * 100) / 100;
 
   return buckets;
+}
+
+/**
+ * Next.js High-Performance Cached Queries (Multi-Tenant Tagged):
+ * - Keyed by tenant companyId and query parameters
+ * - Tagged with `clients-${companyId}` and `aging-${companyId}`
+ * - Stored in memory/Edge cache across requests; revalidated on-demand on writes.
+ */
+
+export function getCachedClients(
+  companyId: string,
+  filters?: Partial<ClientFilterSchemaInput>
+): Promise<ClientWithMetrics[]> {
+  const search = filters?.search?.trim() || "";
+  const riskStatus = filters?.riskStatus || "ALL";
+  const sortBy = filters?.sortBy || "createdAt";
+  const sortOrder = filters?.sortOrder || "desc";
+
+  return unstable_cache(
+    async () => getClients(companyId, filters),
+    ["clients-list", companyId, search, riskStatus, sortBy, sortOrder],
+    {
+      tags: [`clients-${companyId}`],
+      revalidate: 3600,
+    }
+  )();
+}
+
+export function getCachedARAgingBuckets(companyId: string): Promise<ARAgingBuckets> {
+  return unstable_cache(
+    async () => getARAgingBuckets(companyId),
+    ["aging-buckets", companyId],
+    {
+      tags: [`aging-${companyId}`],
+      revalidate: 3600,
+    }
+  )();
+}
+
+export function getCachedClientById(
+  companyId: string,
+  clientId: string
+): Promise<ClientDetailWithInvoices | null> {
+  return unstable_cache(
+    async () => getClientById(companyId, clientId),
+    ["client-detail", companyId, clientId],
+    {
+      tags: [`client-${companyId}-${clientId}`, `clients-${companyId}`],
+      revalidate: 3600,
+    }
+  )();
 }

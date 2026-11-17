@@ -2,7 +2,14 @@
 
 import { redirect } from "next/navigation";
 import { registerUserAndCompany, loginUser, getUserWithCompany } from "./service";
-import { setSessionCookie, clearSessionCookie, getSessionTokenFromCookies, verifySessionToken } from "./session";
+import {
+  setSessionCookie,
+  clearSessionCookie,
+  getSessionTokenFromCookies,
+  verifySessionToken,
+  getSession,
+  getCurrentUser,
+} from "./session";
 import type { RegisterInput, LoginInput, AuthActionResult, SessionPayload, SafeUser } from "./types";
 
 function extractData(input: unknown): Record<string, unknown> {
@@ -150,31 +157,8 @@ export async function logoutAction(options?: { noRedirect?: boolean }): Promise<
   }
 }
 
-/**
- * Server Action / DAL: Reads session cookie and verifies HMAC token.
- */
-export async function getSession(): Promise<SessionPayload | null> {
-  try {
-    const token = await getSessionTokenFromCookies();
-    if (!token) return null;
-    return await verifySessionToken(token);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Fetches the authenticated user along with company details.
- */
-export async function getCurrentUser(): Promise<(SafeUser & { company: { id: string; name: string; baseCurrency: string } }) | null> {
-  try {
-    const session = await getSession();
-    if (!session) return null;
-    return (await getUserWithCompany(session.userId)) as (SafeUser & { company: { id: string; name: string; baseCurrency: string } }) | null;
-  } catch {
-    return null;
-  }
-}
+// Re-export memoized DAL functions
+export { getSession, getCurrentUser };
 
 /**
  * Guard: Requires active authentication or redirects to /login.

@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, updateTag } from "next/cache";
 import { ZodError } from "zod";
 import {
   getSessionTokenFromCookies,
@@ -99,6 +99,14 @@ export async function createClientAction(
     const validated = createClientSchema.parse(input);
     const client = await createClient(session.companyId, validated);
 
+    // Invalidate multi-tenant cache tags
+    try {
+      updateTag(`clients-${session.companyId}`);
+      updateTag(`aging-${session.companyId}`);
+    } catch {
+      revalidateTag(`clients-${session.companyId}`, { expire: 0 });
+      revalidateTag(`aging-${session.companyId}`, { expire: 0 });
+    }
     revalidatePath("/clients");
 
     return {
@@ -147,6 +155,16 @@ export async function updateClientAction(
     const validated = updateClientSchema.parse(input);
     const updated = await updateClient(session.companyId, validated);
 
+    // Invalidate multi-tenant cache tags
+    try {
+      updateTag(`clients-${session.companyId}`);
+      updateTag(`aging-${session.companyId}`);
+      updateTag(`client-${session.companyId}-${updated.id}`);
+    } catch {
+      revalidateTag(`clients-${session.companyId}`, { expire: 0 });
+      revalidateTag(`aging-${session.companyId}`, { expire: 0 });
+      revalidateTag(`client-${session.companyId}-${updated.id}`, { expire: 0 });
+    }
     revalidatePath("/clients");
     revalidatePath(`/clients/${updated.id}`);
 
@@ -186,6 +204,16 @@ export async function deleteClientAction(
 
     const deleted = await softDeleteClient(session.companyId, clientId);
 
+    // Invalidate multi-tenant cache tags
+    try {
+      updateTag(`clients-${session.companyId}`);
+      updateTag(`aging-${session.companyId}`);
+      updateTag(`client-${session.companyId}-${clientId}`);
+    } catch {
+      revalidateTag(`clients-${session.companyId}`, { expire: 0 });
+      revalidateTag(`aging-${session.companyId}`, { expire: 0 });
+      revalidateTag(`client-${session.companyId}-${clientId}`, { expire: 0 });
+    }
     revalidatePath("/clients");
     revalidatePath(`/clients/${clientId}`);
 
