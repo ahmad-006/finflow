@@ -76,12 +76,12 @@ export function UserMenu({
         </span>
         {!collapsed && (
           <>
-            <span className="max-w-[120px] truncate text-xs font-medium text-gray-900">
+            <span className="hidden sm:inline max-w-[120px] truncate text-xs font-medium text-gray-900">
               {fullName}
             </span>
             <ChevronDown
               className={cn(
-                "h-3.5 w-3.5 text-zinc-500 transition-transform",
+                "hidden sm:inline h-3.5 w-3.5 text-zinc-500 transition-transform",
                 isOpen && "rotate-180"
               )}
               strokeWidth={1.5}

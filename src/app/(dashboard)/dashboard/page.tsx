@@ -181,7 +181,7 @@ export default function DashboardOverviewPage() {
               <span className="font-semibold text-ink">30-Day Cash Runway Projection</span>
               <span className="hidden sm:inline">— Daily trajectory under {forecastMode === "expected" ? "risk-adjusted latency" : "perfect on-time settlement"}</span>
             </div>
-            <div className="flex items-center gap-4 text-[11px]">
+            <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[11px]">
               <div className="flex items-center gap-1.5">
                 <span className="h-0.5 w-3.5 bg-ink inline-block rounded-full" />
                 <span>Liquid Cash</span>
@@ -302,18 +302,18 @@ export default function DashboardOverviewPage() {
                   <div
                     key={inv.id}
                     className={cn(
-                      "py-5 flex items-center justify-between transition-colors",
+                      "py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 transition-colors",
                       recentlySettledId === inv.id && "bg-moss-tint/40 rounded-[14px] px-3 -mx-3"
                     )}
                   >
-                    <div>
-                      <p className="text-[17px] font-medium text-ink">{inv.client}</p>
-                      <p className="text-[14px] text-ink-3 mt-0.5">
+                    <div className="min-w-0">
+                      <p className="text-[16px] sm:text-[17px] font-medium text-ink truncate">{inv.client}</p>
+                      <p className="text-[13px] sm:text-[14px] text-ink-3 mt-0.5">
                         {inv.number} · {inv.dueText}
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0">
                       <Figure value={inv.amount} currency="PKR" size="row" />
                       {inv.status === "PAID" ? (
                         <Badge variant="paid">Paid</Badge>
@@ -340,15 +340,15 @@ export default function DashboardOverviewPage() {
 
               <div className="divide-y divide-line">
                 {upcomingInvoices.map((inv) => (
-                  <div key={inv.id} className="py-5 flex items-center justify-between">
-                    <div>
-                      <p className="text-[17px] font-medium text-ink">{inv.client}</p>
-                      <p className="text-[14px] text-ink-3 mt-0.5">
+                  <div key={inv.id} className="py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                    <div className="min-w-0">
+                      <p className="text-[16px] sm:text-[17px] font-medium text-ink truncate">{inv.client}</p>
+                      <p className="text-[13px] sm:text-[14px] text-ink-3 mt-0.5">
                         {inv.number} · {inv.dueText}
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0">
                       <Figure value={inv.amount} currency="PKR" size="row" />
                       <Badge variant="sent">Sent</Badge>
                     </div>
@@ -356,16 +356,16 @@ export default function DashboardOverviewPage() {
                 ))}
 
                 {/* Scheduled Expense Row */}
-                <div className="py-5 flex items-center justify-between">
-                  <div>
-                    <p className="text-[17px] font-medium text-ink">Payroll & Executive Salaries</p>
-                    <p className="text-[14px] text-ink-3 mt-0.5">
+                <div className="py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                  <div className="min-w-0">
+                    <p className="text-[16px] sm:text-[17px] font-medium text-ink">Payroll & Executive Salaries</p>
+                    <p className="text-[13px] sm:text-[14px] text-ink-3 mt-0.5">
                       Scheduled outflow · 28 Nov
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-4">
-                    <span className="text-[17px] font-medium text-ink tabular-nums">
+                  <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0">
+                    <span className="text-[16px] sm:text-[17px] font-medium text-ink tabular-nums">
                       PKR 940,000.00
                     </span>
                     <Badge variant="draft">Scheduled</Badge>

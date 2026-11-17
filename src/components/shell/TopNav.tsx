@@ -89,13 +89,13 @@ export function TopNav({
 
         {/* Center Links (App) */}
         {!isMarketing && user ? (
-          <nav className="hidden md:flex items-center gap-8" aria-label="Application navigation">
+          <nav className="hidden lg:flex items-center gap-6 xl:gap-8" aria-label="Application navigation">
             {inAppLinks.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "text-[15px] transition-colors",
+                  "text-[15px] transition-colors whitespace-nowrap",
                   item.active
                     ? "font-semibold text-ink"
                     : "font-medium text-ink-2 hover:text-ink"
@@ -152,7 +152,7 @@ export function TopNav({
             type="button"
             onClick={() => setMobileMenuOpen(true)}
             aria-label="Open menu"
-            className="md:hidden flex flex-col justify-center items-center w-8 h-8 gap-1.5 p-1 text-ink"
+            className="lg:hidden flex flex-col justify-center items-center w-8 h-8 gap-1.5 p-1 text-ink"
           >
             <span className="w-5 h-[1.5px] bg-ink block" />
             <span className="w-5 h-[1.5px] bg-ink block" />
@@ -217,17 +217,26 @@ export function TopNav({
 
           <div className="flex flex-col gap-3 pt-6 border-t border-line">
             {user ? (
-              <Button
-                variant="primary"
-                size="default"
-                className="w-full"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  if (onSignOut) onSignOut();
-                }}
-              >
-                Sign out
-              </Button>
+              <>
+                <Link
+                  href="/invoices/new"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="inline-flex items-center justify-center h-12 w-full rounded-full bg-ink text-white font-medium text-[16px] hover:bg-ink-hover active:scale-[0.98] transition-all"
+                >
+                  + New invoice
+                </Link>
+                <Button
+                  variant="secondary"
+                  size="default"
+                  className="w-full h-12 rounded-full"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    if (onSignOut) onSignOut();
+                  }}
+                >
+                  Sign out
+                </Button>
+              </>
             ) : (
               <>
                 <Link

@@ -48,19 +48,42 @@ export function ClientDirectorySkeleton() {
       </div>
 
       {/* 3. Toolbar Skeleton */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <div className="h-7 w-24 rounded-full bg-fog" />
-          <div className="h-7 w-20 rounded-full bg-fog" />
-          <div className="h-7 w-20 rounded-full bg-fog" />
-          <div className="h-7 w-20 rounded-full bg-fog" />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 -mx-2 px-2 sm:mx-0 sm:px-0 shrink-0">
+          <div className="h-7 w-24 rounded-full bg-fog shrink-0" />
+          <div className="h-7 w-20 rounded-full bg-fog shrink-0" />
+          <div className="h-7 w-20 rounded-full bg-fog shrink-0" />
+          <div className="h-7 w-20 rounded-full bg-fog shrink-0" />
         </div>
-        <div className="h-10 w-full md:w-72 rounded-[10px] bg-fog" />
+        <div className="h-10 w-full sm:w-72 rounded-[10px] bg-fog" />
       </div>
 
-      {/* 4. Table Skeleton */}
-      <div className="overflow-x-auto border-t border-b border-line">
-        <table className="w-full text-left text-sm">
+      {/* 4. Directory Skeleton: Responsive Mobile Stack + Desktop Table */}
+      {/* Mobile Card Skeleton */}
+      <div className="lg:hidden divide-y divide-line/60 border-t border-b border-line">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="py-4 flex flex-col gap-2.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-1.5 flex-1">
+                <div className="h-4 w-36 rounded-full bg-fog" />
+                <div className="h-3 w-48 rounded-full bg-fog" />
+              </div>
+              <div className="h-5 w-16 rounded-full bg-fog" />
+            </div>
+            <div className="flex items-center justify-between pt-1">
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-12 rounded-full bg-fog" />
+                <div className="h-4 w-20 rounded-full bg-fog" />
+              </div>
+              <div className="h-4 w-24 rounded-full bg-fog" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop Table Skeleton */}
+      <div className="hidden lg:block overflow-x-auto border-t border-b border-line">
+        <table className="w-full min-w-[800px] text-left text-sm">
           <thead>
             <tr className="border-b border-line text-xs font-medium uppercase tracking-[0.06em] text-ink-3">
               <th className="py-3.5 pl-2 pr-4">Client Profile</th>

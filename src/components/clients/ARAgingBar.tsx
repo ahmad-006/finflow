@@ -23,7 +23,7 @@ export function ARAgingBar({ aging, currency = "PKR", className }: ARAgingBarPro
 
   return (
     <div className={cn("flex flex-col gap-5 py-6 border-b border-line", className)}>
-      <div className="flex flex-col md:flex-row md:items-baseline md:justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-3">
         <div>
           <span className="text-[11px] font-medium tracking-[0.08em] uppercase text-ink-3">
             Receivables Schedule
@@ -33,20 +33,20 @@ export function ARAgingBar({ aging, currency = "PKR", className }: ARAgingBarPro
           </h2>
         </div>
 
-        <div className="flex items-center gap-6">
-          <div className="flex flex-col items-start md:items-end">
-            <span className="text-[12px] text-ink-3">Total Outstanding</span>
-            <span className="text-base font-semibold text-ink">
+        <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 w-full sm:w-auto pt-1 sm:pt-0">
+          <div className="flex flex-col items-start sm:items-end">
+            <span className="text-[11px] sm:text-[12px] text-ink-3">Total Outstanding</span>
+            <span className="text-sm sm:text-base font-semibold text-ink">
               <Money amount={aging.totalOutstanding} currency={currency} />
             </span>
           </div>
 
-          <div className="h-8 w-[1px] bg-line" aria-hidden="true" />
+          <div className="h-7 sm:h-8 w-[1px] bg-line" aria-hidden="true" />
 
-          <div className="flex flex-col items-start md:items-end">
-            <span className="text-[12px] text-ink-3">Overdue Delinquency</span>
+          <div className="flex flex-col items-start sm:items-end">
+            <span className="text-[11px] sm:text-[12px] text-ink-3">Overdue Delinquency</span>
             <span className={cn(
-              "text-base font-semibold",
+              "text-sm sm:text-base font-semibold",
               aging.totalOverdue > 0 ? "text-ember-ink" : "text-moss"
             )}>
               <Money amount={aging.totalOverdue} currency={currency} />
@@ -97,8 +97,8 @@ export function ARAgingBar({ aging, currency = "PKR", className }: ARAgingBarPro
           </div>
 
           {/* Aging Brackets Legend */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-1 text-xs">
-            <div className="flex flex-col gap-0.5">
+          <div className="flex overflow-x-auto no-scrollbar gap-4 sm:grid sm:grid-cols-5 sm:gap-3 pt-1 text-xs -mx-2 px-2 sm:mx-0 sm:px-0">
+            <div className="flex flex-col gap-0.5 shrink-0 min-w-[110px] sm:min-w-0">
               <div className="flex items-center gap-1.5 text-ink-3">
                 <span className="h-2 w-2 rounded-full bg-moss inline-block" />
                 <span>Current</span>
@@ -108,7 +108,7 @@ export function ARAgingBar({ aging, currency = "PKR", className }: ARAgingBarPro
               </span>
             </div>
 
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-0.5 shrink-0 min-w-[110px] sm:min-w-0">
               <div className="flex items-center gap-1.5 text-ink-3">
                 <span className="h-2 w-2 rounded-full bg-amber/70 inline-block" />
                 <span>1–30 Days</span>
@@ -118,7 +118,7 @@ export function ARAgingBar({ aging, currency = "PKR", className }: ARAgingBarPro
               </span>
             </div>
 
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-0.5 shrink-0 min-w-[110px] sm:min-w-0">
               <div className="flex items-center gap-1.5 text-ink-3">
                 <span className="h-2 w-2 rounded-full bg-amber inline-block" />
                 <span>31–60 Days</span>
@@ -128,7 +128,7 @@ export function ARAgingBar({ aging, currency = "PKR", className }: ARAgingBarPro
               </span>
             </div>
 
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-0.5 shrink-0 min-w-[110px] sm:min-w-0">
               <div className="flex items-center gap-1.5 text-ink-3">
                 <span className="h-2 w-2 rounded-full bg-ember inline-block" />
                 <span>61–90 Days</span>
@@ -138,7 +138,7 @@ export function ARAgingBar({ aging, currency = "PKR", className }: ARAgingBarPro
               </span>
             </div>
 
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-0.5 shrink-0 min-w-[110px] sm:min-w-0">
               <div className="flex items-center gap-1.5 text-ink-3">
                 <span className="h-2 w-2 rounded-full bg-ember-ink inline-block" />
                 <span>90+ Days</span>

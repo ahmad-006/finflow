@@ -140,9 +140,9 @@ export function ClientDirectoryView({
       <ARAgingBar aging={aging} currency={currency} />
 
       {/* 3. Toolbar: Search + Risk Filter Pills */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         {/* Risk Status Filter Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-2 px-2 sm:mx-0 sm:px-0 shrink-0">
           <button
             type="button"
             onClick={() => setSelectedRisk("ALL")}
@@ -197,7 +197,7 @@ export function ClientDirectoryView({
         </div>
 
         {/* Search Input */}
-        <div className="relative w-full md:w-72">
+        <div className="relative w-full sm:w-72">
           <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-3" />
           <Input
             placeholder="Search by name or email..."
@@ -208,10 +208,94 @@ export function ClientDirectoryView({
         </div>
       </div>
 
-      {/* 4. Client Directory Table */}
+      {/* 4. Client Directory Listing */}
       {filteredClients.length > 0 ? (
-        <div className="overflow-x-auto border-t border-b border-line">
-          <table className="w-full text-left text-sm">
+        <>
+          {/* Mobile Card Stack */}
+          <div className="lg:hidden divide-y divide-line/60 border-t border-b border-line">
+            {filteredClients.map((client) => {
+              const latency = client.metrics.avgPaymentDelayDays;
+              return (
+                <div key={client.id} className="py-4 flex flex-col gap-2.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <Link
+                      href={`/clients/${client.id}`}
+                      className="group flex flex-col min-w-0"
+                    >
+                      <span className="text-[15px] font-semibold text-ink group-hover:underline truncate">
+                        {client.clientName}
+                      </span>
+                      <span className="text-xs text-ink-3 truncate">
+                        {client.email}
+                      </span>
+                    </Link>
+                    <StatusBadge status={client.metrics.riskStatus} />
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs pt-0.5">
+                    <div className="flex items-center gap-2.5 text-ink-2">
+                      <span className="font-mono bg-fog px-2 py-0.5 rounded-full text-[11px]">
+                        Net {client.paymentTermsDays}
+                      </span>
+                      {client.metrics.settledInvoicesCount > 0 ? (
+                        <span
+                          className={cn(
+                            "font-mono font-medium",
+                            latency <= 3
+                              ? "text-moss"
+                              : latency <= 14
+                              ? "text-amber"
+                              : "text-ember-ink"
+                          )}
+                        >
+                          {latency <= 0 ? "On time" : `+${latency.toFixed(1)}d late`}
+                        </span>
+                      ) : (
+                        <span className="text-ink-3">No history</span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="text-right">
+                        <span className="text-[10px] uppercase tracking-wider text-ink-3 block">
+                          Outstanding
+                        </span>
+                        <span className="font-semibold text-ink text-sm">
+                          <Money
+                            amount={client.metrics.outstandingBalance}
+                            currency={currency}
+                          />
+                        </span>
+                      </div>
+                      <Link
+                        href={`/clients/${client.id}`}
+                        className="p-1.5 text-ink-3 hover:text-ink hover:bg-fog rounded-full transition-colors ml-1"
+                        aria-label={`View ${client.clientName} statement`}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Link>
+                    </div>
+                  </div>
+
+                  {client.metrics.overdueAmount > 0 && (
+                    <div className="flex items-center justify-between text-xs px-2.5 py-1 rounded-[8px] bg-ember-tint/60 text-ember-ink">
+                      <span>Overdue delinquency:</span>
+                      <span className="font-semibold">
+                        <Money
+                          amount={client.metrics.overdueAmount}
+                          currency={currency}
+                        />
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop & Tablet Table */}
+          <div className="hidden lg:block overflow-x-auto border-t border-b border-line">
+            <table className="w-full min-w-[800px] text-left text-sm">
             <thead>
               <tr className="border-b border-line text-xs font-medium uppercase tracking-[0.06em] text-ink-3">
                 <th className="py-3.5 pl-2 pr-4">
@@ -360,7 +444,8 @@ export function ClientDirectoryView({
             </tbody>
           </table>
         </div>
-      ) : (
+      </>
+    ) : (
         /* Empty States */
         <div className="py-16 text-center border-t border-b border-line">
           {searchQuery ? (

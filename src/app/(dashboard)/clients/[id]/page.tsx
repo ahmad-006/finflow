@@ -109,7 +109,7 @@ async function ClientStatementDataLoader({
       </div>
 
       {/* 3. Financial Summary Stat Rail */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 py-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 py-2">
         <div className="flex flex-col gap-1 p-4 rounded-[14px] bg-fog">
           <span className="text-xs text-ink-3">Total Billed</span>
           <span className="text-lg font-semibold text-ink">
@@ -151,7 +151,7 @@ async function ClientStatementDataLoader({
           <span className="text-[11px] text-ink-3">Past agreed terms</span>
         </div>
 
-        <div className="flex flex-col gap-1 p-4 rounded-[14px] bg-fog col-span-2 md:col-span-1">
+        <div className="flex flex-col gap-1 p-4 rounded-[14px] bg-fog col-span-2 sm:col-span-1 lg:col-span-1">
           <span className="text-xs text-ink-3">Payment Latency</span>
           <span
             className={cn(
@@ -190,8 +190,58 @@ async function ClientStatementDataLoader({
         </div>
 
         {client.invoices.length > 0 ? (
-          <div className="overflow-x-auto border-t border-b border-line">
-            <table className="w-full text-left text-sm">
+          <>
+            {/* Mobile Invoice Card Stack */}
+            <div className="lg:hidden divide-y divide-line/60 border-t border-b border-line">
+              {client.invoices.map((inv) => {
+                const isPaid = inv.status === "PAID";
+                const dueFormatted = new Date(inv.dueDate).toLocaleDateString("en-GB", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                });
+                return (
+                  <div key={inv.id} className="py-3.5 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono font-semibold text-sm text-ink">
+                        {inv.invoiceNumber}
+                      </span>
+                      <StatusBadge status={inv.status as "PAID" | "OVERDUE" | "SENT"} />
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2 text-ink-3">
+                        <span>Due {dueFormatted}</span>
+                        <span>·</span>
+                        {isPaid ? (
+                          <span className={inv.delayDays === 0 ? "text-moss font-medium" : "text-amber font-medium"}>
+                            {inv.delayDays === 0 ? "On time" : `+${inv.delayDays}d delay`}
+                          </span>
+                        ) : inv.delayDays > 0 ? (
+                          <span className="text-ember-ink font-medium">{inv.delayDays}d overdue</span>
+                        ) : (
+                          <span>Not due</span>
+                        )}
+                      </div>
+                      <div className="font-semibold text-ink text-sm">
+                        <Money amount={inv.baseTotalAmount} currency={currency} />
+                      </div>
+                    </div>
+                    {inv.paidAmount > 0 && !isPaid && (
+                      <div className="text-[11px] text-ink-3 flex justify-between">
+                        <span>Paid towards balance:</span>
+                        <span className="text-moss font-medium">
+                          <Money amount={inv.paidAmount} currency={currency} />
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop & Tablet Table */}
+            <div className="hidden lg:block overflow-x-auto border-t border-b border-line">
+              <table className="w-full min-w-[700px] text-left text-sm">
               <thead>
                 <tr className="border-b border-line text-xs font-medium uppercase tracking-[0.06em] text-ink-3">
                   <th className="py-3.5 pl-2 pr-4">Invoice</th>
@@ -278,7 +328,8 @@ async function ClientStatementDataLoader({
               </tbody>
             </table>
           </div>
-        ) : (
+        </>
+      ) : (
           <div className="py-12 text-center border-t border-b border-line">
             <FileText className="mx-auto h-8 w-8 text-ink-3 mb-2" />
             <p className="text-sm font-medium text-ink">No invoices issued to this client yet</p>

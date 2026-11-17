@@ -27,9 +27,14 @@ export function ClientStatementSkeleton() {
       </div>
 
       {/* 3. 5 KPI Summary Tiles Skeleton */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 py-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 py-2">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex flex-col gap-2 p-4 rounded-[14px] bg-fog">
+          <div
+            key={i}
+            className={`flex flex-col gap-2 p-4 rounded-[14px] bg-fog ${
+              i === 4 ? "col-span-2 sm:col-span-1 lg:col-span-1" : ""
+            }`}
+          >
             <div className="h-3 w-20 rounded-full bg-fog-2" />
             <div className="h-6 w-28 rounded-[6px] bg-fog-2" />
             <div className="h-2.5 w-16 rounded-full bg-fog-2" />
@@ -47,8 +52,25 @@ export function ClientStatementSkeleton() {
           <div className="h-3 w-16 rounded-full bg-fog" />
         </div>
 
-        <div className="overflow-x-auto border-t border-b border-line">
-          <table className="w-full text-left text-sm">
+        {/* Mobile Ledger Cards Skeleton */}
+        <div className="lg:hidden divide-y divide-line/60 border-t border-b border-line">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="py-3.5 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <div className="h-4 w-28 rounded-full bg-fog" />
+                <div className="h-5 w-16 rounded-full bg-fog" />
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="h-3 w-32 rounded-full bg-fog" />
+                <div className="h-4 w-20 rounded-full bg-fog" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Table Skeleton */}
+        <div className="hidden lg:block overflow-x-auto border-t border-b border-line">
+          <table className="w-full min-w-[700px] text-left text-sm">
             <thead>
               <tr className="border-b border-line text-xs font-medium uppercase tracking-[0.06em] text-ink-3">
                 <th className="py-3.5 pl-2 pr-4">Invoice</th>
