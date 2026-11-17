@@ -67,45 +67,45 @@ export default function HomePage() {
       <TopNav isMarketing={true} />
 
       {/* 1. HERO BAND (White band, centered, full bleed line) */}
-      <section className="bg-white pt-14 md:pt-20 pb-16 flex flex-col items-center justify-between min-h-[calc(100svh-56px)]">
+      <section className="bg-white pt-12 sm:pt-16 md:pt-20 pb-12 sm:pb-16 flex flex-col items-center justify-between min-h-0 sm:min-h-[calc(100svh-56px)]">
         <div className="mx-auto max-w-[1200px] px-[var(--gutter)] text-center flex flex-col items-center">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-fog text-[13px] font-medium text-ink-2 mb-6">
             <span className="h-2 w-2 rounded-full bg-moss" />
             <span>Real-time cash flow intelligence</span>
           </div>
 
-          <h1 className="text-[clamp(38px,5vw,62px)] font-semibold tracking-[-0.035em] text-ink leading-[1.06] max-w-[20ch]">
+          <h1 className="text-[clamp(32px,5vw,62px)] font-semibold tracking-[-0.035em] text-ink leading-[1.06] max-w-[20ch]">
             Know your cash thirty days early.
           </h1>
 
-          <p className="mt-5 text-[18px] md:text-[20px] leading-[28px] font-normal tracking-[-0.01em] text-ink-2 max-w-[560px]">
+          <p className="mt-4 sm:mt-5 text-[16px] sm:text-[18px] md:text-[20px] leading-[26px] sm:leading-[28px] font-normal tracking-[-0.01em] text-ink-2 max-w-[560px]">
             FinFlow forecasts your balance from invoices, expenses and how each client really pays.
           </p>
 
-          <div className="mt-8 flex items-center gap-6">
+          <div className="mt-6 sm:mt-8 flex items-center gap-4 sm:gap-6">
             <Link
               href="/register"
-              className="inline-flex items-center justify-center h-12 px-7 rounded-full bg-ink text-white font-medium text-[16px] hover:bg-ink-hover active:scale-[0.98] transition-all"
+              className="inline-flex items-center justify-center h-11 sm:h-12 px-6 sm:px-7 rounded-full bg-ink text-white font-medium text-[15px] sm:text-[16px] hover:bg-ink-hover active:scale-[0.98] transition-all whitespace-nowrap"
             >
               Create workspace
             </Link>
             <Link
               href="/login"
-              className="text-[16px] font-medium text-ink underline underline-offset-4 decoration-line-strong hover:decoration-ink transition-colors"
+              className="text-[15px] sm:text-[16px] font-medium text-ink underline underline-offset-4 decoration-line-strong hover:decoration-ink transition-colors whitespace-nowrap"
             >
               Sign in
             </Link>
           </div>
         </div>
 
-        {/* Full-bleed The Line (edge to edge, no container, height 44vh) */}
-        <div className="w-full mt-12 flex flex-col items-center">
-          <div className="w-full max-w-[1200px] px-[var(--gutter)] flex items-center justify-between text-[13px] text-ink-3 pb-2 border-b border-line">
-            <span>30-Day Runway Forecast</span>
+        {/* Full-bleed The Line (edge to edge, no container, height responsive) */}
+        <div className="w-full mt-8 sm:mt-12 flex flex-col items-center">
+          <div className="w-full max-w-[1200px] px-[var(--gutter)] flex flex-col sm:flex-row justify-between sm:items-baseline gap-1 text-[13px] text-ink-3 pb-2 border-b border-line">
+            <span className="font-medium text-ink">30-Day Runway Forecast</span>
             <span>Safety Buffer: PKR {DEMO.buffer.toLocaleString()}</span>
           </div>
 
-          <div className="w-full h-[40vh] min-h-[260px] max-h-[480px] mt-4">
+          <div className="w-full h-[32vh] sm:h-[40vh] min-h-[220px] sm:min-h-[260px] max-h-[480px] mt-4">
             <InkLine
               values={expectedValues}
               buffer={DEMO.buffer}
@@ -124,151 +124,281 @@ export default function HomePage() {
           </div>
 
           <div className="mt-4 text-center px-4">
-            <StatementSentence className="text-[17px] sm:text-[19px]">
+            <StatementSentence className="text-[15px] sm:text-[19px]">
               {heroSentence}
             </StatementSentence>
           </div>
         </div>
       </section>
 
-      {/* 2. STORY STAGE (Pinned interactive scroll stage across 350vh) */}
-      <section
-        id="story"
-        ref={storyRef}
-        data-state={storyState}
-        className="relative bg-white border-t border-line"
-        style={{ minHeight: "350vh" }}
-      >
-        <div className="sticky top-14 h-[calc(100svh-56px)] flex items-center py-8">
-          <div className="mx-auto w-full max-w-[1200px] px-[var(--gutter)] grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            {/* Left 5 Columns: Story Headline & Body */}
-            <div className="lg:col-span-5 flex flex-col justify-center">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-[12px] font-semibold text-ink-3 uppercase tracking-wider">
-                  Story Chapter 0{storyState} of 03
-                </span>
-                <span className="h-1 w-1 rounded-full bg-line-strong" />
-                <span className="text-[12px] text-ink-3">Scroll to progress</span>
+      {/* 2. STORY STAGE:
+          - Mobile / Tablet (< lg): No pinning (per spec 7.3). 3 stacked responsive bands with final visual states.
+          - Desktop (>= lg): Pinned interactive scroll stage across 350vh with sticky position.
+      */}
+      <section id="story" className="border-t border-line bg-white">
+        {/* Mobile / Tablet Stacked Chapters (< lg) */}
+        <div className="lg:hidden divide-y divide-line">
+          {/* Chapter 01 */}
+          <div className="py-12 px-[var(--gutter)] max-w-[1200px] mx-auto">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-[12px] font-semibold text-ink-3 tracking-wide">
+                01 · Baseline
+              </span>
+            </div>
+            <h2 className="text-[28px] sm:text-[36px] font-semibold tracking-[-0.035em] text-ink leading-tight">
+              Every invoice is a date.
+            </h2>
+            <p className="mt-3 text-[16px] sm:text-[18px] leading-[26px] font-normal text-ink-2">
+              Issue an invoice and it lands on the timeline on the exact day the money is due.
+            </p>
+            <p className="mt-2 text-[14px] text-ink-3">
+              Your scheduled cash ins step upward with each expected settlement.
+            </p>
+
+            <div className="mt-6 bg-fog p-5 sm:p-6 rounded-[20px] border border-line">
+              <div className="h-[200px] sm:h-[240px] w-full">
+                <InkLine
+                  values={onTimeValues}
+                  buffer={DEMO.buffer}
+                  label="On-time baseline forecast"
+                />
               </div>
+              <Ruler days={31} activeDay={12} />
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="text-[12px] font-medium text-ink bg-white rounded-full px-3 py-1 border border-line">
+                  Day 3 · Hamdan Textiles (+624k)
+                </span>
+                <span className="text-[12px] font-medium text-ink bg-white rounded-full px-3 py-1 border border-line">
+                  Day 7 · Northgate (+410k)
+                </span>
+                <span className="text-[12px] font-medium text-ink bg-white rounded-full px-3 py-1 border border-line">
+                  Day 19 · Crestline (+520k)
+                </span>
+              </div>
+            </div>
+          </div>
 
-              {storyState === 1 && (
-                <div className="transition-opacity duration-300">
-                  <h2 className="text-[clamp(32px,4vw,48px)] font-semibold tracking-[-0.035em] text-ink leading-tight">
-                    Every invoice is a date.
-                  </h2>
-                  <p className="mt-5 text-[18px] leading-[28px] font-normal text-ink-2">
-                    Issue an invoice and it lands on the timeline on the exact day the money is due.
-                  </p>
-                  <p className="mt-4 text-[14px] text-ink-3">
-                    Your scheduled cash ins step upward with each expected settlement.
-                  </p>
-                </div>
-              )}
-
-              {storyState === 2 && (
-                <div className="transition-opacity duration-300">
-                  <h2 className="text-[clamp(32px,4vw,48px)] font-semibold tracking-[-0.035em] text-ink leading-tight">
-                    Late payers, priced in.
-                  </h2>
-                  <p className="mt-5 text-[18px] leading-[28px] font-normal text-ink-2">
-                    FinFlow learns how each client actually pays, and moves the money to the day it will really arrive.
-                  </p>
-                  <div className="mt-4 p-3 rounded-[14px] bg-ember-tint text-[14px] font-medium text-ember-ink">
-                    Cash is below your buffer for 5 days, not 2.
-                  </div>
-                </div>
-              )}
-
-              {storyState === 3 && (
-                <div className="transition-opacity duration-300">
-                  <h2 className="text-[clamp(32px,4vw,48px)] font-semibold tracking-[-0.035em] text-ink leading-tight">
-                    One number, any currency.
-                  </h2>
-                  <p className="mt-5 text-[18px] leading-[28px] font-normal text-ink-2">
-                    Bill in dollars, euros or pounds. Your books stay unified in rupees at the rate on the day you issue.
-                  </p>
-                  <p className="mt-4 text-[14px] text-ink-3">
-                    Daily market conversion rates synced directly into your forecasting runway.
-                  </p>
-                </div>
-              )}
+          {/* Chapter 02 */}
+          <div className="py-12 px-[var(--gutter)] max-w-[1200px] mx-auto">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-[12px] font-semibold text-ink-3 tracking-wide">
+                02 · Dynamic Latency
+              </span>
+            </div>
+            <h2 className="text-[28px] sm:text-[36px] font-semibold tracking-[-0.035em] text-ink leading-tight">
+              Late payers, priced in.
+            </h2>
+            <p className="mt-3 text-[16px] sm:text-[18px] leading-[26px] font-normal text-ink-2">
+              FinFlow learns how each client actually pays, and moves the money to the day it will really arrive.
+            </p>
+            <div className="mt-4 p-3 rounded-[14px] bg-ember-tint text-[14px] font-medium text-ember-ink">
+              Cash is below your buffer for 5 days, not 2.
             </div>
 
-            {/* Right 7 Columns: Visual Representation */}
-            <div className="lg:col-span-7 flex flex-col justify-center bg-fog p-6 sm:p-8 rounded-[20px] border border-line">
-              {storyState === 1 && (
-                <div className="w-full flex flex-col">
-                  <div className="h-[250px] w-full">
-                    <InkLine
-                      values={onTimeValues}
-                      buffer={DEMO.buffer}
-                      label="On-time baseline forecast"
-                    />
-                  </div>
-                  <Ruler days={31} activeDay={12} />
-                  <div className="mt-4 flex flex-wrap gap-2.5">
-                    <span className="text-[12px] font-medium text-ink bg-white rounded-full px-3 py-1 border border-line">
-                      Day 3 · Hamdan Textiles (+624k)
-                    </span>
-                    <span className="text-[12px] font-medium text-ink bg-white rounded-full px-3 py-1 border border-line">
-                      Day 7 · Northgate (+410k)
-                    </span>
-                    <span className="text-[12px] font-medium text-ink bg-white rounded-full px-3 py-1 border border-line">
-                      Day 19 · Crestline (+520k)
-                    </span>
-                  </div>
-                </div>
-              )}
+            <div className="mt-6 bg-fog p-5 sm:p-6 rounded-[20px] border border-line">
+              <div className="h-[200px] sm:h-[240px] w-full">
+                <InkLine
+                  values={expectedValues}
+                  ghost={onTimeValues}
+                  buffer={DEMO.buffer}
+                  label="Expected cash curve with latency"
+                />
+              </div>
+              <Ruler days={31} activeDay={17} />
+              <p className="mt-4 text-[13px] text-ink-3">
+                Thin dashed line: on-time promise. Solid line: reality adjusted for 11 days average delay.
+              </p>
+            </div>
+          </div>
 
-              {storyState === 2 && (
-                <div className="w-full flex flex-col">
-                  <div className="h-[250px] w-full">
-                    <InkLine
-                      values={expectedValues}
-                      ghost={onTimeValues}
-                      buffer={DEMO.buffer}
-                      label="Expected cash curve with latency"
-                    />
-                  </div>
-                  <Ruler days={31} activeDay={17} />
-                  <p className="mt-4 text-[14px] text-ink-3">
-                    Thin dashed line: on-time promise. Solid line: reality adjusted for 11 days average delay.
-                  </p>
-                </div>
-              )}
+          {/* Chapter 03 */}
+          <div className="py-12 px-[var(--gutter)] max-w-[1200px] mx-auto">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-[12px] font-semibold text-ink-3 tracking-wide">
+                03 · Multi-Currency
+              </span>
+            </div>
+            <h2 className="text-[28px] sm:text-[36px] font-semibold tracking-[-0.035em] text-ink leading-tight">
+              One number, any currency.
+            </h2>
+            <p className="mt-3 text-[16px] sm:text-[18px] leading-[26px] font-normal text-ink-2">
+              Bill in dollars, euros or pounds. Your books stay unified in rupees at the rate on the day you issue.
+            </p>
+            <p className="mt-2 text-[14px] text-ink-3">
+              Daily market conversion rates synced directly into your forecasting runway.
+            </p>
 
-              {storyState === 3 && (
-                <div className="w-full">
-                  <div className="divide-y divide-line text-[14px]">
-                    <div className="py-2.5 flex justify-between items-center">
-                      <span className="text-ink font-medium">USD 2,340.75</span>
-                      <span className="text-ink-3">at 278.4000</span>
-                      <span className="text-ink font-mono tabular-nums">PKR 651,664.80</span>
-                    </div>
-                    <div className="py-2.5 flex justify-between items-center">
-                      <span className="text-ink font-medium">EUR 1,180.00</span>
-                      <span className="text-ink-3">at 301.2500</span>
-                      <span className="text-ink font-mono tabular-nums">PKR 355,475.00</span>
-                    </div>
-                    <div className="py-2.5 flex justify-between items-center">
-                      <span className="text-ink font-medium">GBP 960.40</span>
-                      <span className="text-ink-3">at 351.9000</span>
-                      <span className="text-ink font-mono tabular-nums">PKR 337,964.76</span>
-                    </div>
-                    <div className="py-2.5 flex justify-between items-center">
-                      <span className="text-ink font-medium">PKR 187,450.00</span>
-                      <span className="text-ink-3">at 1.0000</span>
-                      <span className="text-ink font-mono tabular-nums">PKR 187,450.00</span>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-line-strong flex justify-between items-baseline">
-                    <span className="text-[15px] font-semibold text-ink">Consolidated Total</span>
-                    <Figure value={1532554.56} currency="PKR" size="lg" />
-                  </div>
-                  <p className="mt-1 text-[12px] text-ink-3">Rates shown are verified mid-market examples.</p>
+            <div className="mt-6 bg-fog p-5 sm:p-6 rounded-[20px] border border-line">
+              <div className="divide-y divide-line text-[14px]">
+                <div className="py-2.5 flex justify-between items-center gap-2">
+                  <span className="text-ink font-medium">USD 2,340.75</span>
+                  <span className="text-ink-3 hidden sm:inline text-xs">at 278.4000</span>
+                  <span className="text-ink font-mono tabular-nums">PKR 651,664.80</span>
                 </div>
-              )}
+                <div className="py-2.5 flex justify-between items-center gap-2">
+                  <span className="text-ink font-medium">EUR 1,180.00</span>
+                  <span className="text-ink-3 hidden sm:inline text-xs">at 301.2500</span>
+                  <span className="text-ink font-mono tabular-nums">PKR 355,475.00</span>
+                </div>
+                <div className="py-2.5 flex justify-between items-center gap-2">
+                  <span className="text-ink font-medium">GBP 960.40</span>
+                  <span className="text-ink-3 hidden sm:inline text-xs">at 351.9000</span>
+                  <span className="text-ink font-mono tabular-nums">PKR 337,964.76</span>
+                </div>
+                <div className="py-2.5 flex justify-between items-center gap-2">
+                  <span className="text-ink font-medium">PKR 187,450.00</span>
+                  <span className="text-ink-3 hidden sm:inline text-xs">at 1.0000</span>
+                  <span className="text-ink font-mono tabular-nums">PKR 187,450.00</span>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-line-strong flex justify-between items-baseline">
+                <span className="text-[14px] sm:text-[15px] font-semibold text-ink">Consolidated Total</span>
+                <Figure value={1532554.56} currency="PKR" size="lg" />
+              </div>
+              <p className="mt-2 text-[12px] text-ink-3">Rates shown are verified mid-market examples.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Pinned Interactive Scroll Stage (>= lg) */}
+        <div
+          ref={storyRef}
+          data-state={storyState}
+          className="hidden lg:block relative"
+          style={{ minHeight: "350vh" }}
+        >
+          <div className="sticky top-14 h-[calc(100svh-56px)] flex items-center py-8">
+            <div className="mx-auto w-full max-w-[1200px] px-[var(--gutter)] grid grid-cols-12 gap-12 items-center">
+              {/* Left 5 Columns: Story Headline & Body */}
+              <div className="col-span-5 flex flex-col justify-center">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-[12px] font-semibold text-ink-3 tracking-wide">
+                    0{storyState} of 03
+                  </span>
+                  <span className="h-1 w-1 rounded-full bg-line-strong" />
+                  <span className="text-[12px] text-ink-3">Scroll to progress</span>
+                </div>
+
+                {storyState === 1 && (
+                  <div className="transition-opacity duration-300">
+                    <h2 className="text-[clamp(32px,4vw,48px)] font-semibold tracking-[-0.035em] text-ink leading-tight">
+                      Every invoice is a date.
+                    </h2>
+                    <p className="mt-5 text-[18px] leading-[28px] font-normal text-ink-2">
+                      Issue an invoice and it lands on the timeline on the exact day the money is due.
+                    </p>
+                    <p className="mt-4 text-[14px] text-ink-3">
+                      Your scheduled cash ins step upward with each expected settlement.
+                    </p>
+                  </div>
+                )}
+
+                {storyState === 2 && (
+                  <div className="transition-opacity duration-300">
+                    <h2 className="text-[clamp(32px,4vw,48px)] font-semibold tracking-[-0.035em] text-ink leading-tight">
+                      Late payers, priced in.
+                    </h2>
+                    <p className="mt-5 text-[18px] leading-[28px] font-normal text-ink-2">
+                      FinFlow learns how each client actually pays, and moves the money to the day it will really arrive.
+                    </p>
+                    <div className="mt-4 p-3 rounded-[14px] bg-ember-tint text-[14px] font-medium text-ember-ink">
+                      Cash is below your buffer for 5 days, not 2.
+                    </div>
+                  </div>
+                )}
+
+                {storyState === 3 && (
+                  <div className="transition-opacity duration-300">
+                    <h2 className="text-[clamp(32px,4vw,48px)] font-semibold tracking-[-0.035em] text-ink leading-tight">
+                      One number, any currency.
+                    </h2>
+                    <p className="mt-5 text-[18px] leading-[28px] font-normal text-ink-2">
+                      Bill in dollars, euros or pounds. Your books stay unified in rupees at the rate on the day you issue.
+                    </p>
+                    <p className="mt-4 text-[14px] text-ink-3">
+                      Daily market conversion rates synced directly into your forecasting runway.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Right 7 Columns: Visual Representation */}
+              <div className="col-span-7 flex flex-col justify-center bg-fog p-8 rounded-[20px] border border-line">
+                {storyState === 1 && (
+                  <div className="w-full flex flex-col">
+                    <div className="h-[250px] w-full">
+                      <InkLine
+                        values={onTimeValues}
+                        buffer={DEMO.buffer}
+                        label="On-time baseline forecast"
+                      />
+                    </div>
+                    <Ruler days={31} activeDay={12} />
+                    <div className="mt-4 flex flex-wrap gap-2.5">
+                      <span className="text-[12px] font-medium text-ink bg-white rounded-full px-3 py-1 border border-line">
+                        Day 3 · Hamdan Textiles (+624k)
+                      </span>
+                      <span className="text-[12px] font-medium text-ink bg-white rounded-full px-3 py-1 border border-line">
+                        Day 7 · Northgate (+410k)
+                      </span>
+                      <span className="text-[12px] font-medium text-ink bg-white rounded-full px-3 py-1 border border-line">
+                        Day 19 · Crestline (+520k)
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {storyState === 2 && (
+                  <div className="w-full flex flex-col">
+                    <div className="h-[250px] w-full">
+                      <InkLine
+                        values={expectedValues}
+                        ghost={onTimeValues}
+                        buffer={DEMO.buffer}
+                        label="Expected cash curve with latency"
+                      />
+                    </div>
+                    <Ruler days={31} activeDay={17} />
+                    <p className="mt-4 text-[14px] text-ink-3">
+                      Thin dashed line: on-time promise. Solid line: reality adjusted for 11 days average delay.
+                    </p>
+                  </div>
+                )}
+
+                {storyState === 3 && (
+                  <div className="w-full">
+                    <div className="divide-y divide-line text-[14px]">
+                      <div className="py-2.5 flex justify-between items-center">
+                        <span className="text-ink font-medium">USD 2,340.75</span>
+                        <span className="text-ink-3">at 278.4000</span>
+                        <span className="text-ink font-mono tabular-nums">PKR 651,664.80</span>
+                      </div>
+                      <div className="py-2.5 flex justify-between items-center">
+                        <span className="text-ink font-medium">EUR 1,180.00</span>
+                        <span className="text-ink-3">at 301.2500</span>
+                        <span className="text-ink font-mono tabular-nums">PKR 355,475.00</span>
+                      </div>
+                      <div className="py-2.5 flex justify-between items-center">
+                        <span className="text-ink font-medium">GBP 960.40</span>
+                        <span className="text-ink-3">at 351.9000</span>
+                        <span className="text-ink font-mono tabular-nums">PKR 337,964.76</span>
+                      </div>
+                      <div className="py-2.5 flex justify-between items-center">
+                        <span className="text-ink font-medium">PKR 187,450.00</span>
+                        <span className="text-ink-3">at 1.0000</span>
+                        <span className="text-ink font-mono tabular-nums">PKR 187,450.00</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-line-strong flex justify-between items-baseline">
+                      <span className="text-[15px] font-semibold text-ink">Consolidated Total</span>
+                      <Figure value={1532554.56} currency="PKR" size="lg" />
+                    </div>
+                    <p className="mt-1 text-[12px] text-ink-3">Rates shown are verified mid-market examples.</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -650,7 +780,7 @@ export default function HomePage() {
 
       {/* 10. FOOTER (One row, Section 7.7) */}
       <footer className="bg-white py-12 border-t border-line">
-        <div className="mx-auto max-w-[1200px] px-[var(--gutter)] flex flex-wrap items-center justify-between gap-6 text-[14px] text-ink-3">
+        <div className="mx-auto max-w-[1200px] px-[var(--gutter)] flex flex-col sm:flex-row items-center justify-between gap-6 text-[14px] text-ink-3 text-center sm:text-left">
           <div className="flex items-center">
             <Image
               src="/finflow-logo-on-white.png"

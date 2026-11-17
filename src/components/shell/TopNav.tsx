@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -35,8 +36,25 @@ export function TopNav({
 }: TopNavProps) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Prevent background scroll when mobile menu is open
+  React.useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
 
   // Wayfinding ruler on scroll for marketing
   React.useEffect(() => {
@@ -108,7 +126,7 @@ export function TopNav({
         ) : null}
 
         {/* Right Actions */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2.5 sm:gap-4 shrink-0">
           {isMarketing ? (
             <>
               {user ? (
@@ -122,13 +140,13 @@ export function TopNav({
                 <>
                   <Link
                     href="/login"
-                    className="text-[15px] font-medium text-ink hover:underline decoration-line-strong hover:decoration-ink transition-colors"
+                    className="hidden sm:inline-block text-[15px] font-medium text-ink hover:underline decoration-line-strong hover:decoration-ink transition-colors whitespace-nowrap"
                   >
                     Sign in
                   </Link>
                   <Link
                     href="/register"
-                    className="inline-flex items-center justify-center h-9 px-[18px] rounded-full bg-ink text-white text-[15px] font-medium hover:bg-ink-hover transition-colors"
+                    className="inline-flex items-center justify-center h-9 px-3.5 sm:px-[18px] rounded-full bg-ink text-white text-[13px] sm:text-[15px] font-medium hover:bg-ink-hover active:scale-[0.98] transition-all whitespace-nowrap shrink-0"
                   >
                     Create workspace
                   </Link>
@@ -170,9 +188,9 @@ export function TopNav({
         </div>
       )}
 
-      {/* Mobile Full-Screen Overlay */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-between bg-white p-8">
+      {/* Mobile Full-Screen Overlay (Portaled to document.body to prevent parent stacking/backdrop-filter clipping) */}
+      {mounted && mobileMenuOpen && createPortal(
+        <div className="fixed inset-0 z-[100] flex flex-col justify-between bg-white p-8">
           <div className="flex items-center justify-between">
             <Link
               href="/"
@@ -256,7 +274,8 @@ export function TopNav({
               </>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </header>
   );
