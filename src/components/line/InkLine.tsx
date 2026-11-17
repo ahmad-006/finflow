@@ -85,7 +85,7 @@ export function InkLine({
   values,
   buffer,
   width = 1440,
-  height = 420,
+  height = 250,
   label,
   ghost,
   currency = "PKR",

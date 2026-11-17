@@ -123,16 +123,16 @@ export default function DashboardOverviewPage() {
       <h1 className="sr-only">Overview</h1>
 
       {/* Band 1: White band - Hero Figure & Live InkLine Chart */}
-      <section className="bg-white pt-10 pb-16">
+      <section className="bg-white pt-6 pb-8 md:pt-8 md:pb-10">
         <div className="mx-auto max-w-[1200px] px-[var(--gutter)]">
           {/* Header row */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
-              <p className="text-[14px] text-ink-3 font-medium">Liquid cash today</p>
+              <p className="text-[13px] text-ink-3 font-medium uppercase tracking-[0.06em]">Liquid cash today</p>
               <div className="mt-1 transition-colors duration-500">
                 <Figure value={liquidCash} currency="PKR" size="xl" />
               </div>
-              <div className="mt-3">
+              <div className="mt-2">
                 <StatementSentence>
                   {overdueCount > 0 ? (
                     renderOverviewBreach("PKR 238,900", "30 Nov", 5)
@@ -144,48 +144,80 @@ export default function DashboardOverviewPage() {
             </div>
 
             {/* Segmented Control: [On time | Expected] */}
-            <div className="inline-flex h-10 p-1 rounded-full bg-fog self-start md:self-end">
-              <button
-                type="button"
-                onClick={() => setForecastMode("onTime")}
-                className={cn(
-                  "px-4 rounded-full text-[15px] font-medium transition-all select-none",
-                  forecastMode === "onTime"
-                    ? "bg-white text-ink shadow-[var(--shadow-thumb)]"
-                    : "text-ink-3 hover:text-ink"
-                )}
-              >
-                On time
-              </button>
-              <button
-                type="button"
-                onClick={() => setForecastMode("expected")}
-                className={cn(
-                  "px-4 rounded-full text-[15px] font-medium transition-all select-none",
-                  forecastMode === "expected"
-                    ? "bg-white text-ink shadow-[var(--shadow-thumb)]"
-                    : "text-ink-3 hover:text-ink"
-                )}
-              >
-                Expected
-              </button>
+            <div className="flex flex-col items-start md:items-end gap-1.5 self-start md:self-end">
+              <span className="text-[11px] font-medium tracking-[0.08em] uppercase text-ink-3">Forecast Scenario</span>
+              <div className="inline-flex h-9 p-1 rounded-full bg-fog">
+                <button
+                  type="button"
+                  onClick={() => setForecastMode("onTime")}
+                  className={cn(
+                    "px-3.5 rounded-full text-xs font-medium transition-all select-none",
+                    forecastMode === "onTime"
+                      ? "bg-white text-ink shadow-[var(--shadow-thumb)]"
+                      : "text-ink-3 hover:text-ink"
+                  )}
+                >
+                  On time
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForecastMode("expected")}
+                  className={cn(
+                    "px-3.5 rounded-full text-xs font-medium transition-all select-none",
+                    forecastMode === "expected"
+                      ? "bg-white text-ink shadow-[var(--shadow-thumb)]"
+                      : "text-ink-3 hover:text-ink"
+                  )}
+                >
+                  Expected
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Full bleed InkLine Graphic (420px height) */}
-          <div className="mt-10 h-[380px] sm:h-[420px] w-full">
+          {/* Graph Subtitle & Legend */}
+          <div className="mt-8 flex flex-wrap items-center justify-between gap-3 text-xs text-ink-3 border-t border-line/60 pt-4">
+            <div className="flex items-center gap-1.5">
+              <span className="font-semibold text-ink">30-Day Cash Runway Projection</span>
+              <span className="hidden sm:inline">— Daily trajectory under {forecastMode === "expected" ? "risk-adjusted latency" : "perfect on-time settlement"}</span>
+            </div>
+            <div className="flex items-center gap-4 text-[11px]">
+              <div className="flex items-center gap-1.5">
+                <span className="h-0.5 w-3.5 bg-ink inline-block rounded-full" />
+                <span>Liquid Cash</span>
+              </div>
+              {onTimeGhost && (
+                <div className="flex items-center gap-1.5">
+                  <span className="h-0.5 w-3.5 border-b border-dashed border-ink-3 inline-block" />
+                  <span>On-Time Ghost</span>
+                </div>
+              )}
+              <div className="flex items-center gap-1.5">
+                <span className="h-0.5 w-3.5 bg-ember inline-block rounded-full" />
+                <span>Buffer Breach</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="h-0.5 w-3.5 border-b border-dashed border-line-strong inline-block" />
+                <span>Floor (1.2M)</span>
+              </div>
+            </div>
+          </div>
+
+          {/* InkLine Graphic (Compact 240px height) */}
+          <div className="mt-2 h-[220px] sm:h-[250px] w-full">
             <InkLine
               values={forecastValues}
               ghost={onTimeGhost}
               buffer={DEMO.buffer}
-              height={420}
+              height={250}
               currency="PKR"
               label="30-day liquid cash forecast"
+              showBufferLabel={true}
             />
           </div>
 
           {/* 31-day Day Ruler with Today and Scrubber */}
-          <div className="mt-2">
+          <div className="mt-1">
             <Ruler
               days={31}
               activeDay={activeDay}
@@ -197,52 +229,52 @@ export default function DashboardOverviewPage() {
       </section>
 
       {/* Band 2: Fog band - 4 Supporting Figures directly on band (No boxes!) */}
-      <section className="bg-fog py-20">
+      <section className="bg-fog py-10 md:py-12">
         <div className="mx-auto max-w-[1200px] px-[var(--gutter)]">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
             {/* Column 1: Receivables */}
             <div>
-              <p className="text-[14px] text-ink-3 font-medium">Receivables, 30 days</p>
+              <p className="text-[13px] text-ink-3 font-medium">Receivables, 30 days</p>
               <div className="mt-1">
                 <Figure value={2222750} currency="PKR" size="lg" />
               </div>
-              <p className="mt-1 text-[14px] text-ink-3">5 invoices</p>
+              <p className="mt-0.5 text-xs text-ink-3">5 active invoices</p>
             </div>
 
             {/* Column 2: Overdue */}
             <div>
-              <p className="text-[14px] text-ink-3 font-medium">Overdue</p>
+              <p className="text-[13px] text-ink-3 font-medium">Overdue</p>
               <div className="mt-1">
                 <Figure value={overdueTotal} currency="PKR" size="lg" />
               </div>
-              <p className="mt-1 text-[14px] text-ember-ink font-medium">
+              <p className="mt-0.5 text-xs text-ember-ink font-medium">
                 {overdueCount} {overdueCount === 1 ? "invoice" : "invoices"}
               </p>
             </div>
 
             {/* Column 3: Lowest balance */}
             <div>
-              <p className="text-[14px] text-ink-3 font-medium">Lowest balance</p>
+              <p className="text-[13px] text-ink-3 font-medium">Lowest projected point</p>
               <div className="mt-1">
                 <Figure value={961100} currency="PKR" size="lg" />
               </div>
-              <p className="mt-1 text-[14px] text-ink-3">on 30 Nov</p>
+              <p className="mt-0.5 text-xs text-ink-3">Expected on 30 Nov</p>
             </div>
 
             {/* Column 4: First day below buffer */}
             <div>
-              <p className="text-[14px] text-ink-3 font-medium">First day below buffer</p>
-              <p className="mt-1 text-[40px] leading-[44px] tracking-[-0.03em] font-light text-ember-ink">
+              <p className="text-[13px] text-ink-3 font-medium">First day below buffer</p>
+              <p className="mt-1 text-2xl sm:text-[28px] leading-tight tracking-[-0.025em] font-light text-ember-ink">
                 30 Nov
               </p>
-              <p className="mt-1 text-[14px] text-ink-3">PKR 238,900 short</p>
+              <p className="mt-0.5 text-xs text-ink-3">PKR 238,900 deficit</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Band 3: White band - Ledger Rows (Needs attention & Next 14 days) */}
-      <section className="bg-white py-20">
+      <section className="bg-white py-12 md:py-16">
         <div className="mx-auto max-w-[1200px] px-[var(--gutter)]">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
             {/* Left Ledger: Needs attention */}

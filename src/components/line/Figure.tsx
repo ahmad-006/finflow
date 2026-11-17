@@ -29,13 +29,13 @@ export function Figure({
   // Size styling map
   const sizeClasses: Record<FigureSize, { container: string; currency: string; number: string; decimals: string }> = {
     xl: {
-      container: "text-[clamp(64px,9vw,128px)] leading-none tracking-[-0.045em] font-extralight",
+      container: "text-[clamp(36px,4.5vw,52px)] leading-none tracking-[-0.035em] font-light",
       currency: "text-[0.5em] font-normal mr-2 text-[var(--ink-3)]",
       number: isNegative ? "text-[var(--ember-ink)]" : "text-[var(--ink)]",
       decimals: "text-[0.55em] font-light text-[var(--ink-3)]",
     },
     lg: {
-      container: "text-[40px] leading-[44px] tracking-[-0.03em] font-light",
+      container: "text-[26px] sm:text-[30px] leading-tight tracking-[-0.025em] font-light",
       currency: "text-[0.55em] font-normal mr-1.5 text-[var(--ink-3)]",
       number: isNegative ? "text-[var(--ember-ink)]" : "text-[var(--ink)]",
       decimals: "text-[0.65em] font-normal text-[var(--ink-3)]",
