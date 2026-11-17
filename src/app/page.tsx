@@ -651,15 +651,14 @@ export default function HomePage() {
       {/* 10. FOOTER (One row, Section 7.7) */}
       <footer className="bg-white py-12 border-t border-line">
         <div className="mx-auto max-w-[1200px] px-[var(--gutter)] flex flex-wrap items-center justify-between gap-6 text-[14px] text-ink-3">
-          <div className="flex items-center gap-2 font-medium text-ink">
+          <div className="flex items-center">
             <Image
-              src="/finflow-icon.png"
+              src="/finflow-logo-on-white.png"
               alt="FinFlow"
-              width={20}
-              height={20}
-              className="h-5 w-5 rounded-md object-contain"
+              width={109}
+              height={25}
+              className="h-5 w-auto object-contain"
             />
-            <span>FinFlow</span>
           </div>
 
           <p>Built for CS2682, Riphah International University</p>

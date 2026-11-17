@@ -75,19 +75,16 @@ export function TopNav({
         {/* Left: Wordmark */}
         <Link
           href={user ? "/dashboard" : "/"}
-          className="flex items-center gap-2 text-ink hover:opacity-90 transition-opacity"
+          className="flex items-center hover:opacity-90 transition-opacity"
         >
           <Image
-            src="/finflow-icon.png"
+            src="/finflow-logo-on-white.png"
             alt="FinFlow"
-            width={24}
-            height={24}
-            className="h-6 w-6 rounded-md object-contain shrink-0"
+            width={131}
+            height={30}
+            className="h-7 w-auto object-contain shrink-0"
             priority
           />
-          <span className="font-semibold text-lg tracking-tight text-ink">
-            FinFlow
-          </span>
         </Link>
 
         {/* Center Links (App) */}
@@ -180,16 +177,15 @@ export function TopNav({
             <Link
               href="/"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 text-ink font-semibold text-lg"
+              className="flex items-center hover:opacity-90 transition-opacity"
             >
               <Image
-                src="/finflow-icon.png"
+                src="/finflow-logo-on-white.png"
                 alt="FinFlow"
-                width={24}
-                height={24}
-                className="h-6 w-6 rounded-md object-contain"
+                width={131}
+                height={30}
+                className="h-7 w-auto object-contain"
               />
-              <span>FinFlow</span>
             </Link>
             <button
               type="button"
