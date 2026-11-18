@@ -35,6 +35,8 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
   }
 
   // 4. Determine route access
+  const isLogoutRoute = pathname === "/logout" || pathname.startsWith("/logout/");
+
   const isAuthRoute =
     pathname === "/login" ||
     pathname.startsWith("/login/") ||
@@ -43,6 +45,7 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
 
   const isPublicRoute =
     isAuthRoute ||
+    isLogoutRoute ||
     pathname.startsWith("/pay") ||
     pathname.startsWith("/api/pay") ||
     pathname.startsWith("/api/health");
@@ -63,7 +66,8 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
   }
 
   // If an already authenticated user visits /login or /register, redirect directly to /dashboard
-  if (isAuthRoute && session) {
+  // (Do not redirect /logout, which handles explicit session destruction)
+  if (isAuthRoute && session && !isLogoutRoute) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

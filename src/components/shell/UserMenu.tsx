@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { SlidersHorizontal, LogOut, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { logoutAction } from "@/modules/auth/actions";
 
 export interface UserMenuProps {
   user?: {
@@ -30,7 +31,24 @@ export function UserMenu({
   className,
 }: UserMenuProps) {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [isPending, startTransition] = React.useTransition();
   const menuRef = React.useRef<HTMLDivElement>(null);
+
+  const handleSignOut = () => {
+    startTransition(async () => {
+      setIsOpen(false);
+      try {
+        if (onSignOut) {
+          await onSignOut();
+        } else {
+          await logoutAction();
+        }
+      } catch (err) {
+        // Fallback hard redirect to /logout in case of unexpected action failure
+        window.location.href = "/logout";
+      }
+    });
+  };
 
   // Close when clicking outside
   React.useEffect(() => {
@@ -123,30 +141,16 @@ export function UserMenu({
               <span>Settings</span>
             </Link>
 
-            {onSignOut ? (
-              <button
-                type="button"
-                onClick={async () => {
-                  setIsOpen(false);
-                  await onSignOut();
-                }}
-                className="flex w-full items-center gap-2 rounded-full px-3 py-2 text-[14px] text-ember-ink hover:bg-ember-tint transition-colors text-left"
-                role="menuitem"
-              >
-                <LogOut className="h-4 w-4 stroke-[1.5]" />
-                <span>Log out</span>
-              </button>
-            ) : (
-              <Link
-                href="/login"
-                onClick={() => setIsOpen(false)}
-                className="flex w-full items-center gap-2 rounded-full px-3 py-2 text-[14px] text-ember-ink hover:bg-ember-tint transition-colors text-left"
-                role="menuitem"
-              >
-                <LogOut className="h-4 w-4 stroke-[1.5]" />
-                <span>Log out</span>
-              </Link>
-            )}
+            <button
+              type="button"
+              onClick={handleSignOut}
+              disabled={isPending}
+              className="flex w-full items-center gap-2 rounded-full px-3 py-2 text-[14px] text-ember-ink hover:bg-ember-tint transition-colors text-left disabled:opacity-50"
+              role="menuitem"
+            >
+              <LogOut className="h-4 w-4 stroke-[1.5]" />
+              <span>{isPending ? "Logging out..." : "Log out"}</span>
+            </button>
           </div>
         </div>
       )}

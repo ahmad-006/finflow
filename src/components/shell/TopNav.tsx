@@ -9,6 +9,7 @@ import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserMenu } from "./UserMenu";
 import { Button } from "@/components/ui/button";
+import { logoutAction } from "@/modules/auth/actions";
 
 export interface TopNavProps {
   user?: {
@@ -39,6 +40,22 @@ export function TopNav({
   const [mounted, setMounted] = React.useState(false);
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
+  const [isLoggingOut, startLogoutTransition] = React.useTransition();
+
+  const handleMobileSignOut = () => {
+    startLogoutTransition(async () => {
+      setMobileMenuOpen(false);
+      try {
+        if (onSignOut) {
+          await onSignOut();
+        } else {
+          await logoutAction();
+        }
+      } catch (err) {
+        window.location.href = "/logout";
+      }
+    });
+  };
 
   React.useEffect(() => {
     setMounted(true);
@@ -247,12 +264,10 @@ export function TopNav({
                   variant="secondary"
                   size="default"
                   className="w-full h-12 rounded-full"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    if (onSignOut) onSignOut();
-                  }}
+                  disabled={isLoggingOut}
+                  onClick={handleMobileSignOut}
                 >
-                  Sign out
+                  {isLoggingOut ? "Signing out..." : "Sign out"}
                 </Button>
               </>
             ) : (
