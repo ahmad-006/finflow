@@ -44,7 +44,7 @@ export function OfflineBanner() {
     return (
       <aside
         aria-live="polite"
-        className="w-full bg-amber-50 border-b border-amber-200 px-4 py-2 text-amber-900 text-xs font-medium"
+        className="w-full bg-amber-50 border-b border-amber-200 px-4 py-2 text-amber-900 text-xs font-medium print:hidden"
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -70,7 +70,7 @@ export function OfflineBanner() {
     return (
       <aside
         aria-live="polite"
-        className="w-full bg-emerald-50 border-b border-emerald-200 px-4 py-2 text-emerald-900 text-xs font-medium transition-opacity duration-300"
+        className="w-full bg-emerald-50 border-b border-emerald-200 px-4 py-2 text-emerald-900 text-xs font-medium transition-opacity duration-300 print:hidden"
       >
         <div className="max-w-7xl mx-auto flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />

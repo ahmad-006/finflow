@@ -16,12 +16,15 @@ import {
   Clock,
   CheckCircle2,
   AlertTriangle,
+  Download,
+  Loader2,
 } from "lucide-react";
 import type { InvoiceWithItemsAndClient } from "@/modules/invoices/types";
 import { formatMoney } from "@/modules/invoices/currency";
 import { InvoiceStatusBadge } from "./InvoiceStatusBadge";
 import { RecordPaymentModal } from "./RecordPaymentModal";
 import { formatUserError } from "@/lib/errors";
+import { downloadInvoicePDF } from "@/modules/documents";
 import {
   markInvoiceSentAction,
   cancelInvoiceAction,
@@ -42,6 +45,7 @@ export function InvoiceDetailCockpit({
   const [isPending, startTransition] = React.useTransition();
   const [isPaymentModalOpen, setIsPaymentModalOpen] = React.useState(false);
   const [copiedLink, setCopiedLink] = React.useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = React.useState(false);
   const [actionError, setActionError] = React.useState<string | null>(null);
 
   const remainingBalance = Math.max(0, invoice.totalAmount - invoice.paidAmount);
@@ -53,6 +57,24 @@ export function InvoiceDetailCockpit({
       day: "numeric",
       year: "numeric",
     }).format(new Date(date));
+  };
+
+  const handleDownloadPdf = async () => {
+    setActionError(null);
+    setIsDownloadingPdf(true);
+    try {
+      // Yield to event loop to allow loading spinner to render
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      downloadInvoicePDF(invoice, {
+        companyName,
+        baseCurrency,
+      });
+    } catch (err) {
+      console.error("PDF download failed:", err);
+      setActionError("Failed to generate PDF document. Please try again.");
+    } finally {
+      setIsDownloadingPdf(false);
+    }
   };
 
   const handleCopyPublicLink = () => {
@@ -148,15 +170,37 @@ export function InvoiceDetailCockpit({
             )}
           </button>
 
-          {/* Print / Export */}
+          {/* Download PDF Vector Document */}
           <button
             type="button"
-            onClick={handlePrint}
+            disabled={isDownloadingPdf}
+            onClick={handleDownloadPdf}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-line bg-white text-xs font-medium text-ink/70 hover:bg-fog hover:text-ink transition-colors disabled:opacity-50"
+            title="Download PDF document (INV-YYYY-XXXX.pdf)"
+          >
+            {isDownloadingPdf ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-ink/70" />
+                <span>Generating PDF...</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-3.5 h-3.5" />
+                <span>Download PDF</span>
+              </>
+            )}
+          </button>
+
+          {/* Print / Export */}
+          <Link
+            href={`/invoices/${invoice.id}/print`}
+            target="_blank"
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-line bg-white text-xs font-medium text-ink/70 hover:bg-fog hover:text-ink transition-colors"
+            title="Open printable A4 view"
           >
             <Printer className="w-3.5 h-3.5" />
-            <span>Print Invoice</span>
-          </button>
+            <span>Print View</span>
+          </Link>
 
           {/* Mark Sent (if DRAFT) */}
           {invoice.status === "DRAFT" && (

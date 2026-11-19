@@ -9,6 +9,8 @@ import {
   Calendar,
   ArrowRight,
   Filter,
+  Download,
+  Loader2,
 } from "lucide-react";
 import type {
   InvoiceWithItemsAndClient,
@@ -19,18 +21,22 @@ import type {
 import { formatMoney, SUPPORTED_CURRENCIES } from "@/modules/invoices/currency";
 import { InvoiceStatusBadge } from "./InvoiceStatusBadge";
 import { InvoiceKPIStrip } from "./InvoiceKPIStrip";
+import { downloadInvoicePDF } from "@/modules/documents";
 
 interface InvoiceDirectoryViewProps {
   initialInvoices: InvoiceWithItemsAndClient[];
   kpis: InvoiceKPIs;
   baseCurrency?: string;
+  companyName?: string;
 }
 
 export function InvoiceDirectoryView({
   initialInvoices,
   kpis,
   baseCurrency = "PKR",
+  companyName = "FinFlow Commercial Services",
 }: InvoiceDirectoryViewProps) {
+  const [downloadingId, setDownloadingId] = React.useState<string | null>(null);
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<InvoiceStatus | "ALL">("ALL");
   const [currencyFilter, setCurrencyFilter] = React.useState<InvoiceCurrency | "ALL">("ALL");
@@ -86,6 +92,21 @@ export function InvoiceDirectoryView({
       day: "numeric",
       year: "numeric",
     }).format(new Date(date));
+  };
+
+  const handleDownloadPDF = async (inv: InvoiceWithItemsAndClient) => {
+    setDownloadingId(inv.id);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      downloadInvoicePDF(inv, {
+        companyName,
+        baseCurrency,
+      });
+    } catch (err) {
+      console.error("Quick PDF download failed:", err);
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   return (
@@ -300,13 +321,31 @@ export function InvoiceDirectoryView({
 
                       {/* Action */}
                       <td className="py-3 px-4 text-right">
-                        <Link
-                          href={`/invoices/${inv.id}`}
-                          className="inline-flex items-center gap-1 text-[11px] font-medium text-ink/70 hover:text-ink px-2.5 py-1 rounded-full border border-line hover:bg-fog transition-colors"
-                        >
-                          <span>Manage</span>
-                          <ArrowRight className="w-3 h-3" />
-                        </Link>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            title="Download PDF"
+                            disabled={downloadingId === inv.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownloadPDF(inv);
+                            }}
+                            className="inline-flex items-center justify-center p-1.5 rounded-full border border-line bg-white text-ink/70 hover:text-ink hover:bg-fog transition-colors disabled:opacity-50"
+                          >
+                            {downloadingId === inv.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-ink/70" />
+                            ) : (
+                              <Download className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                          <Link
+                            href={`/invoices/${inv.id}`}
+                            className="inline-flex items-center gap-1 text-[11px] font-medium text-ink/70 hover:text-ink px-2.5 py-1 rounded-full border border-line hover:bg-fog transition-colors"
+                          >
+                            <span>Manage</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -325,15 +364,17 @@ export function InvoiceDirectoryView({
                 new Date(inv.dueDate).getTime() < new Date().getTime();
 
               return (
-                <Link
+                <div
                   key={inv.id}
-                  href={`/invoices/${inv.id}`}
-                  className="flex flex-col gap-2.5 p-4 hover:bg-fog/20 transition-colors block"
+                  className="flex flex-col gap-2.5 p-4 hover:bg-fog/20 transition-colors"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-mono font-medium text-sm text-ink">
+                    <Link
+                      href={`/invoices/${inv.id}`}
+                      className="font-mono font-medium text-sm text-ink hover:underline"
+                    >
                       {inv.invoiceNumber}
-                    </span>
+                    </Link>
                     <InvoiceStatusBadge status={inv.status} />
                   </div>
 
@@ -363,12 +404,31 @@ export function InvoiceDirectoryView({
                         </span>
                       )}
                     </div>
-                    <span className="text-ink font-medium flex items-center gap-0.5">
-                      View details
-                      <ArrowRight className="w-3 h-3" />
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={downloadingId === inv.id}
+                        onClick={() => handleDownloadPDF(inv)}
+                        className="inline-flex items-center gap-1 text-[10px] font-medium text-ink/70 hover:text-ink px-2 py-0.5 rounded-full border border-line hover:bg-fog transition-colors disabled:opacity-50"
+                        title="Download PDF"
+                      >
+                        {downloadingId === inv.id ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Download className="w-3 h-3" />
+                        )}
+                        <span>PDF</span>
+                      </button>
+                      <Link
+                        href={`/invoices/${inv.id}`}
+                        className="text-ink font-medium flex items-center gap-0.5"
+                      >
+                        <span>View</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </Link>
+                    </div>
                   </div>
-                </Link>
+                </div>
               );
             })}
           </div>
