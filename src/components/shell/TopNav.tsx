@@ -94,6 +94,7 @@ export function TopNav({
     { label: "Overview", href: "/dashboard", active: pathname === "/dashboard" },
     { label: "Invoices", href: "/invoices", active: pathname.startsWith("/invoices") },
     { label: "Clients", href: "/clients", active: pathname.startsWith("/clients") },
+    { label: "Expenses", href: "/expenses", active: pathname.startsWith("/expenses") },
     { label: "Cash flow", href: "/cash-flow", active: pathname.startsWith("/cash-flow") },
     { label: "Calendar", href: "/calendar", active: pathname.startsWith("/calendar") },
   ];
@@ -101,7 +102,7 @@ export function TopNav({
   return (
     <header
       className={cn(
-        "sticky top-0 z-20 h-14 w-full bg-white/80 backdrop-blur-[20px] transition-colors select-none",
+        "sticky top-0 z-20 h-14 w-full bg-white/80 backdrop-blur-[20px] transition-colors select-none print:hidden",
         isScrolled && "border-b border-line",
         className
       )}
