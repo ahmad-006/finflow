@@ -3,6 +3,7 @@
 import * as React from "react";
 import { X, Loader2 } from "lucide-react";
 import { createClientAction } from "@/modules/clients/actions";
+import { formatUserError } from "@/lib/errors";
 import type { ClientRecord } from "@/modules/clients/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,20 +56,24 @@ export function CreateClientModal({
     setFieldErrors({});
 
     startTransition(async () => {
-      const result = await createClientAction(formData);
+      try {
+        const result = await createClientAction(formData);
 
-      if (!result.success) {
-        setErrorMessage(result.error || "Failed to create client.");
-        if (result.errors) {
-          setFieldErrors(result.errors);
+        if (!result.success) {
+          setErrorMessage(result.error || "Failed to create client.");
+          if (result.errors) {
+            setFieldErrors(result.errors);
+          }
+          return;
         }
-        return;
-      }
 
-      if (result.data) {
-        onSuccess?.(result.data);
+        if (result.data) {
+          onSuccess?.(result.data);
+        }
+        onClose();
+      } catch (err) {
+        setErrorMessage(formatUserError(err, "Unable to create client. Please check your connection."));
       }
-      onClose();
     });
   }
 

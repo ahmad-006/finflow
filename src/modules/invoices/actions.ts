@@ -2,6 +2,7 @@
 
 import { revalidatePath, revalidateTag, updateTag } from "next/cache";
 import { ZodError } from "zod";
+import { formatUserError } from "@/lib/errors";
 import {
   getSessionTokenFromCookies,
   verifySessionToken,
@@ -115,7 +116,7 @@ export async function createInvoiceAction(
     }
     return {
       success: false,
-      error: err instanceof Error ? err.message : "Failed to create invoice.",
+      error: formatUserError(err, "Failed to create invoice."),
     };
   }
 }
@@ -151,7 +152,7 @@ export async function updateInvoiceAction(
     }
     return {
       success: false,
-      error: err instanceof Error ? err.message : "Failed to update invoice.",
+      error: formatUserError(err, "Failed to update invoice."),
     };
   }
 }
@@ -183,7 +184,7 @@ export async function markInvoiceSentAction(
   } catch (err: unknown) {
     return {
       success: false,
-      error: err instanceof Error ? err.message : "Failed to mark invoice as sent.",
+      error: formatUserError(err, "Failed to mark invoice as sent."),
     };
   }
 }
@@ -220,7 +221,7 @@ export async function recordPaymentAction(
     }
     return {
       success: false,
-      error: err instanceof Error ? err.message : "Failed to record payment.",
+      error: formatUserError(err, "Failed to record payment."),
     };
   }
 }
@@ -251,7 +252,7 @@ export async function cancelInvoiceAction(
   } catch (err: unknown) {
     return {
       success: false,
-      error: err instanceof Error ? err.message : "Failed to cancel invoice.",
+      error: formatUserError(err, "Failed to cancel invoice."),
     };
   }
 }

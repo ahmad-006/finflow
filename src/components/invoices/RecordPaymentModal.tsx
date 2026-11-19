@@ -4,6 +4,7 @@ import * as React from "react";
 import { X, CheckCircle2, AlertCircle } from "lucide-react";
 import { formatMoney } from "@/modules/invoices/currency";
 import type { InvoiceCurrency } from "@/modules/invoices/types";
+import { formatUserError } from "@/lib/errors";
 import { recordPaymentAction } from "@/modules/invoices/actions";
 
 interface RecordPaymentModalProps {
@@ -58,18 +59,22 @@ export function RecordPaymentModal({
     }
 
     startTransition(async () => {
-      const res = await recordPaymentAction({
-        invoiceId,
-        paidAmount: parsedAmount,
-        paidAt: paymentDate,
-        notes: notes.trim() || undefined,
-      });
+      try {
+        const res = await recordPaymentAction({
+          invoiceId,
+          paidAmount: parsedAmount,
+          paidAt: paymentDate,
+          notes: notes.trim() || undefined,
+        });
 
-      if (!res.success) {
-        setErrorBanner(res.error || "Failed to record payment.");
-      } else {
-        onSuccess?.();
-        onClose();
+        if (!res.success) {
+          setErrorBanner(res.error || "Failed to record payment.");
+        } else {
+          onSuccess?.();
+          onClose();
+        }
+      } catch (actionErr) {
+        setErrorBanner(formatUserError(actionErr, "Unable to record payment. Please check your connection."));
       }
     });
   };

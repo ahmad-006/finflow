@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { hanken } from "./fonts";
+import { OfflineBanner } from "@/components/shell/OfflineBanner";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -146,6 +147,7 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-white text-ink font-sans min-h-screen antialiased selection:bg-ink selection:text-white">
+        <OfflineBanner />
         {children}
       </body>
     </html>

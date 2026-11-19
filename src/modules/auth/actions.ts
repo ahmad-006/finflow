@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { formatUserError } from "@/lib/errors";
 import { registerUserAndCompany, loginUser, getUserWithCompany } from "./service";
 import {
   setSessionCookie,
@@ -78,7 +79,7 @@ export async function registerAction(
       throw err;
     }
 
-    const message = err instanceof Error ? err.message : "Registration failed. Please check your inputs.";
+    const message = formatUserError(err, "Registration failed. Please check your inputs.");
     return {
       success: false,
       error: message,
@@ -121,7 +122,7 @@ export async function loginAction(
       throw err;
     }
 
-    const message = err instanceof Error ? err.message : "Invalid credentials. Please try again.";
+    const message = formatUserError(err, "Invalid credentials. Please try again.");
     return {
       success: false,
       error: message,

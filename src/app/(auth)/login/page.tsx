@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { InlineAlert } from "@/components/feedback/InlineAlert";
+import { formatUserError } from "@/lib/errors";
 import { loginAction } from "@/modules/auth/actions";
 
 export default function LoginPage() {
@@ -43,11 +44,7 @@ export default function LoginPage() {
       ) {
         return;
       }
-      setError(
-        err instanceof Error
-          ? err.message
-          : "The email or password is incorrect."
-      );
+      setError(formatUserError(err, "The email or password is incorrect."));
       setIsPending(false);
     }
   };

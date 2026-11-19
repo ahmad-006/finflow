@@ -21,6 +21,7 @@ import {
   DEFAULT_EXCHANGE_RATES,
   CURRENCY_SYMBOLS,
 } from "@/modules/invoices/currency";
+import { formatUserError } from "@/lib/errors";
 import { createInvoiceAction } from "@/modules/invoices/actions";
 
 interface ClientOption {
@@ -166,15 +167,19 @@ export function InvoiceBuilderView({
         })),
       };
 
-      const res = await createInvoiceAction(payload);
+      try {
+        const res = await createInvoiceAction(payload);
 
-      if (!res.success) {
-        setErrorBanner(res.error || "Failed to generate invoice.");
-        if (res.errors) {
-          setFieldErrors(res.errors);
+        if (!res.success) {
+          setErrorBanner(res.error || "Failed to generate invoice.");
+          if (res.errors) {
+            setFieldErrors(res.errors);
+          }
+        } else if (res.data) {
+          router.push(`/invoices/${res.data.id}`);
         }
-      } else if (res.data) {
-        router.push(`/invoices/${res.data.id}`);
+      } catch (actionErr) {
+        setErrorBanner(formatUserError(actionErr, "Unable to generate invoice. Please check your connection."));
       }
     });
   };

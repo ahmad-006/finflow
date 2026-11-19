@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Plus, Search, ChevronRight, Trash2, ArrowUpDown } from "lucide-react";
 import type { ClientWithMetrics, ARAgingBuckets, ClientRiskStatus } from "@/modules/clients/types";
 import { deleteClientAction } from "@/modules/clients/actions";
+import { formatUserError } from "@/lib/errors";
 import { ARAgingBar } from "./ARAgingBar";
 import { CreateClientModal } from "./CreateClientModal";
 import { StatusBadge } from "@/components/data/StatusBadge";
@@ -98,14 +99,19 @@ export function ClientDirectoryView({
       return;
     }
 
-    setDeletePendingId(id);
-    const result = await deleteClientAction(id);
-    setDeletePendingId(null);
+    try {
+      setDeletePendingId(id);
+      const result = await deleteClientAction(id);
+      setDeletePendingId(null);
 
-    if (result.success) {
-      setClients((prev) => prev.filter((c) => c.id !== id));
-    } else {
-      alert(result.error || "Failed to delete client.");
+      if (result.success) {
+        setClients((prev) => prev.filter((c) => c.id !== id));
+      } else {
+        alert(result.error || "Failed to delete client.");
+      }
+    } catch (err) {
+      setDeletePendingId(null);
+      alert(formatUserError(err, "Unable to delete client. Please check your connection."));
     }
   }
 

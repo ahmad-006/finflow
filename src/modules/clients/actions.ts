@@ -2,6 +2,7 @@
 
 import { revalidatePath, revalidateTag, updateTag } from "next/cache";
 import { ZodError } from "zod";
+import { formatUserError } from "@/lib/errors";
 import {
   getSessionTokenFromCookies,
   verifySessionToken,
@@ -123,7 +124,7 @@ export async function createClientAction(
     }
     return {
       success: false,
-      error: err instanceof Error ? err.message : "Failed to create client.",
+      error: formatUserError(err, "Failed to create client."),
     };
   }
 }
@@ -182,7 +183,7 @@ export async function updateClientAction(
     }
     return {
       success: false,
-      error: err instanceof Error ? err.message : "Failed to update client.",
+      error: formatUserError(err, "Failed to update client."),
     };
   }
 }
@@ -224,7 +225,7 @@ export async function deleteClientAction(
   } catch (err: unknown) {
     return {
       success: false,
-      error: err instanceof Error ? err.message : "Failed to delete client.",
+      error: formatUserError(err, "Failed to delete client."),
     };
   }
 }

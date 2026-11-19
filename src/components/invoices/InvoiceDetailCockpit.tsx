@@ -21,6 +21,7 @@ import type { InvoiceWithItemsAndClient } from "@/modules/invoices/types";
 import { formatMoney } from "@/modules/invoices/currency";
 import { InvoiceStatusBadge } from "./InvoiceStatusBadge";
 import { RecordPaymentModal } from "./RecordPaymentModal";
+import { formatUserError } from "@/lib/errors";
 import {
   markInvoiceSentAction,
   cancelInvoiceAction,
@@ -65,11 +66,15 @@ export function InvoiceDetailCockpit({
   const handleMarkSent = () => {
     setActionError(null);
     startTransition(async () => {
-      const res = await markInvoiceSentAction(invoice.id);
-      if (!res.success) {
-        setActionError(res.error || "Failed to mark invoice as sent.");
-      } else {
-        router.refresh();
+      try {
+        const res = await markInvoiceSentAction(invoice.id);
+        if (!res.success) {
+          setActionError(res.error || "Failed to mark invoice as sent.");
+        } else {
+          router.refresh();
+        }
+      } catch (err) {
+        setActionError(formatUserError(err, "Unable to mark invoice as sent. Please check your connection."));
       }
     });
   };
@@ -80,11 +85,15 @@ export function InvoiceDetailCockpit({
     }
     setActionError(null);
     startTransition(async () => {
-      const res = await cancelInvoiceAction(invoice.id);
-      if (!res.success) {
-        setActionError(res.error || "Failed to cancel invoice.");
-      } else {
-        router.refresh();
+      try {
+        const res = await cancelInvoiceAction(invoice.id);
+        if (!res.success) {
+          setActionError(res.error || "Failed to cancel invoice.");
+        } else {
+          router.refresh();
+        }
+      } catch (err) {
+        setActionError(formatUserError(err, "Unable to cancel invoice. Please check your connection."));
       }
     });
   };

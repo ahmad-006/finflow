@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { InlineAlert } from "@/components/feedback/InlineAlert";
+import { formatUserError } from "@/lib/errors";
 import { registerAction } from "@/modules/auth/actions";
 import { cn } from "@/lib/utils";
 
@@ -62,11 +63,7 @@ export default function RegisterPage() {
       ) {
         return;
       }
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to create workspace. Please check your connection."
-      );
+      setError(formatUserError(err, "Unable to create workspace. Please check your connection."));
       setIsPending(false);
     }
   };
