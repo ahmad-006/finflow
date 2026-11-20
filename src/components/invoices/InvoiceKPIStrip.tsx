@@ -11,7 +11,7 @@ export function InvoiceKPIStrip({ kpis, baseCurrency = "PKR" }: InvoiceKPIStripP
   const currencyCode = (baseCurrency as any) || "PKR";
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 py-4 border-y border-line">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 py-4 border-y border-line">
       {/* 1. Outstanding Receivables */}
       <div className="flex flex-col gap-1 p-2">
         <div className="flex items-center justify-between">
@@ -24,7 +24,7 @@ export function InvoiceKPIStrip({ kpis, baseCurrency = "PKR" }: InvoiceKPIStripP
             </span>
           )}
         </div>
-        <div className="text-xl sm:text-2xl font-serif tracking-tight text-ink">
+        <div className="text-lg sm:text-2xl font-serif tracking-tight text-ink num truncate">
           {formatMoney(kpis.totalOutstanding, currencyCode)}
         </div>
         <span className="text-[11px] text-ink/50">
@@ -45,7 +45,7 @@ export function InvoiceKPIStrip({ kpis, baseCurrency = "PKR" }: InvoiceKPIStripP
           )}
         </div>
         <div
-          className={`text-xl sm:text-2xl font-serif tracking-tight ${
+          className={`text-lg sm:text-2xl font-serif tracking-tight num truncate ${
             kpis.totalOverdue > 0 ? "text-ember" : "text-ink"
           }`}
         >
@@ -61,7 +61,7 @@ export function InvoiceKPIStrip({ kpis, baseCurrency = "PKR" }: InvoiceKPIStripP
         <span className="text-xs font-mono uppercase tracking-wider text-ink/50">
           Settled This Month
         </span>
-        <div className="text-xl sm:text-2xl font-serif tracking-tight text-ink">
+        <div className="text-lg sm:text-2xl font-serif tracking-tight text-ink num truncate">
           {formatMoney(kpis.totalPaidThisMonth, currencyCode)}
         </div>
         <span className="text-[11px] text-ink/50">
@@ -74,7 +74,7 @@ export function InvoiceKPIStrip({ kpis, baseCurrency = "PKR" }: InvoiceKPIStripP
         <span className="text-xs font-mono uppercase tracking-wider text-ink/50">
           Drafts
         </span>
-        <div className="text-xl sm:text-2xl font-serif tracking-tight text-ink">
+        <div className="text-lg sm:text-2xl font-serif tracking-tight text-ink num truncate">
           {formatMoney(kpis.totalDrafts, currencyCode)}
         </div>
         <span className="text-[11px] text-ink/50">

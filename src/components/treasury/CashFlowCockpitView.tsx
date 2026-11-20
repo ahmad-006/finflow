@@ -160,24 +160,24 @@ export function CashFlowCockpitView({
           </div>
 
           {/* Action pills */}
-          <div className="flex flex-wrap items-center gap-3 self-start md:self-end shrink-0">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto shrink-0 self-start md:self-end">
             <Button
               type="button"
               variant="secondary"
               onClick={() => setIsSettingsOpen(true)}
-              className="h-10 px-4 rounded-full text-xs font-medium border border-line hover:border-ink-3"
+              className="min-h-[44px] px-4 rounded-full text-xs font-medium border border-line hover:border-ink-3 flex items-center justify-center"
             >
-              <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5" />
-              Adjust liquidity reserve
+              <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+              <span>Adjust liquidity reserve</span>
             </Button>
             <Button
               type="button"
               variant="primary"
               onClick={() => setIsExpenseDrawerOpen(true)}
-              className="h-10 px-5 rounded-full text-xs font-medium bg-ink text-white hover:bg-ink-hover"
+              className="min-h-[44px] px-5 rounded-full text-xs font-medium bg-ink text-white hover:bg-ink-hover flex items-center justify-center"
             >
-              <Plus className="w-3.5 h-3.5 mr-1.5" />
-              Schedule outflow
+              <Plus className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+              <span>Schedule outflow</span>
             </Button>
           </div>
         </div>
@@ -185,10 +185,10 @@ export function CashFlowCockpitView({
 
       {/* 4-Metric Strip */}
       <section aria-label="Key treasury figures" className="py-8 border-b border-line">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
           {/* Column 1: Current Cash (Liquid Reserve) */}
-          <div>
-            <p className="text-[13px] text-ink-3 font-medium uppercase tracking-[0.06em]">
+          <div className="min-w-0">
+            <p className="text-[11px] sm:text-[13px] text-ink-3 font-medium uppercase tracking-[0.06em] truncate">
               Current cash (liquid reserve)
             </p>
             <div className="mt-1">
@@ -198,8 +198,8 @@ export function CashFlowCockpitView({
           </div>
 
           {/* Column 2: Safety Buffer Threshold */}
-          <div>
-            <p className="text-[13px] text-ink-3 font-medium uppercase tracking-[0.06em]">
+          <div className="min-w-0">
+            <p className="text-[11px] sm:text-[13px] text-ink-3 font-medium uppercase tracking-[0.06em] truncate">
               Safety buffer threshold
             </p>
             <div className="mt-1">
@@ -209,8 +209,8 @@ export function CashFlowCockpitView({
           </div>
 
           {/* Column 3: 30-Day Net Trajectory */}
-          <div>
-            <p className="text-[13px] text-ink-3 font-medium uppercase tracking-[0.06em]">
+          <div className="min-w-0">
+            <p className="text-[11px] sm:text-[13px] text-ink-3 font-medium uppercase tracking-[0.06em] truncate">
               30-day net trajectory
             </p>
             <div className="mt-1 flex items-baseline gap-1">
@@ -218,7 +218,7 @@ export function CashFlowCockpitView({
             </div>
             <p
               className={cn(
-                "mt-0.5 text-xs font-medium",
+                "mt-0.5 text-xs font-medium truncate",
                 summary.net30DayChange >= 0 ? "text-moss" : "text-ember-ink"
               )}
             >
@@ -229,15 +229,15 @@ export function CashFlowCockpitView({
           </div>
 
           {/* Column 4: Lowest Forecast Point */}
-          <div>
-            <p className="text-[13px] text-ink-3 font-medium uppercase tracking-[0.06em]">
+          <div className="min-w-0">
+            <p className="text-[11px] sm:text-[13px] text-ink-3 font-medium uppercase tracking-[0.06em] truncate">
               Lowest forecast point
             </p>
             <div className="mt-1">
               <Figure value={summary.minProjectedBalance} currency={baseCurrency} size="lg" />
             </div>
             {hasBreach ? (
-              <div className="mt-1 flex items-center gap-1.5">
+              <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-ember-tint text-ember-ink border border-ember/20">
                   Breach on {summary.minBalanceDate}
                 </span>
@@ -251,7 +251,7 @@ export function CashFlowCockpitView({
 
       {/* Interactive Forecast Curve Card Container */}
       <section aria-label="Interactive forecast curve" className="my-8">
-        <div className="rounded-[16px] border border-line bg-white p-6 sm:p-8">
+        <div className="rounded-[16px] border border-line bg-white p-4 sm:p-6 lg:p-8">
           {/* Card Top Toolbar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-line/70">
             <div>
@@ -271,18 +271,18 @@ export function CashFlowCockpitView({
             </div>
 
             {/* Segmented Control */}
-            <div className="flex items-center gap-1.5 self-start sm:self-auto">
-              <span className="text-[11px] font-mono uppercase tracking-wider text-ink-3 mr-1">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-ink-3">
                 Scenario
               </span>
-              <div className="inline-flex h-9 p-1 rounded-full bg-fog border border-line/60">
+              <div className="flex flex-col sm:flex-row p-1 rounded-[16px] sm:rounded-full bg-fog border border-line/60 w-full sm:w-auto gap-1 sm:gap-0">
                 <button
                   type="button"
                   onClick={() => handleModeChange("expected")}
                   className={cn(
-                    "px-3.5 rounded-full text-xs font-medium transition-colors select-none",
+                    "min-h-[44px] px-3.5 py-2 rounded-full text-xs font-medium transition-colors select-none text-center flex items-center justify-center leading-tight",
                     mode === "expected"
-                      ? "bg-white text-ink shadow-[var(--shadow-thumb)]"
+                      ? "bg-white text-ink border border-line font-semibold"
                       : "text-ink-3 hover:text-ink"
                   )}
                 >
@@ -292,9 +292,9 @@ export function CashFlowCockpitView({
                   type="button"
                   onClick={() => handleModeChange("onTime")}
                   className={cn(
-                    "px-3.5 rounded-full text-xs font-medium transition-colors select-none",
+                    "min-h-[44px] px-3.5 py-2 rounded-full text-xs font-medium transition-colors select-none text-center flex items-center justify-center leading-tight",
                     mode === "onTime"
-                      ? "bg-white text-ink shadow-[var(--shadow-thumb)]"
+                      ? "bg-white text-ink border border-line font-semibold"
                       : "text-ink-3 hover:text-ink"
                   )}
                 >
@@ -350,43 +350,51 @@ export function CashFlowCockpitView({
           </div>
 
           {/* Synchronized Day Scrub Inspection Ribbon */}
-          <div className="mt-6 p-4 rounded-[12px] bg-fog/60 border border-line flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] bg-white border border-line text-xs font-mono font-semibold text-ink">
-                <Calendar className="w-3.5 h-3.5 text-ink-3" />
-                <span>
-                  Day {activePoint.dayIndex} ({activePoint.displayDate}, {activePoint.dayOfWeek})
-                </span>
+          <div className="mt-6 p-3.5 sm:p-4 rounded-[12px] bg-fog/60 border border-line flex flex-col gap-3.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] bg-white border border-line text-xs font-mono font-semibold text-ink shrink-0">
+                  <Calendar className="w-3.5 h-3.5 text-ink-3 shrink-0" />
+                  <span>
+                    Day {activePoint.dayIndex} ({activePoint.displayDate}, {activePoint.dayOfWeek})
+                  </span>
+                </div>
               </div>
-              <div>
-                <span className="text-[11px] font-mono uppercase text-ink-3 block">
-                  Projected balance
+              <div className="flex items-baseline justify-between sm:justify-start gap-2">
+                <span className="text-[11px] font-mono uppercase text-ink-3">
+                  Projected balance:
                 </span>
-                <span className="text-sm font-serif font-bold text-ink">
+                <span className="text-sm sm:text-base font-serif font-bold text-ink">
                   {formatMoney(activePoint.closingBalance, baseCurrency)}
                 </span>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-4 text-xs">
-              <div>
-                <span className="text-ink-3 block text-[11px] font-mono uppercase">Inflows</span>
-                <span className="font-semibold text-moss">
+            <div className="grid grid-cols-3 gap-2 py-2.5 border-y border-line/60 text-xs">
+              <div className="min-w-0">
+                <span className="text-ink-3 block text-[10px] sm:text-[11px] font-mono uppercase truncate">
+                  Inflows
+                </span>
+                <span className="font-semibold text-moss block truncate">
                   +{formatMoney(activePoint.inflows, baseCurrency)}
                 </span>
               </div>
-              <div>
-                <span className="text-ink-3 block text-[11px] font-mono uppercase">Outflows</span>
-                <span className="font-semibold text-ink">
+              <div className="min-w-0">
+                <span className="text-ink-3 block text-[10px] sm:text-[11px] font-mono uppercase truncate">
+                  Outflows
+                </span>
+                <span className="font-semibold text-ink block truncate">
                   {activePoint.outflows > 0 ? "-" : ""}
                   {formatMoney(activePoint.outflows, baseCurrency)}
                 </span>
               </div>
-              <div>
-                <span className="text-ink-3 block text-[11px] font-mono uppercase">Net change</span>
+              <div className="min-w-0">
+                <span className="text-ink-3 block text-[10px] sm:text-[11px] font-mono uppercase truncate">
+                  Net change
+                </span>
                 <span
                   className={cn(
-                    "font-semibold",
+                    "font-semibold block truncate",
                     activePoint.netChange > 0
                       ? "text-moss"
                       : activePoint.netChange < 0
@@ -398,7 +406,10 @@ export function CashFlowCockpitView({
                   {formatMoney(Math.abs(activePoint.netChange), baseCurrency)}
                 </span>
               </div>
-              <div className="sm:border-l sm:border-line sm:pl-4 flex items-center gap-3">
+            </div>
+
+            <div className="flex items-center justify-between gap-3 pt-0.5">
+              <div className="min-w-0 truncate">
                 {activePoint.isBreach ? (
                   <Badge variant="critical">
                     Deficit: {formatMoney(activePoint.deficitAmount, baseCurrency)}
@@ -408,14 +419,14 @@ export function CashFlowCockpitView({
                 ) : (
                   <Badge variant="healthy">Healthy</Badge>
                 )}
-                <Link
-                  href={`/cash-flow/${activePoint.date}?mode=${mode}`}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-mono font-medium text-ink bg-white hover:bg-fog border border-line transition-colors"
-                >
-                  <span>Day details</span>
-                  <ArrowRight className="w-3 h-3" />
-                </Link>
               </div>
+              <Link
+                href={`/cash-flow/${activePoint.date}?mode=${mode}`}
+                className="inline-flex items-center justify-center min-h-[44px] px-3.5 py-2 rounded-full text-xs font-mono font-medium text-ink bg-white hover:bg-fog border border-line transition-colors shrink-0"
+              >
+                <span>Day details</span>
+                <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+              </Link>
             </div>
           </div>
         </div>
@@ -434,15 +445,15 @@ export function CashFlowCockpitView({
           </div>
 
           {/* Filter tabs */}
-          <div className="flex flex-wrap items-center gap-1.5 self-start sm:self-auto">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <button
               type="button"
               onClick={() => setTableFilter("ALL")}
               className={cn(
-                "px-3 py-1 rounded-full text-xs font-medium transition-colors select-none",
+                "min-h-[44px] px-3.5 py-2 rounded-full text-xs font-medium transition-colors select-none flex items-center justify-center",
                 tableFilter === "ALL"
                   ? "bg-ink text-white"
-                  : "bg-fog text-ink hover:bg-fog-2"
+                  : "bg-fog text-ink hover:bg-fog-2 border border-line/60"
               )}
             >
               All days ({counts.all})
@@ -451,10 +462,10 @@ export function CashFlowCockpitView({
               type="button"
               onClick={() => setTableFilter("INFLOWS")}
               className={cn(
-                "px-3 py-1 rounded-full text-xs font-medium transition-colors select-none",
+                "min-h-[44px] px-3.5 py-2 rounded-full text-xs font-medium transition-colors select-none flex items-center justify-center",
                 tableFilter === "INFLOWS"
                   ? "bg-ink text-white"
-                  : "bg-fog text-ink hover:bg-fog-2"
+                  : "bg-fog text-ink hover:bg-fog-2 border border-line/60"
               )}
             >
               Inflow days ({counts.inflows})
@@ -463,10 +474,10 @@ export function CashFlowCockpitView({
               type="button"
               onClick={() => setTableFilter("OUTFLOWS")}
               className={cn(
-                "px-3 py-1 rounded-full text-xs font-medium transition-colors select-none",
+                "min-h-[44px] px-3.5 py-2 rounded-full text-xs font-medium transition-colors select-none flex items-center justify-center",
                 tableFilter === "OUTFLOWS"
                   ? "bg-ink text-white"
-                  : "bg-fog text-ink hover:bg-fog-2"
+                  : "bg-fog text-ink hover:bg-fog-2 border border-line/60"
               )}
             >
               Outflow days ({counts.outflows})
@@ -475,10 +486,10 @@ export function CashFlowCockpitView({
               type="button"
               onClick={() => setTableFilter("DEFICITS")}
               className={cn(
-                "px-3 py-1 rounded-full text-xs font-medium transition-colors select-none",
+                "min-h-[44px] px-3.5 py-2 rounded-full text-xs font-medium transition-colors select-none flex items-center justify-center",
                 tableFilter === "DEFICITS"
                   ? "bg-ember-ink text-white"
-                  : "bg-fog text-ink hover:bg-fog-2"
+                  : "bg-fog text-ink hover:bg-fog-2 border border-line/60"
               )}
             >
               Deficit days ({counts.deficits})
@@ -486,8 +497,182 @@ export function CashFlowCockpitView({
           </div>
         </div>
 
-        {/* Ledger Table Container */}
-        <div className="mt-4 border border-line rounded-[14px] overflow-hidden bg-white">
+        {/* Ledger Mobile Cards Container (< md) */}
+        <div className="mt-4 space-y-3 block md:hidden">
+          {filteredPoints.length === 0 ? (
+            <div className="py-8 px-4 text-center text-xs text-ink-3 rounded-[12px] border border-line bg-fog/20">
+              No days match the selected filter.
+            </div>
+          ) : (
+            filteredPoints.map((point) => {
+              const isSelected = point.dayIndex === safeActiveDay;
+              const isPositive = point.netChange > 0;
+              const isNegative = point.netChange < 0;
+
+              let statusVariant: "healthy" | "watchlist" | "critical" = "healthy";
+              let statusLabel = "Healthy";
+
+              if (point.isBreach) {
+                statusVariant = "critical";
+                statusLabel = "Critical deficit";
+              } else if (point.closingBalance < summary.safetyBuffer * 1.25) {
+                statusVariant = "watchlist";
+                statusLabel = "Buffer warning";
+              }
+
+              return (
+                <div
+                  key={point.dayIndex}
+                  onClick={() => setActiveDay(point.dayIndex)}
+                  className={cn(
+                    "p-4 rounded-[12px] border transition-colors cursor-pointer",
+                    isSelected
+                      ? "border-ink bg-fog/40"
+                      : "border-line bg-white hover:bg-fog/20"
+                  )}
+                >
+                  {/* Card Header: Date & Status Badge */}
+                  <div className="flex items-center justify-between gap-2 pb-3 border-b border-line/60">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-semibold text-sm text-ink">
+                        {point.displayDate}
+                      </span>
+                      <span className="text-xs text-ink-3">
+                        ({point.dayOfWeek})
+                      </span>
+                      {point.dayIndex === 0 && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-fog-2 text-ink-2 font-mono">
+                          Today
+                        </span>
+                      )}
+                    </div>
+                    <Badge variant={statusVariant}>{statusLabel}</Badge>
+                  </div>
+
+                  {/* Flows Breakdown */}
+                  <div className="py-3 space-y-2.5 text-xs">
+                    {/* Inflows */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <span className="text-[11px] font-mono uppercase text-ink-3 block">
+                          Maturing inflows
+                        </span>
+                        {point.inflowEvents.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {point.inflowEvents.slice(0, 2).map((ev) => (
+                              <span
+                                key={ev.id}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-fog text-ink-2"
+                              >
+                                <span className="truncate max-w-[120px]">{ev.clientName}</span>
+                                {ev.isOverdue && (
+                                  <span className="text-ember-ink font-semibold">Overdue</span>
+                                )}
+                              </span>
+                            ))}
+                            {point.inflowEvents.length > 2 && (
+                              <span className="text-[10px] text-ink-3 self-center">
+                                +{point.inflowEvents.length - 2} more
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <span
+                        className={cn(
+                          "font-semibold font-mono whitespace-nowrap",
+                          point.inflows > 0 ? "text-moss" : "text-ink-3"
+                        )}
+                      >
+                        {point.inflows > 0 ? `+${formatMoney(point.inflows, baseCurrency)}` : "—"}
+                      </span>
+                    </div>
+
+                    {/* Outflows */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <span className="text-[11px] font-mono uppercase text-ink-3 block">
+                          Maturing outflows
+                        </span>
+                        {point.outflowEvents.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {point.outflowEvents.slice(0, 2).map((ev) => (
+                              <span
+                                key={ev.id}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-fog text-ink-2"
+                              >
+                                <span className="truncate max-w-[120px]">{ev.title}</span>
+                                <span className="text-ink-3">({ev.category})</span>
+                              </span>
+                            ))}
+                            {point.outflowEvents.length > 2 && (
+                              <span className="text-[10px] text-ink-3 self-center">
+                                +{point.outflowEvents.length - 2} more
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <span
+                        className={cn(
+                          "font-semibold font-mono whitespace-nowrap",
+                          point.outflows > 0 ? "text-ink" : "text-ink-3"
+                        )}
+                      >
+                        {point.outflows > 0 ? `-${formatMoney(point.outflows, baseCurrency)}` : "—"}
+                      </span>
+                    </div>
+
+                    {/* Net Change and Balance */}
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-line/60">
+                      <div>
+                        <span className="text-[10px] font-mono uppercase text-ink-3 block">
+                          Daily net change
+                        </span>
+                        <span
+                          className={cn(
+                            "font-mono font-semibold text-xs",
+                            isPositive
+                              ? "text-moss"
+                              : isNegative
+                              ? "text-ember-ink"
+                              : "text-ink-3"
+                          )}
+                        >
+                          {isPositive ? "+" : isNegative ? "-" : ""}
+                          {formatMoney(Math.abs(point.netChange), baseCurrency)}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] font-mono uppercase text-ink-3 block">
+                          Projected balance
+                        </span>
+                        <span className="font-serif font-bold text-sm text-ink">
+                          {formatMoney(point.closingBalance, baseCurrency)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card Footer: Details Link button with 44px min height */}
+                  <div className="pt-2 border-t border-line/60">
+                    <Link
+                      href={`/cash-flow/${point.date}?mode=${mode}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full min-h-[44px] flex items-center justify-center gap-1.5 px-4 py-2 rounded-full border border-line bg-fog hover:bg-fog-2 text-xs font-mono font-medium text-ink transition-colors"
+                    >
+                      <span>View day details</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Ledger Table Container (Desktop >= md) */}
+        <div className="mt-4 border border-line rounded-[14px] overflow-hidden bg-white hidden md:block">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-fog/60 border-b border-line text-ink-3 font-mono uppercase tracking-wider text-[11px]">

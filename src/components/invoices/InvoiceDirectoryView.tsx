@@ -11,6 +11,7 @@ import {
   Filter,
   Download,
   Loader2,
+  CheckCircle2,
 } from "lucide-react";
 import type {
   InvoiceWithItemsAndClient,
@@ -21,9 +22,10 @@ import type {
 import { formatMoney, SUPPORTED_CURRENCIES } from "@/modules/invoices/currency";
 import { InvoiceStatusBadge } from "./InvoiceStatusBadge";
 import { InvoiceKPIStrip } from "./InvoiceKPIStrip";
+import { RecordPaymentModal } from "./RecordPaymentModal";
 import { downloadInvoicePDF } from "@/modules/documents";
 
-interface InvoiceDirectoryViewProps {
+export interface InvoiceDirectoryViewProps {
   initialInvoices: InvoiceWithItemsAndClient[];
   kpis: InvoiceKPIs;
   baseCurrency?: string;
@@ -37,6 +39,7 @@ export function InvoiceDirectoryView({
   companyName = "FinFlow Commercial Services",
 }: InvoiceDirectoryViewProps) {
   const [downloadingId, setDownloadingId] = React.useState<string | null>(null);
+  const [paymentInvoice, setPaymentInvoice] = React.useState<InvoiceWithItemsAndClient | null>(null);
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<InvoiceStatus | "ALL">("ALL");
   const [currencyFilter, setCurrencyFilter] = React.useState<InvoiceCurrency | "ALL">("ALL");
@@ -127,9 +130,9 @@ export function InvoiceDirectoryView({
 
         <Link
           href="/invoices/new"
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-ink text-white text-sm font-medium hover:bg-ink/90 transition-colors self-start sm:self-auto shrink-0"
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 min-h-[44px] rounded-full bg-ink text-white text-sm font-medium hover:bg-ink-hover transition-colors w-full sm:w-auto shrink-0"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 shrink-0" />
           <span>New Invoice</span>
         </Link>
       </div>
@@ -138,7 +141,7 @@ export function InvoiceDirectoryView({
       <InvoiceKPIStrip kpis={kpis} baseCurrency={baseCurrency} />
 
       {/* 3. Filter & Search Toolbar */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div className="flex flex-col gap-3">
         {/* Status Filter Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-2 px-2 sm:mx-0 sm:px-0">
           {(["ALL", "DRAFT", "SENT", "PAID", "OVERDUE"] as const).map((status) => {
@@ -149,7 +152,7 @@ export function InvoiceDirectoryView({
                 key={status}
                 type="button"
                 onClick={() => setStatusFilter(status)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors shrink-0 ${
+                className={`inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] rounded-full text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
                   isActive
                     ? "bg-ink text-white"
                     : "bg-fog text-ink/70 hover:bg-fog-2 hover:text-ink"
@@ -157,8 +160,8 @@ export function InvoiceDirectoryView({
               >
                 <span>{status === "ALL" ? "All Invoices" : status.charAt(0) + status.slice(1).toLowerCase()}</span>
                 <span
-                  className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
-                    isActive ? "bg-white/20 text-white" : "bg-white text-ink/60"
+                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ${
+                    isActive ? "bg-white/20 text-white" : "bg-white text-ink/60 border border-line"
                   }`}
                 >
                   {count}
@@ -169,14 +172,26 @@ export function InvoiceDirectoryView({
         </div>
 
         {/* Currency Selector & Search Input */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
+          {/* Search Box */}
+          <div className="relative flex-1 min-w-0">
+            <Search className="w-4 h-4 text-ink/40 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search invoice or client..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 h-11 text-xs sm:text-sm rounded-[10px] border border-line bg-white text-ink placeholder:text-ink/40 focus:outline-none focus:border-ink/50 transition-colors"
+            />
+          </div>
+
           {/* Currency Dropdown Filter */}
-          <div className="relative shrink-0">
+          <div className="relative w-full sm:w-auto shrink-0">
             <select
               aria-label="Filter by currency"
               value={currencyFilter}
               onChange={(e) => setCurrencyFilter(e.target.value as any)}
-              className="appearance-none pl-3 pr-8 py-1.5 text-xs font-mono rounded-[8px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50"
+              className="appearance-none w-full sm:w-auto pl-3.5 pr-9 h-11 text-xs font-mono rounded-[10px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50 cursor-pointer"
             >
               <option value="ALL">All Currencies</option>
               {SUPPORTED_CURRENCIES.map((cur) => (
@@ -185,19 +200,7 @@ export function InvoiceDirectoryView({
                 </option>
               ))}
             </select>
-            <Filter className="w-3 h-3 text-ink/40 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          </div>
-
-          {/* Search Box */}
-          <div className="relative flex-1 sm:w-64">
-            <Search className="w-3.5 h-3.5 text-ink/40 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search invoice or client..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs rounded-[8px] border border-line bg-white text-ink placeholder:text-ink/40 focus:outline-none focus:border-ink/50"
-            />
+            <Filter className="w-3.5 h-3.5 text-ink/40 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
         </div>
       </div>
@@ -212,7 +215,7 @@ export function InvoiceDirectoryView({
               ? "No billing records match the selected filter criteria. Try clearing search or status filters."
               : "No invoices have been recorded yet. Create your first dynamic multi-currency invoice."}
           </p>
-          {(search || statusFilter !== "ALL" || currencyFilter !== "ALL") ? (
+          {search || statusFilter !== "ALL" || currencyFilter !== "ALL" ? (
             <button
               type="button"
               onClick={() => {
@@ -220,14 +223,14 @@ export function InvoiceDirectoryView({
                 setStatusFilter("ALL");
                 setCurrencyFilter("ALL");
               }}
-              className="px-4 py-1.5 text-xs rounded-full border border-line bg-white text-ink hover:bg-fog transition-colors"
+              className="min-h-[44px] px-5 py-2 text-xs rounded-full border border-line bg-white text-ink hover:bg-fog transition-colors font-medium inline-flex items-center justify-center"
             >
               Reset Filters
             </button>
           ) : (
             <Link
               href="/invoices/new"
-              className="px-4 py-2 text-xs rounded-full bg-ink text-white font-medium hover:bg-ink/90 transition-colors"
+              className="min-h-[44px] px-5 py-2 text-xs rounded-full bg-ink text-white font-medium hover:bg-ink-hover transition-colors inline-flex items-center justify-center"
             >
               Create First Invoice
             </Link>
@@ -235,18 +238,18 @@ export function InvoiceDirectoryView({
         </div>
       ) : (
         <div className="border border-line rounded-[10px] overflow-hidden bg-white">
-          {/* A. Desktop High-Density Table */}
+          {/* A. Desktop High-Density Table (>= 768px) */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-line bg-fog/30 text-[11px] font-mono uppercase tracking-wider text-ink/60">
-                  <th className="py-3 px-4">Invoice #</th>
-                  <th className="py-3 px-4">Client</th>
-                  <th className="py-3 px-4">Issue Date</th>
-                  <th className="py-3 px-4">Due Date</th>
-                  <th className="py-3 px-4 text-right">Amount</th>
-                  <th className="py-3 px-4 text-center">Status</th>
-                  <th className="py-3 px-4 text-right">Action</th>
+                  <th scope="col" className="py-3 px-4 font-normal">Invoice #</th>
+                  <th scope="col" className="py-3 px-4 font-normal">Client</th>
+                  <th scope="col" className="py-3 px-4 font-normal">Issue Date</th>
+                  <th scope="col" className="py-3 px-4 font-normal">Due Date</th>
+                  <th scope="col" className="py-3 px-4 font-normal text-right">Amount</th>
+                  <th scope="col" className="py-3 px-4 font-normal text-center">Status</th>
+                  <th scope="col" className="py-3 px-4 font-normal text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line text-xs">
@@ -256,6 +259,7 @@ export function InvoiceDirectoryView({
                     inv.status !== "PAID" &&
                     inv.status !== "CANCELLED" &&
                     new Date(inv.dueDate).getTime() < new Date().getTime();
+                  const canPay = inv.status !== "PAID" && inv.status !== "CANCELLED";
 
                   return (
                     <tr
@@ -303,7 +307,7 @@ export function InvoiceDirectoryView({
                       {/* Amount & Dual Currency Display */}
                       <td className="py-3 px-4 text-right">
                         <div className="flex flex-col items-end">
-                          <span className="font-mono font-medium text-ink">
+                          <span className="font-mono font-medium text-ink num">
                             {formatMoney(inv.totalAmount, inv.currency)}
                           </span>
                           {isForeign && (
@@ -322,6 +326,17 @@ export function InvoiceDirectoryView({
                       {/* Action */}
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {canPay && (
+                            <button
+                              type="button"
+                              onClick={() => setPaymentInvoice(inv)}
+                              className="inline-flex items-center gap-1 text-[11px] font-medium text-ink px-2.5 py-1 rounded-full border border-line bg-fog hover:bg-fog-2 transition-colors"
+                              title="Record Payment"
+                            >
+                              <CheckCircle2 className="w-3 h-3 text-moss" />
+                              <span>Pay</span>
+                            </button>
+                          )}
                           <button
                             type="button"
                             title="Download PDF"
@@ -354,7 +369,7 @@ export function InvoiceDirectoryView({
             </table>
           </div>
 
-          {/* B. Mobile Card Stack Layout */}
+          {/* B. Mobile Card Stack Layout (< 768px) with min 44px Touch Targets */}
           <div className="md:hidden divide-y divide-line">
             {filteredInvoices.map((inv) => {
               const isForeign = inv.currency !== baseCurrency;
@@ -362,28 +377,36 @@ export function InvoiceDirectoryView({
                 inv.status !== "PAID" &&
                 inv.status !== "CANCELLED" &&
                 new Date(inv.dueDate).getTime() < new Date().getTime();
+              const canPay = inv.status !== "PAID" && inv.status !== "CANCELLED";
 
               return (
                 <div
                   key={inv.id}
-                  className="flex flex-col gap-2.5 p-4 hover:bg-fog/20 transition-colors"
+                  className="flex flex-col gap-3 p-4 hover:bg-fog/20 transition-colors"
                 >
-                  <div className="flex items-center justify-between">
+                  {/* Card Header: Invoice Number & Status Badge */}
+                  <div className="flex items-center justify-between gap-2">
                     <Link
                       href={`/invoices/${inv.id}`}
-                      className="font-mono font-medium text-sm text-ink hover:underline"
+                      className="font-mono font-medium text-sm text-ink hover:underline truncate"
                     >
                       {inv.invoiceNumber}
                     </Link>
                     <InvoiceStatusBadge status={inv.status} />
                   </div>
 
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium text-ink">
-                      {inv.client.clientName}
-                    </span>
-                    <div className="text-right">
-                      <div className="font-mono font-semibold text-ink">
+                  {/* Card Client & Amount */}
+                  <div className="flex items-baseline justify-between gap-2">
+                    <div className="flex flex-col min-w-0">
+                      <span className="font-medium text-sm text-ink truncate">
+                        {inv.client.clientName}
+                      </span>
+                      <span className="text-xs text-ink/50 truncate">
+                        {inv.client.email}
+                      </span>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="font-mono font-semibold text-sm text-ink num">
                         {formatMoney(inv.totalAmount, inv.currency)}
                       </div>
                       {isForeign && (
@@ -394,9 +417,10 @@ export function InvoiceDirectoryView({
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-1 border-t border-line/50 text-[11px] text-ink/50">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3 text-ink/40" />
+                  {/* Card Meta: Due Date */}
+                  <div className="flex items-center justify-between pt-2 border-t border-line/60 text-xs text-ink/60">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-ink/40 shrink-0" />
                       <span>Due {formatDate(inv.dueDate)}</span>
                       {isPastDue && (
                         <span className="text-ember font-medium ml-1">
@@ -404,29 +428,43 @@ export function InvoiceDirectoryView({
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
+                  </div>
+
+                  {/* Card Action Buttons (>= 44px Touch Targets) */}
+                  <div className="flex items-center gap-2 pt-1 flex-wrap">
+                    {canPay && (
                       <button
                         type="button"
-                        disabled={downloadingId === inv.id}
-                        onClick={() => handleDownloadPDF(inv)}
-                        className="inline-flex items-center gap-1 text-[10px] font-medium text-ink/70 hover:text-ink px-2 py-0.5 rounded-full border border-line hover:bg-fog transition-colors disabled:opacity-50"
-                        title="Download PDF"
+                        onClick={() => setPaymentInvoice(inv)}
+                        className="flex-1 min-h-[44px] inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium bg-fog text-ink hover:bg-fog-2 border border-line transition-colors"
                       >
-                        {downloadingId === inv.id ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <Download className="w-3 h-3" />
-                        )}
-                        <span>PDF</span>
+                        <CheckCircle2 className="w-4 h-4 text-moss shrink-0" />
+                        <span>Mark Paid</span>
                       </button>
-                      <Link
-                        href={`/invoices/${inv.id}`}
-                        className="text-ink font-medium flex items-center gap-0.5"
-                      >
-                        <span>View</span>
-                        <ArrowRight className="w-3 h-3" />
-                      </Link>
-                    </div>
+                    )}
+
+                    <button
+                      type="button"
+                      disabled={downloadingId === inv.id}
+                      onClick={() => handleDownloadPDF(inv)}
+                      className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-full border border-line bg-white text-ink/70 hover:text-ink hover:bg-fog transition-colors disabled:opacity-50 text-xs font-medium"
+                      title="Download PDF"
+                    >
+                      {downloadingId === inv.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                      ) : (
+                        <Download className="w-4 h-4 shrink-0" />
+                      )}
+                      <span>PDF</span>
+                    </button>
+
+                    <Link
+                      href={`/invoices/${inv.id}`}
+                      className="min-h-[44px] inline-flex items-center justify-center gap-1 text-xs font-medium text-ink bg-fog hover:bg-fog-2 px-3.5 py-2 rounded-full border border-line transition-colors"
+                    >
+                      <span>Manage</span>
+                      <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+                    </Link>
                   </div>
                 </div>
               );
@@ -444,6 +482,25 @@ export function InvoiceDirectoryView({
           Base Currency: {baseCurrency}
         </span>
       </div>
+
+      {/* Record Customer Payment Modal */}
+      {paymentInvoice && (
+        <RecordPaymentModal
+          isOpen={Boolean(paymentInvoice)}
+          onClose={() => setPaymentInvoice(null)}
+          invoiceId={paymentInvoice.id}
+          invoiceNumber={paymentInvoice.invoiceNumber}
+          totalAmount={paymentInvoice.totalAmount}
+          paidAmount={paymentInvoice.paidAmount}
+          currency={paymentInvoice.currency}
+          onSuccess={() => {
+            window.location.reload();
+          }}
+        />
+      )}
     </div>
   );
 }
+
+// Named alias export for InvoiceListView
+export const InvoiceListView = InvoiceDirectoryView;

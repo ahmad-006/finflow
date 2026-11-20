@@ -85,21 +85,21 @@ export function UserMenu({
         aria-haspopup="true"
         aria-label="User menu"
         className={cn(
-          "flex items-center gap-2 rounded-md p-1.5 text-xs text-zinc-700 hover:text-gray-900 hover:bg-zinc-100 transition-colors select-none",
+          "flex items-center gap-2 rounded-full p-1 text-xs text-ink hover:bg-fog transition-colors select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2",
           collapsed && "justify-center"
         )}
       >
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-[10px] font-medium text-gray-900 select-none">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-fog border border-line text-[11px] font-semibold text-ink select-none">
           {initials}
         </span>
         {!collapsed && (
           <>
-            <span className="hidden sm:inline max-w-[120px] truncate text-xs font-medium text-gray-900">
+            <span className="hidden sm:inline max-w-[120px] truncate text-xs font-medium text-ink">
               {fullName}
             </span>
             <ChevronDown
               className={cn(
-                "hidden sm:inline h-3.5 w-3.5 text-zinc-500 transition-transform",
+                "hidden sm:inline h-3.5 w-3.5 text-ink-3 transition-transform",
                 isOpen && "rotate-180"
               )}
               strokeWidth={1.5}
@@ -111,7 +111,7 @@ export function UserMenu({
       {isOpen && (
         <div
           role="menu"
-          className="absolute right-0 top-full mt-2 z-50 min-w-[220px] rounded-[18px] border border-line bg-white p-2 shadow-float select-none"
+          className="absolute right-0 top-full mt-2 z-50 min-w-[220px] rounded-[18px] border border-line bg-white p-2 select-none shadow-none"
         >
           {/* User & Company summary */}
           <div className="border-b border-line px-3 py-2.5">
@@ -145,7 +145,7 @@ export function UserMenu({
               type="button"
               onClick={handleSignOut}
               disabled={isPending}
-              className="flex w-full items-center gap-2 rounded-full px-3 py-2 text-[14px] text-ember-ink hover:bg-ember-tint transition-colors text-left disabled:opacity-50"
+              className="flex w-full items-center gap-2 rounded-full px-3 py-2 text-[14px] text-ink hover:bg-fog transition-colors text-left disabled:opacity-50"
               role="menuitem"
             >
               <LogOut className="h-4 w-4 stroke-[1.5]" />

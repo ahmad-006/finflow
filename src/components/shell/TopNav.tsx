@@ -1,15 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserMenu } from "./UserMenu";
-import { Button } from "@/components/ui/button";
-import { logoutAction } from "@/modules/auth/actions";
+import { MobileMenu } from "./MobileMenu";
 
 export interface TopNavProps {
   user?: {
@@ -35,43 +32,11 @@ export function TopNav({
   className,
   isMarketing = false,
 }: TopNavProps) {
-  const pathname = usePathname();
+  const rawPathname = usePathname();
+  const pathname = rawPathname || "";
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
-  const [mounted, setMounted] = React.useState(false);
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
-  const [isLoggingOut, startLogoutTransition] = React.useTransition();
-
-  const handleMobileSignOut = () => {
-    startLogoutTransition(async () => {
-      setMobileMenuOpen(false);
-      try {
-        if (onSignOut) {
-          await onSignOut();
-        } else {
-          await logoutAction();
-        }
-      } catch (err) {
-        window.location.href = "/logout";
-      }
-    });
-  };
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Prevent background scroll when mobile menu is open
-  React.useEffect(() => {
-    if (mobileMenuOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [mobileMenuOpen]);
 
   // Wayfinding ruler on scroll for marketing
   React.useEffect(() => {
@@ -107,11 +72,18 @@ export function TopNav({
         className
       )}
     >
-      <div className="mx-auto flex h-full max-w-[1200px] items-center justify-between px-[var(--gutter)]">
-        {/* Left: Wordmark */}
+      <div
+        className="mx-auto flex h-full w-full max-w-[1440px] items-center justify-between px-[clamp(16px,4vw,48px)] box-border min-w-0"
+        style={{
+          paddingLeft: "clamp(16px, 4vw, 48px)",
+          paddingRight: "clamp(16px, 4vw, 48px)",
+        }}
+      >
+        {/* Left: Brand logo */}
         <Link
           href={user ? "/dashboard" : "/"}
-          className="flex items-center hover:opacity-90 transition-opacity"
+          className="flex items-center hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 rounded-sm shrink-0"
+          aria-label="FinFlow home"
         >
           <Image
             src="/finflow-logo-on-white.png"
@@ -123,18 +95,22 @@ export function TopNav({
           />
         </Link>
 
-        {/* Center Links (App) */}
+        {/* Center: Navigation pills (App) */}
         {!isMarketing && user ? (
-          <nav className="hidden lg:flex items-center gap-6 xl:gap-8" aria-label="Application navigation">
+          <nav
+            className="hidden lg:flex items-center gap-1 xl:gap-1.5"
+            aria-label="Application navigation"
+          >
             {inAppLinks.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={item.active ? "page" : undefined}
                 className={cn(
-                  "text-[15px] transition-colors whitespace-nowrap",
+                  "px-3.5 py-1.5 rounded-full text-[14px] xl:text-[15px] font-medium transition-colors whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2",
                   item.active
-                    ? "font-semibold text-ink"
-                    : "font-medium text-ink-2 hover:text-ink"
+                    ? "bg-fog text-ink font-semibold"
+                    : "text-ink-2 hover:text-ink hover:bg-fog/60"
                 )}
               >
                 {item.label}
@@ -144,13 +120,13 @@ export function TopNav({
         ) : null}
 
         {/* Right Actions */}
-        <div className="flex items-center gap-2.5 sm:gap-4 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {isMarketing ? (
             <>
               {user ? (
                 <Link
                   href="/dashboard"
-                  className="hidden sm:inline-flex items-center justify-center h-9 px-[18px] rounded-full bg-ink text-white text-[15px] font-medium hover:bg-ink-hover transition-colors"
+                  className="hidden sm:inline-flex items-center justify-center min-h-[36px] h-9 px-4 rounded-full bg-ink text-white text-[14px] font-medium hover:bg-ink-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
                 >
                   Open dashboard
                 </Link>
@@ -158,13 +134,13 @@ export function TopNav({
                 <>
                   <Link
                     href="/login"
-                    className="hidden sm:inline-block text-[15px] font-medium text-ink hover:underline decoration-line-strong hover:decoration-ink transition-colors whitespace-nowrap"
+                    className="hidden sm:inline-block text-[14px] font-medium text-ink hover:underline decoration-line-strong hover:decoration-ink transition-colors whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
                   >
                     Sign in
                   </Link>
                   <Link
                     href="/register"
-                    className="inline-flex items-center justify-center h-9 px-3.5 sm:px-[18px] rounded-full bg-ink text-white text-[13px] sm:text-[15px] font-medium hover:bg-ink-hover active:scale-[0.98] transition-all whitespace-nowrap shrink-0"
+                    className="inline-flex items-center justify-center min-h-[36px] h-9 px-3.5 sm:px-4 rounded-full bg-ink text-white text-[13px] sm:text-[14px] font-medium hover:bg-ink-hover transition-colors whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
                   >
                     Create workspace
                   </Link>
@@ -175,7 +151,7 @@ export function TopNav({
             <>
               <Link
                 href="/invoices/new"
-                className="hidden sm:inline-flex items-center justify-center h-9 px-[18px] rounded-full bg-ink text-white text-[15px] font-medium hover:bg-ink-hover active:scale-[0.98] transition-all"
+                className="hidden sm:inline-flex items-center justify-center min-h-[36px] h-9 px-4 rounded-full bg-ink text-white text-[14px] font-medium hover:bg-ink-hover transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
               >
                 New invoice
               </Link>
@@ -183,20 +159,23 @@ export function TopNav({
             </>
           )}
 
-          {/* Mobile hamburger button */}
+          {/* Clean accessible hamburger button (< 1024px) */}
           <button
             type="button"
             onClick={() => setMobileMenuOpen(true)}
-            aria-label="Open menu"
-            className="lg:hidden flex flex-col justify-center items-center w-8 h-8 gap-1.5 p-1 text-ink"
+            aria-label="Open navigation menu"
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-navigation-sheet"
+            className="lg:hidden inline-flex flex-col justify-center items-center w-11 h-11 min-h-[44px] min-w-[44px] rounded-full hover:bg-fog active:bg-fog-2 text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 shrink-0"
           >
-            <span className="w-5 h-[1.5px] bg-ink block" />
-            <span className="w-5 h-[1.5px] bg-ink block" />
+            <span className="sr-only">Open navigation menu</span>
+            <span className="w-5 h-[1.5px] bg-ink block rounded-full" />
+            <span className="w-5 h-[1.5px] bg-ink block rounded-full mt-1.5" />
           </button>
         </div>
       </div>
 
-      {/* Homepage Scroll Ruler along bottom edge */}
+      {/* Marketing Scroll Ruler along bottom edge */}
       {isMarketing && (
         <div className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-line overflow-hidden">
           <div
@@ -206,93 +185,15 @@ export function TopNav({
         </div>
       )}
 
-      {/* Mobile Full-Screen Overlay (Portaled to document.body to prevent parent stacking/backdrop-filter clipping) */}
-      {mounted && mobileMenuOpen && createPortal(
-        <div className="fixed inset-0 z-[100] flex flex-col justify-between bg-white p-8">
-          <div className="flex items-center justify-between">
-            <Link
-              href="/"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center hover:opacity-90 transition-opacity"
-            >
-              <Image
-                src="/finflow-logo-on-white.png"
-                alt="FinFlow"
-                width={131}
-                height={30}
-                className="h-7 w-auto object-contain"
-              />
-            </Link>
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(false)}
-              aria-label="Close menu"
-              className="p-2 text-ink hover:opacity-70 transition-opacity"
-            >
-              <X className="h-6 w-6 stroke-[1.5]" />
-            </button>
-          </div>
-
-          <nav className="flex flex-col gap-5 my-auto" aria-label="Mobile navigation">
-            {(user ? inAppLinks : [
-              { label: "Overview", href: "/#overview", active: false },
-              { label: "Story", href: "/#story", active: false },
-              { label: "Product", href: "/#product", active: false },
-              { label: "Capabilities", href: "/#more", active: false },
-            ]).map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-4xl font-semibold text-ink tracking-tight hover:opacity-70 transition-opacity"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="flex flex-col gap-3 pt-6 border-t border-line">
-            {user ? (
-              <>
-                <Link
-                  href="/invoices/new"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="inline-flex items-center justify-center h-12 w-full rounded-full bg-ink text-white font-medium text-[16px] hover:bg-ink-hover active:scale-[0.98] transition-all"
-                >
-                  + New invoice
-                </Link>
-                <Button
-                  variant="secondary"
-                  size="default"
-                  className="w-full h-12 rounded-full"
-                  disabled={isLoggingOut}
-                  onClick={handleMobileSignOut}
-                >
-                  {isLoggingOut ? "Signing out..." : "Sign out"}
-                </Button>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/register"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="inline-flex items-center justify-center h-12 w-full rounded-full bg-ink text-white font-medium text-[17px]"
-                >
-                  Create workspace
-                </Link>
-                <Link
-                  href="/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="inline-flex items-center justify-center h-12 w-full rounded-full bg-fog text-ink font-medium text-[17px]"
-                >
-                  Sign in
-                </Link>
-              </>
-            )}
-          </div>
-        </div>,
-        document.body
-      )}
+      {/* Slide-in Mobile Navigation Sheet */}
+      <MobileMenu
+        isOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        user={user}
+        company={company}
+        onSignOut={onSignOut}
+        isMarketing={isMarketing}
+      />
     </header>
   );
 }

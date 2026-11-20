@@ -126,36 +126,38 @@ export function CashFlowDayDetailView({ day, mode = "expected" }: CashFlowDayDet
         </div>
 
         {/* Day Pagination & Overview Links */}
-        <div className="flex items-center gap-2 self-start md:self-end">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
           <Link
             href="/cash-flow"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono font-medium text-ink-2 bg-fog hover:bg-fog/80 border border-line transition-colors"
+            className="inline-flex items-center justify-center min-h-[44px] px-3.5 py-2 rounded-full text-xs font-mono font-medium text-ink bg-fog hover:bg-fog/80 border border-line transition-colors flex-1 sm:flex-initial"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
+            <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
             <span>30-Day forecast</span>
           </Link>
 
-          {day.prevDate && (
-            <Link
-              href={`/cash-flow/${day.prevDate}?mode=${mode}`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono font-medium text-ink-2 bg-white hover:bg-fog border border-line transition-colors"
-              title="Previous day"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Prev day</span>
-            </Link>
-          )}
+          <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+            {day.prevDate && (
+              <Link
+                href={`/cash-flow/${day.prevDate}?mode=${mode}`}
+                className="inline-flex items-center justify-center min-h-[44px] px-3.5 py-2 rounded-full text-xs font-mono font-medium text-ink bg-white hover:bg-fog border border-line transition-colors flex-1 sm:flex-initial"
+                title="Previous day"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+                <span>Prev day</span>
+              </Link>
+            )}
 
-          {day.nextDate && (
-            <Link
-              href={`/cash-flow/${day.nextDate}?mode=${mode}`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono font-medium text-ink-2 bg-white hover:bg-fog border border-line transition-colors"
-              title="Next day"
-            >
-              <span>Next day</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          )}
+            {day.nextDate && (
+              <Link
+                href={`/cash-flow/${day.nextDate}?mode=${mode}`}
+                className="inline-flex items-center justify-center min-h-[44px] px-3.5 py-2 rounded-full text-xs font-mono font-medium text-ink bg-white hover:bg-fog border border-line transition-colors flex-1 sm:flex-initial"
+                title="Next day"
+              >
+                <span>Next day</span>
+                <ArrowRight className="w-3.5 h-3.5 ml-1" />
+              </Link>
+            )}
+          </div>
         </div>
       </div>
 
@@ -167,49 +169,49 @@ export function CashFlowDayDetailView({ day, mode = "expected" }: CashFlowDayDet
       )}
 
       {/* 5-Metric Financial Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 lg:gap-6 py-6 border-b border-line my-4">
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-mono uppercase tracking-wider text-ink-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 py-6 border-b border-line my-4">
+        <div className="flex flex-col gap-1 p-3 md:p-0 rounded-[10px] md:rounded-none bg-fog/20 md:bg-transparent border border-line/50 md:border-0 min-w-0">
+          <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-wider text-ink-3 truncate">
             Opening balance
           </span>
-          <span className="text-xl sm:text-2xl font-serif font-bold text-ink">
+          <span className="text-lg sm:text-2xl font-serif font-bold text-ink truncate">
             {formatMoney(day.openingBalance, day.baseCurrency)}
           </span>
-          <span className="text-[11px] text-ink-3">Starting midnight cash</span>
+          <span className="text-[10px] sm:text-[11px] text-ink-3 truncate">Starting midnight cash</span>
         </div>
 
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-mono uppercase tracking-wider text-ink-3">
+        <div className="flex flex-col gap-1 p-3 md:p-0 rounded-[10px] md:rounded-none bg-fog/20 md:bg-transparent border border-line/50 md:border-0 min-w-0">
+          <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-wider text-ink-3 truncate">
             Maturing inflows
           </span>
-          <span className="text-xl sm:text-2xl font-serif font-bold text-moss">
+          <span className="text-lg sm:text-2xl font-serif font-bold text-moss truncate">
             +{formatMoney(day.totalInflows, day.baseCurrency)}
           </span>
-          <span className="text-[11px] text-ink-3">
+          <span className="text-[10px] sm:text-[11px] text-ink-3 truncate">
             {day.inflows.length} {day.inflows.length === 1 ? "receivable" : "receivables"}
           </span>
         </div>
 
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-mono uppercase tracking-wider text-ink-3">
+        <div className="flex flex-col gap-1 p-3 md:p-0 rounded-[10px] md:rounded-none bg-fog/20 md:bg-transparent border border-line/50 md:border-0 min-w-0">
+          <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-wider text-ink-3 truncate">
             Scheduled outflows
           </span>
-          <span className="text-xl sm:text-2xl font-serif font-bold text-ink">
+          <span className="text-lg sm:text-2xl font-serif font-bold text-ink truncate">
             {day.totalOutflows > 0 ? "-" : ""}
             {formatMoney(day.totalOutflows, day.baseCurrency)}
           </span>
-          <span className="text-[11px] text-ink-3">
+          <span className="text-[10px] sm:text-[11px] text-ink-3 truncate">
             {day.outflows.length} {day.outflows.length === 1 ? "payable" : "payables"}
           </span>
         </div>
 
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-mono uppercase tracking-wider text-ink-3">
+        <div className="flex flex-col gap-1 p-3 md:p-0 rounded-[10px] md:rounded-none bg-fog/20 md:bg-transparent border border-line/50 md:border-0 min-w-0">
+          <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-wider text-ink-3 truncate">
             Daily net change
           </span>
           <span
             className={cn(
-              "text-xl sm:text-2xl font-serif font-bold",
+              "text-lg sm:text-2xl font-serif font-bold truncate",
               day.netChange > 0
                 ? "text-moss"
                 : day.netChange < 0
@@ -220,24 +222,35 @@ export function CashFlowDayDetailView({ day, mode = "expected" }: CashFlowDayDet
             {day.netChange > 0 ? "+" : day.netChange < 0 ? "-" : ""}
             {formatMoney(Math.abs(day.netChange), day.baseCurrency)}
           </span>
-          <span className="text-[11px] text-ink-3">Inflows minus outflows</span>
+          <span className="text-[10px] sm:text-[11px] text-ink-3 truncate">Inflows minus outflows</span>
         </div>
 
-        <div className="flex flex-col gap-1 col-span-2 md:col-span-1">
-          <span className="text-[11px] font-mono uppercase tracking-wider text-ink-3">
-            Closing balance
-          </span>
-          <span
-            className={cn(
-              "text-xl sm:text-2xl font-serif font-bold",
-              day.isBreach ? "text-ember-ink" : "text-ink"
-            )}
-          >
-            {formatMoney(day.closingBalance, day.baseCurrency)}
-          </span>
-          <span className="text-[11px] text-ink-3">
-            Buffer: {formatMoney(day.safetyBuffer, day.baseCurrency)}
-          </span>
+        <div className="col-span-2 md:col-span-1 p-3.5 md:p-0 rounded-[10px] md:rounded-none bg-fog/40 md:bg-transparent border border-line md:border-0 flex flex-col justify-between">
+          <div className="flex items-center justify-between md:block">
+            <div>
+              <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-wider text-ink-3 block">
+                Closing balance
+              </span>
+              <span
+                className={cn(
+                  "text-xl sm:text-2xl font-serif font-bold block",
+                  day.isBreach ? "text-ember-ink" : "text-ink"
+                )}
+              >
+                {formatMoney(day.closingBalance, day.baseCurrency)}
+              </span>
+            </div>
+            <div className="text-right md:text-left mt-0.5 md:mt-1">
+              <span className="text-[10px] sm:text-[11px] text-ink-3 block">
+                Buffer: {formatMoney(day.safetyBuffer, day.baseCurrency)}
+              </span>
+              {day.isBreach && (
+                <span className="text-[10px] font-mono font-semibold text-ember-ink block">
+                  Deficit: {formatMoney(day.deficitAmount, day.baseCurrency)}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -265,78 +278,159 @@ export function CashFlowDayDetailView({ day, mode = "expected" }: CashFlowDayDet
               No customer receivables are scheduled or overdue for this date.
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-[12px] border border-line">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-line bg-fog/60 text-ink-3 font-mono text-[11px] uppercase tracking-wider">
-                    <th className="py-3 px-4">Invoice #</th>
-                    <th className="py-3 px-4">Client</th>
-                    <th className="py-3 px-4">Original Amount</th>
-                    <th className="py-3 px-4 text-right">Base Equivalent</th>
-                    <th className="py-3 px-4 text-center">Status</th>
-                    <th className="py-3 px-4 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {day.inflows.map((inv) => (
-                    <tr key={inv.id} className="hover:bg-fog/30 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-semibold text-ink">
-                        <Link
-                          href={`/invoices/${inv.id}`}
-                          className="hover:underline text-ink flex items-center gap-1"
-                        >
-                          <span>{inv.invoiceNumber}</span>
-                        </Link>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-ink">{inv.clientName}</span>
-                          <span className="text-[11px] text-ink-3">Due: {inv.dueDate}</span>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-ink-2">
-                        {inv.currency} {Number(inv.totalAmount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            <>
+              {/* Mobile Cards (< md) */}
+              <div className="space-y-3 block md:hidden">
+                {day.inflows.map((inv) => (
+                  <div
+                    key={inv.id}
+                    className="p-4 rounded-[12px] border border-line bg-white space-y-3"
+                  >
+                    <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-line/60">
+                      <Link
+                        href={`/invoices/${inv.id}`}
+                        className="font-mono font-semibold text-ink text-sm hover:underline flex items-center gap-1"
+                      >
+                        <span>{inv.invoiceNumber}</span>
+                      </Link>
+                      {inv.isOverdue ? (
+                        <Badge variant="overdue">Overdue</Badge>
+                      ) : (
+                        <Badge variant="sent">Open</Badge>
+                      )}
+                    </div>
+
+                    <div className="flex items-start justify-between gap-2 text-xs">
+                      <div>
+                        <span className="font-semibold text-ink block">{inv.clientName}</span>
+                        <span className="text-ink-3 text-[11px] block mt-0.5">Due: {inv.dueDate}</span>
+                      </div>
+                      <div className="text-right font-mono">
+                        <span className="text-ink-2 block">
+                          {inv.currency}{" "}
+                          {Number(inv.totalAmount).toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                          })}
+                        </span>
                         {inv.currency !== day.baseCurrency && (
-                          <span className="block text-[10px] text-ink-3">
-                            FX Rate: {Number(inv.exchangeRate).toFixed(4)}
+                          <span className="text-[10px] text-ink-3 block">
+                            FX: {Number(inv.exchangeRate).toFixed(4)}
                           </span>
                         )}
-                      </td>
-                      <td className="py-3.5 px-4 text-right font-mono font-bold text-moss whitespace-nowrap">
-                        +{formatMoney(inv.baseAmount, day.baseCurrency)}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 pt-2.5 border-t border-line/60">
+                      <div>
+                        <span className="text-[10px] font-mono uppercase text-ink-3 block">
+                          Base equivalent
+                        </span>
+                        <span className="font-mono font-bold text-moss text-sm">
+                          +{formatMoney(inv.baseAmount, day.baseCurrency)}
+                        </span>
                         {inv.isOverdue && (
-                          <span className="block text-[10px] text-ink-3 font-normal">
+                          <span className="text-[10px] text-ink-3 block">
                             (0.70 haircut factor)
                           </span>
                         )}
-                      </td>
-                      <td className="py-3.5 px-4 text-center">
-                        {inv.isOverdue ? (
-                          <Badge variant="overdue">Overdue</Badge>
+                      </div>
+
+                      {/* Visible Settlement Trigger */}
+                      <Button
+                        variant="secondary"
+                        size="compact"
+                        disabled={settlingInvoiceId === inv.id}
+                        onClick={() => handleSettleInvoice(inv)}
+                        className="min-h-[44px] px-4 rounded-full text-xs font-medium border border-line hover:border-ink-3 shrink-0 flex items-center justify-center"
+                      >
+                        {settlingInvoiceId === inv.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
                         ) : (
-                          <Badge variant="sent">Open</Badge>
+                          "Mark paid"
                         )}
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <Button
-                          variant="ghost"
-                          size="compact"
-                          disabled={settlingInvoiceId === inv.id}
-                          onClick={() => handleSettleInvoice(inv)}
-                          className="text-xs h-7 px-2.5 rounded-full"
-                        >
-                          {settlingInvoiceId === inv.id ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            "Mark paid"
-                          )}
-                        </Button>
-                      </td>
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table (>= md) */}
+              <div className="overflow-x-auto rounded-[12px] border border-line hidden md:block">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-line bg-fog/60 text-ink-3 font-mono text-[11px] uppercase tracking-wider">
+                      <th className="py-3 px-4">Invoice #</th>
+                      <th className="py-3 px-4">Client</th>
+                      <th className="py-3 px-4">Original Amount</th>
+                      <th className="py-3 px-4 text-right">Base Equivalent</th>
+                      <th className="py-3 px-4 text-center">Status</th>
+                      <th className="py-3 px-4 text-right">Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {day.inflows.map((inv) => (
+                      <tr key={inv.id} className="hover:bg-fog/30 transition-colors">
+                        <td className="py-3.5 px-4 font-mono font-semibold text-ink">
+                          <Link
+                            href={`/invoices/${inv.id}`}
+                            className="hover:underline text-ink flex items-center gap-1"
+                          >
+                            <span>{inv.invoiceNumber}</span>
+                          </Link>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-ink">{inv.clientName}</span>
+                            <span className="text-[11px] text-ink-3">Due: {inv.dueDate}</span>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-ink-2">
+                          {inv.currency}{" "}
+                          {Number(inv.totalAmount).toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                          })}
+                          {inv.currency !== day.baseCurrency && (
+                            <span className="block text-[10px] text-ink-3">
+                              FX Rate: {Number(inv.exchangeRate).toFixed(4)}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-mono font-bold text-moss whitespace-nowrap">
+                          +{formatMoney(inv.baseAmount, day.baseCurrency)}
+                          {inv.isOverdue && (
+                            <span className="block text-[10px] text-ink-3 font-normal">
+                              (0.70 haircut factor)
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          {inv.isOverdue ? (
+                            <Badge variant="overdue">Overdue</Badge>
+                          ) : (
+                            <Badge variant="sent">Open</Badge>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <Button
+                            variant="ghost"
+                            size="compact"
+                            disabled={settlingInvoiceId === inv.id}
+                            onClick={() => handleSettleInvoice(inv)}
+                            className="text-xs h-8 px-3 rounded-full hover:bg-fog border border-transparent hover:border-line"
+                          >
+                            {settlingInvoiceId === inv.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              "Mark paid"
+                            )}
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </section>
 
@@ -362,73 +456,142 @@ export function CashFlowDayDetailView({ day, mode = "expected" }: CashFlowDayDet
               No operational expenses or vendor liabilities scheduled for this date.
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-[12px] border border-line">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-line bg-fog/60 text-ink-3 font-mono text-[11px] uppercase tracking-wider">
-                    <th className="py-3 px-4">Expense Title</th>
-                    <th className="py-3 px-4">Category</th>
-                    <th className="py-3 px-4">Recurrence</th>
-                    <th className="py-3 px-4">Due Date</th>
-                    <th className="py-3 px-4 text-right">Amount</th>
-                    <th className="py-3 px-4 text-center">Status</th>
-                    <th className="py-3 px-4 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {day.outflows.map((exp) => (
-                    <tr key={exp.id} className="hover:bg-fog/30 transition-colors">
-                      <td className="py-3.5 px-4 font-semibold text-ink">
-                        <div className="flex flex-col">
-                          <span>{exp.title}</span>
-                          {exp.notes && (
-                            <span className="text-[11px] text-ink-3 font-normal truncate max-w-xs">
-                              {exp.notes}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4">
+            <>
+              {/* Mobile Cards (< md) */}
+              <div className="space-y-3 block md:hidden">
+                {day.outflows.map((exp) => (
+                  <div
+                    key={exp.id}
+                    className="p-4 rounded-[12px] border border-line bg-white space-y-3"
+                  >
+                    <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-line/60">
+                      <div>
+                        <span className="font-semibold text-ink text-sm block">{exp.title}</span>
+                        {exp.notes && (
+                          <span className="text-[11px] text-ink-3 block truncate max-w-[240px] mt-0.5">
+                            {exp.notes}
+                          </span>
+                        )}
+                      </div>
+                      {exp.isOverdue ? (
+                        <Badge variant="overdue">Overdue</Badge>
+                      ) : (
+                        <Badge variant="draft">Pending</Badge>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-mono bg-fog text-ink-2">
                           {exp.category}
                         </span>
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-[11px] text-ink-3">
-                        {exp.recurrence || "ONE_OFF"}
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-ink-2">
-                        {exp.dueDate}
-                      </td>
-                      <td className="py-3.5 px-4 text-right font-mono font-bold text-ink whitespace-nowrap">
-                        -{formatMoney(exp.amount, day.baseCurrency)}
-                      </td>
-                      <td className="py-3.5 px-4 text-center">
-                        {exp.isOverdue ? (
-                          <Badge variant="overdue">Overdue</Badge>
+                        <span className="font-mono text-[11px] text-ink-3">
+                          {exp.recurrence || "ONE_OFF"}
+                        </span>
+                      </div>
+                      <span className="font-mono text-[11px] text-ink-2">
+                        Due: {exp.dueDate}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 pt-2.5 border-t border-line/60">
+                      <div>
+                        <span className="text-[10px] font-mono uppercase text-ink-3 block">
+                          Amount
+                        </span>
+                        <span className="font-mono font-bold text-ink text-sm">
+                          -{formatMoney(exp.amount, day.baseCurrency)}
+                        </span>
+                      </div>
+
+                      {/* Visible Settlement Trigger */}
+                      <Button
+                        variant="secondary"
+                        size="compact"
+                        disabled={settlingExpenseId === exp.id}
+                        onClick={() => handleSettleExpense(exp)}
+                        className="min-h-[44px] px-4 rounded-full text-xs font-medium border border-line hover:border-ink-3 shrink-0 flex items-center justify-center"
+                      >
+                        {settlingExpenseId === exp.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
                         ) : (
-                          <Badge variant="draft">Pending</Badge>
+                          "Mark paid"
                         )}
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <Button
-                          variant="ghost"
-                          size="compact"
-                          disabled={settlingExpenseId === exp.id}
-                          onClick={() => handleSettleExpense(exp)}
-                          className="text-xs h-7 px-2.5 rounded-full"
-                        >
-                          {settlingExpenseId === exp.id ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            "Mark paid"
-                          )}
-                        </Button>
-                      </td>
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table (>= md) */}
+              <div className="overflow-x-auto rounded-[12px] border border-line hidden md:block">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-line bg-fog/60 text-ink-3 font-mono text-[11px] uppercase tracking-wider">
+                      <th className="py-3 px-4">Expense Title</th>
+                      <th className="py-3 px-4">Category</th>
+                      <th className="py-3 px-4">Recurrence</th>
+                      <th className="py-3 px-4">Due Date</th>
+                      <th className="py-3 px-4 text-right">Amount</th>
+                      <th className="py-3 px-4 text-center">Status</th>
+                      <th className="py-3 px-4 text-right">Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {day.outflows.map((exp) => (
+                      <tr key={exp.id} className="hover:bg-fog/30 transition-colors">
+                        <td className="py-3.5 px-4 font-semibold text-ink">
+                          <div className="flex flex-col">
+                            <span>{exp.title}</span>
+                            {exp.notes && (
+                              <span className="text-[11px] text-ink-3 font-normal truncate max-w-xs">
+                                {exp.notes}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-mono bg-fog text-ink-2">
+                            {exp.category}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-[11px] text-ink-3">
+                          {exp.recurrence || "ONE_OFF"}
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-ink-2">
+                          {exp.dueDate}
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-mono font-bold text-ink whitespace-nowrap">
+                          -{formatMoney(exp.amount, day.baseCurrency)}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          {exp.isOverdue ? (
+                            <Badge variant="overdue">Overdue</Badge>
+                          ) : (
+                            <Badge variant="draft">Pending</Badge>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <Button
+                            variant="ghost"
+                            size="compact"
+                            disabled={settlingExpenseId === exp.id}
+                            onClick={() => handleSettleExpense(exp)}
+                            className="text-xs h-8 px-3 rounded-full hover:bg-fog border border-transparent hover:border-line"
+                          >
+                            {settlingExpenseId === exp.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              "Mark paid"
+                            )}
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </section>
       </div>
