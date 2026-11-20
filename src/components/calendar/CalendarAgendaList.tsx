@@ -11,18 +11,36 @@ import type { CalendarDay, CalendarEvent } from "@/modules/calendar/types";
 interface CalendarAgendaListProps {
   days: CalendarDay[];
   baseCurrency: string;
+  filterType?: "ALL" | "INFLOWS" | "OUTFLOWS" | "OVERDUE";
   onSelectDay: (day: CalendarDay) => void;
 }
 
 export function CalendarAgendaList({
   days,
   baseCurrency,
+  filterType = "ALL",
   onSelectDay,
 }: CalendarAgendaListProps) {
-  // Filter for days that belong to current month and have at least one event
-  const activeDays = days.filter(
-    (d) => d.isCurrentMonth && d.events.length > 0
-  );
+  function filterEvents(events: CalendarEvent[]) {
+    if (filterType === "INFLOWS") {
+      return events.filter((e) => e.type === "invoice");
+    }
+    if (filterType === "OUTFLOWS") {
+      return events.filter((e) => e.type === "expense");
+    }
+    if (filterType === "OVERDUE") {
+      return events.filter((e) => e.isOverdue);
+    }
+    return events;
+  }
+
+  // Filter for days that belong to current month and have matching events
+  const activeDays = days
+    .map((d) => ({
+      ...d,
+      matchingEvents: filterEvents(d.events),
+    }))
+    .filter((d) => d.isCurrentMonth && d.matchingEvents.length > 0);
 
   function mapInvoiceBadgeVariant(status: string) {
     switch (status) {
@@ -54,18 +72,17 @@ export function CalendarAgendaList({
     return (
       <div className="p-12 text-center border border-line rounded bg-white space-y-3">
         <p className="text-sm font-medium text-ink">
-          No scheduled transactions found
+          No matching transactions found
         </p>
         <p className="text-xs text-ink-3 max-w-sm mx-auto">
-          There are no accounts receivable collections or operational payables
-          scheduled in this monthly period.
+          There are no scheduled transactions matching the selected filter in this monthly period.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {activeDays.map((day) => {
         const parsedDate = new Date(`${day.date}T00:00:00Z`);
         const formattedDate = new Intl.DateTimeFormat("en-GB", {
@@ -79,10 +96,10 @@ export function CalendarAgendaList({
         return (
           <div
             key={day.date}
-            className="border border-line rounded bg-white overflow-hidden"
+            className="border border-line rounded bg-white overflow-hidden shadow-none"
           >
             {/* Day Header Bar */}
-            <div className="p-4 border-b border-line bg-fog/30 flex flex-wrap items-center justify-between gap-3">
+            <div className="p-3.5 border-b border-line bg-fog/30 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <span className="font-medium text-sm text-ink">
                   {formattedDate}
@@ -93,7 +110,8 @@ export function CalendarAgendaList({
                   </span>
                 )}
                 <span className="text-xs font-mono text-ink-3">
-                  ({day.events.length} {day.events.length === 1 ? "event" : "events"})
+                  ({day.matchingEvents.length}{" "}
+                  {day.matchingEvents.length === 1 ? "event" : "events"})
                 </span>
               </div>
 
@@ -132,7 +150,7 @@ export function CalendarAgendaList({
 
             {/* Event Rows */}
             <div className="divide-y divide-line">
-              {day.events.map((event) => {
+              {day.matchingEvents.map((event) => {
                 const isInflow = event.type === "invoice";
 
                 return (

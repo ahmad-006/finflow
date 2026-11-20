@@ -318,16 +318,25 @@ export async function get30DayForecast(
   const anchorDateUtc = toUtcMidnight(anchorDate ?? new Date());
   const maxHorizonUtc = new Date(anchorDateUtc.getTime() + 120 * 86400000);
 
-  const [company, rawInvoices, rawExpenses, clientLatencyMap] = await Promise.all([
-    db.company.findUnique({
-      where: { id: companyId },
-      select: {
-        id: true,
-        liquidReserve: true,
-        safetyBuffer: true,
-        baseCurrency: true,
-      },
-    }),
+  const company = await db.company.findUnique({
+    where: { id: companyId },
+    select: {
+      id: true,
+      liquidReserve: true,
+      safetyBuffer: true,
+      baseCurrency: true,
+    },
+  });
+
+  if (!company) {
+    throw new Error("Company not found.");
+  }
+
+  const openingBalance = roundMoney(Number(company.liquidReserve) || 0);
+  const safetyBuffer = roundMoney(Number(company.safetyBuffer) || 0);
+  const baseCurrency = company.baseCurrency || "PKR";
+
+  const [rawInvoices, rawExpenses, clientLatencyMap] = await Promise.all([
     db.invoice.findMany({
       where: {
         companyId,
@@ -367,14 +376,6 @@ export async function get30DayForecast(
     }),
     computeClientLatencies(companyId),
   ]);
-
-  if (!company) {
-    throw new Error("Company not found.");
-  }
-
-  const openingBalance = roundMoney(Number(company.liquidReserve) || 0);
-  const safetyBuffer = roundMoney(Number(company.safetyBuffer) || 0);
-  const baseCurrency = company.baseCurrency || "PKR";
 
   const unpaidInvoices: UnpaidInvoiceDTO[] = rawInvoices.map((inv) => ({
     id: inv.id,

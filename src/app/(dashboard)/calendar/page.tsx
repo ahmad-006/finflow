@@ -27,11 +27,11 @@ async function CalendarDataLoader() {
 export default function CalendarPage() {
   return (
     <main className="min-h-screen bg-white">
-      <Band tone="white" className="py-8 md:py-12">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
         <React.Suspense fallback={<CalendarSkeleton />}>
           <CalendarDataLoader />
         </React.Suspense>
-      </Band>
+      </div>
     </main>
   );
 }
