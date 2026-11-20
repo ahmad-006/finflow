@@ -7,7 +7,6 @@
  * actionable, human-readable notifications.
  */
 
-import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 
 export type AppErrorCode =
@@ -73,6 +72,14 @@ function hasTimeoutKeywords(str: string): boolean {
   );
 }
 
+interface PrismaLikeError {
+  name?: string;
+  code?: string;
+  errorCode?: string;
+  message?: string;
+  meta?: { target?: unknown };
+}
+
 /**
  * Categorizes any caught error into a safe, structured AppError.
  */
@@ -88,19 +95,32 @@ export function categorizeError(err: unknown): ParsedAppError {
     };
   }
 
+  const errObj = (typeof err === "object" && err !== null ? err : {}) as PrismaLikeError;
+  const errName =
+    errObj.name ||
+    (err instanceof Error ? err.constructor?.name : "") ||
+    "";
+  const errCode = typeof errObj.code === "string" ? errObj.code : "";
+  const errMsg =
+    typeof errObj.message === "string"
+      ? errObj.message
+      : err instanceof Error
+      ? err.message
+      : String(err || "");
+
   // 2. Prisma Client Initialization Error (Database unreachable / offline / DNS fail)
-  if (err instanceof Prisma.PrismaClientInitializationError) {
+  if (errName === "PrismaClientInitializationError") {
     return {
       code: "DATABASE_UNAVAILABLE",
       userMessage: "Unable to connect to the database. Please check your internet connection and try again.",
       isNetworkOrDb: true,
-      technicalDetails: `PrismaClientInitializationError: ${err.errorCode || "UNREACHABLE"}`,
+      technicalDetails: `PrismaClientInitializationError: ${errObj.errorCode || "UNREACHABLE"}`,
     };
   }
 
   // 3. Prisma Client Known Request Errors (P1001, P1002, P2002, P2025, etc.)
-  if (err instanceof Prisma.PrismaClientKnownRequestError) {
-    switch (err.code) {
+  if (errName === "PrismaClientKnownRequestError") {
+    switch (errCode) {
       case "P1001":
       case "P1017":
       case "P2024":
@@ -108,7 +128,7 @@ export function categorizeError(err: unknown): ParsedAppError {
           code: "DATABASE_UNAVAILABLE",
           userMessage: "Unable to reach the database server. Please verify your internet connection and try again.",
           isNetworkOrDb: true,
-          technicalDetails: `Prisma ${err.code}: Database connection unavailable`,
+          technicalDetails: `Prisma ${errCode}: Database connection unavailable`,
         };
 
       case "P1002":
@@ -118,11 +138,11 @@ export function categorizeError(err: unknown): ParsedAppError {
           code: "DATABASE_TIMEOUT",
           userMessage: "The request took longer than expected due to network latency. Please try again.",
           isNetworkOrDb: true,
-          technicalDetails: `Prisma ${err.code}: Transaction or operation timeout`,
+          technicalDetails: `Prisma ${errCode}: Transaction or operation timeout`,
         };
 
       case "P2002": {
-        const target = Array.isArray(err.meta?.target) ? (err.meta.target as string[]).join(", ") : "record";
+        const target = Array.isArray(errObj.meta?.target) ? (errObj.meta.target as string[]).join(", ") : "record";
         return {
           code: "CONFLICT_DUPLICATE",
           userMessage: `A ${target} with this information already exists in your company.`,
@@ -148,27 +168,27 @@ export function categorizeError(err: unknown): ParsedAppError {
         };
 
       default:
-        if (hasConnectionKeywords(err.message)) {
+        if (hasConnectionKeywords(errMsg)) {
           return {
             code: "DATABASE_UNAVAILABLE",
             userMessage: "Unable to connect to the database. Please check your internet connection and try again.",
             isNetworkOrDb: true,
-            technicalDetails: `Prisma ${err.code}`,
+            technicalDetails: `Prisma ${errCode}`,
           };
         }
         return {
           code: "GENERIC_ERROR",
           userMessage: "A database error occurred while processing your request. Please try again.",
           isNetworkOrDb: false,
-          technicalDetails: `Prisma ${err.code}`,
+          technicalDetails: `Prisma ${errCode}`,
         };
     }
   }
 
   // 4. Prisma Rust Panic or Unknown Request
   if (
-    err instanceof Prisma.PrismaClientRustPanicError ||
-    err instanceof Prisma.PrismaClientUnknownRequestError
+    errName === "PrismaClientRustPanicError" ||
+    errName === "PrismaClientUnknownRequestError"
   ) {
     return {
       code: "DATABASE_UNAVAILABLE",
