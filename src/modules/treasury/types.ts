@@ -92,6 +92,55 @@ export interface ForecastQueryInput {
   horizonDays?: number;
 }
 
+export interface DetailedInflowEvent {
+  id: string;
+  invoiceNumber: string;
+  clientId: string;
+  clientName: string;
+  totalAmount: number;
+  currency: string;
+  exchangeRate: number;
+  baseAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  dueDate: string;
+  status: string;
+  isOverdue: boolean;
+}
+
+export interface DetailedOutflowEvent {
+  id: string;
+  title: string;
+  category: string;
+  amount: number;
+  dueDate: string;
+  isPaid: boolean;
+  isOverdue: boolean;
+  recurrence?: string;
+  notes?: string | null;
+}
+
+export interface DayForecastDetails {
+  date: string;
+  displayDate: string;
+  dayOfWeek: string;
+  dayIndex: number;
+  isToday: boolean;
+  baseCurrency: string;
+  openingBalance: number;
+  totalInflows: number;
+  totalOutflows: number;
+  netChange: number;
+  closingBalance: number;
+  safetyBuffer: number;
+  isBreach: boolean;
+  deficitAmount: number;
+  prevDate: string | null;
+  nextDate: string | null;
+  inflows: DetailedInflowEvent[];
+  outflows: DetailedOutflowEvent[];
+}
+
 export interface TreasuryActionResult<T = unknown> {
   success: boolean;
   data?: T;

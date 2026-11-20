@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   SlidersHorizontal,
@@ -8,6 +9,7 @@ import {
   AlertTriangle,
   ArrowUpRight,
   ArrowDownRight,
+  ArrowRight,
   Calendar,
   CheckCircle2,
   Clock,
@@ -396,7 +398,7 @@ export function CashFlowCockpitView({
                   {formatMoney(Math.abs(activePoint.netChange), baseCurrency)}
                 </span>
               </div>
-              <div className="sm:border-l sm:border-line sm:pl-4">
+              <div className="sm:border-l sm:border-line sm:pl-4 flex items-center gap-3">
                 {activePoint.isBreach ? (
                   <Badge variant="critical">
                     Deficit: {formatMoney(activePoint.deficitAmount, baseCurrency)}
@@ -406,6 +408,13 @@ export function CashFlowCockpitView({
                 ) : (
                   <Badge variant="healthy">Healthy</Badge>
                 )}
+                <Link
+                  href={`/cash-flow/${activePoint.date}?mode=${mode}`}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-mono font-medium text-ink bg-white hover:bg-fog border border-line transition-colors"
+                >
+                  <span>Day details</span>
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
               </div>
             </div>
           </div>
@@ -489,12 +498,13 @@ export function CashFlowCockpitView({
                   <th className="py-3 px-4 text-right">Daily net change</th>
                   <th className="py-3 px-4 text-right">Projected balance</th>
                   <th className="py-3 px-4 text-center">Health status</th>
+                  <th className="py-3 px-4 text-right">Details</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
                 {filteredPoints.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-ink-3">
+                    <td colSpan={7} className="py-8 text-center text-ink-3">
                       No days match the selected filter.
                     </td>
                   </tr>
@@ -528,7 +538,11 @@ export function CashFlowCockpitView({
                       >
                         {/* Date Column */}
                         <td className="py-3.5 px-4 font-medium text-ink whitespace-nowrap">
-                          <div className="flex items-center gap-1.5">
+                          <Link
+                            href={`/cash-flow/${point.date}?mode=${mode}`}
+                            className="hover:underline flex items-center gap-1.5"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <span>{point.displayDate}</span>
                             <span className="text-ink-3 font-normal">({point.dayOfWeek})</span>
                             {point.dayIndex === 0 && (
@@ -536,7 +550,7 @@ export function CashFlowCockpitView({
                                 Today
                               </span>
                             )}
-                          </div>
+                          </Link>
                         </td>
 
                         {/* Maturing Inflows */}
@@ -623,6 +637,19 @@ export function CashFlowCockpitView({
                         {/* Health Status */}
                         <td className="py-3.5 px-4 text-center whitespace-nowrap">
                           <Badge variant={statusVariant}>{statusLabel}</Badge>
+                        </td>
+
+                        {/* Details Action */}
+                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                          <Link
+                            href={`/cash-flow/${point.date}?mode=${mode}`}
+                            className="inline-flex items-center gap-1 text-[11px] font-mono text-ink-3 hover:text-ink hover:underline transition-colors"
+                            title={`Inspect ${point.displayDate}`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <span>Details</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </Link>
                         </td>
                       </tr>
                     );

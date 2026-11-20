@@ -12,6 +12,9 @@ import type {
   TreasurySettings,
   UnpaidInvoiceDTO,
   UnpaidExpenseDTO,
+  DetailedInflowEvent,
+  DetailedOutflowEvent,
+  DayForecastDetails,
 } from "./types";
 import { updateTreasurySettingsSchema } from "./validation";
 
@@ -582,6 +585,219 @@ export async function getCached30DayForecast(
   } catch (err: unknown) {
     if (err instanceof Error && err.message.includes("incrementalCache missing")) {
       return get30DayForecast(companyId, mode, anchorDate);
+    }
+    throw err;
+  }
+}
+
+/**
+ * Retrieves detailed transaction breakdown and figures for a specific date in the 30-day forecast.
+ */
+export async function getDayForecastDetails(
+  companyId: string,
+  targetDateStr: string,
+  mode: ForecastMode = "expected"
+): Promise<DayForecastDetails | null> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(targetDateStr)) {
+    return null;
+  }
+
+  const forecast = await get30DayForecast(companyId, mode);
+  const pointIndex = forecast.dailyPoints.findIndex((p) => p.date === targetDateStr);
+  if (pointIndex === -1) {
+    return null;
+  }
+
+  const point = forecast.dailyPoints[pointIndex];
+  const prevDate = pointIndex > 0 ? forecast.dailyPoints[pointIndex - 1].date : null;
+  const nextDate =
+    pointIndex < forecast.dailyPoints.length - 1
+      ? forecast.dailyPoints[pointIndex + 1].date
+      : null;
+
+  const anchorDateUtc = toUtcMidnight(new Date());
+  const tenantTodayMs = anchorDateUtc.getTime();
+  const isDayZero = pointIndex === 0;
+
+  const [rawInvoices, rawExpenses, clientLatencyMap] = await Promise.all([
+    db.invoice.findMany({
+      where: {
+        companyId,
+        status: { notIn: ["PAID", "CANCELLED"] },
+      },
+      select: {
+        id: true,
+        invoiceNumber: true,
+        currency: true,
+        exchangeRate: true,
+        totalAmount: true,
+        baseTotalAmount: true,
+        paidAmount: true,
+        dueDate: true,
+        status: true,
+        clientId: true,
+        client: {
+          select: {
+            clientName: true,
+          },
+        },
+      },
+    }),
+    db.expense.findMany({
+      where: {
+        companyId,
+        isPaid: false,
+      },
+      select: {
+        id: true,
+        title: true,
+        category: true,
+        amount: true,
+        dueDate: true,
+        recurrence: true,
+        notes: true,
+      },
+    }),
+    computeClientLatencies(companyId),
+  ]);
+
+  const inflows: DetailedInflowEvent[] = [];
+  for (const inv of rawInvoices) {
+    const paid = Number(inv.paidAmount) || 0;
+    const total = Number(inv.totalAmount) || 0;
+    const remainingDoc = Math.max(0, total - paid);
+    const fxRate = Number(inv.exchangeRate) || 1;
+    const remainingBase = roundMoney(new Decimal(remainingDoc).mul(new Decimal(fxRate)));
+    if (remainingBase <= 0) continue;
+
+    const dueUtc = toUtcMidnight(inv.dueDate);
+    const diffFromToday = Math.round((dueUtc.getTime() - tenantTodayMs) / 86400000);
+
+    let matchesDay = false;
+    let isOverdue = false;
+
+    if (diffFromToday < 0) {
+      if (isDayZero) {
+        matchesDay = true;
+        isOverdue = true;
+      }
+    } else {
+      let slotIndex = diffFromToday;
+      if (mode === "expected") {
+        const latency = Math.round(clientLatencyMap.get(inv.clientId) ?? 0);
+        slotIndex = diffFromToday + latency;
+      }
+      if (slotIndex === pointIndex) {
+        matchesDay = true;
+        isOverdue = false;
+      }
+    }
+
+    if (matchesDay) {
+      inflows.push({
+        id: inv.id,
+        invoiceNumber: inv.invoiceNumber,
+        clientId: inv.clientId,
+        clientName: inv.client?.clientName || "Unknown Client",
+        totalAmount: total,
+        currency: inv.currency,
+        exchangeRate: fxRate,
+        baseAmount: isOverdue ? roundMoney(new Decimal(remainingBase).mul(0.7)) : remainingBase,
+        paidAmount: paid,
+        remainingAmount: remainingDoc,
+        dueDate: toUtcMidnight(inv.dueDate).toISOString().slice(0, 10),
+        status: inv.status,
+        isOverdue,
+      });
+    }
+  }
+
+  const outflows: DetailedOutflowEvent[] = [];
+  for (const exp of rawExpenses) {
+    const amount = roundMoney(Number(exp.amount) || 0);
+    if (amount <= 0) continue;
+
+    const expDueUtc = toUtcMidnight(exp.dueDate);
+    const diffFromToday = Math.round((expDueUtc.getTime() - tenantTodayMs) / 86400000);
+
+    let matchesDay = false;
+    let isOverdue = false;
+
+    if (diffFromToday < 0) {
+      if (isDayZero) {
+        matchesDay = true;
+        isOverdue = true;
+      }
+    } else if (diffFromToday === pointIndex) {
+      matchesDay = true;
+      isOverdue = false;
+    }
+
+    if (matchesDay) {
+      outflows.push({
+        id: exp.id,
+        title: exp.title,
+        category: exp.category,
+        amount,
+        dueDate: toUtcMidnight(exp.dueDate).toISOString().slice(0, 10),
+        isPaid: false,
+        isOverdue,
+        recurrence: exp.recurrence,
+        notes: exp.notes,
+      });
+    }
+  }
+
+  // Format full display date, e.g. "20 Nov 2026"
+  const slotDate = new Date(point.date + "T00:00:00.000Z");
+  const fullDisplayDate = `${slotDate.getUTCDate()} ${MONTH_NAMES[slotDate.getUTCMonth()]} ${slotDate.getUTCFullYear()}`;
+
+  return {
+    date: point.date,
+    displayDate: fullDisplayDate,
+    dayOfWeek: point.dayOfWeek,
+    dayIndex: point.dayIndex,
+    isToday: isDayZero,
+    baseCurrency: forecast.baseCurrency,
+    openingBalance: point.openingBalance,
+    totalInflows: point.inflows,
+    totalOutflows: point.outflows,
+    netChange: point.netChange,
+    closingBalance: point.closingBalance,
+    safetyBuffer: forecast.safetyBuffer,
+    isBreach: point.isBreach,
+    deficitAmount: point.deficitAmount,
+    prevDate,
+    nextDate,
+    inflows,
+    outflows,
+  };
+}
+
+/**
+ * Multi-tenant tagged cache: getCachedDayForecastDetails
+ */
+export async function getCachedDayForecastDetails(
+  companyId: string,
+  targetDateStr: string,
+  mode: ForecastMode = "expected"
+): Promise<DayForecastDetails | null> {
+  try {
+    return await unstable_cache(
+      async () => getDayForecastDetails(companyId, targetDateStr, mode),
+      [`treasury-day-${companyId}`, targetDateStr, mode],
+      {
+        tags: [
+          `treasury-${companyId}`,
+          `invoices-${companyId}`,
+          `expenses-${companyId}`,
+        ],
+        revalidate: 3600,
+      }
+    )();
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message.includes("incrementalCache missing")) {
+      return getDayForecastDetails(companyId, targetDateStr, mode);
     }
     throw err;
   }

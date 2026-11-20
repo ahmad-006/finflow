@@ -14,6 +14,8 @@ import {
   updateTreasurySettings,
   getCached30DayForecast,
   computeClientLatencies,
+  getDayForecastDetails,
+  getCachedDayForecastDetails,
 } from "@/modules/treasury/service";
 import {
   updateTreasurySettingsAction,
@@ -794,6 +796,59 @@ describe("Domain 6: Treasury Ledger & 30-Day Forward Forecast Engine", () => {
       expect(cached.onTimeCurve.length).toBe(31);
       expect(cached.expectedCurve.length).toBe(31);
       expect(cached.openingBalance).toBe(3_200_000);
+    }, 20000);
+
+    it("should return null when getDayForecastDetails receives an invalid date string", async () => {
+      const invalid = await getDayForecastDetails(companyAId, "invalid-date");
+      expect(invalid).toBeNull();
+    });
+
+    it("should return null when getDayForecastDetails receives a date outside 30-day window", async () => {
+      const outside = await getDayForecastDetails(companyAId, "2099-01-01");
+      expect(outside).toBeNull();
+    });
+
+    it("should retrieve granular Day 0 breakdown with itemized overdue invoices and payables", async () => {
+      const todayStr = toUtcMidnight(new Date()).toISOString().slice(0, 10);
+      const details = await getDayForecastDetails(companyAId, todayStr, "expected");
+
+      expect(details).toBeDefined();
+      if (details) {
+        expect(details.date).toBe(todayStr);
+        expect(details.dayIndex).toBe(0);
+        expect(details.isToday).toBe(true);
+        expect(details.baseCurrency).toBe("PKR");
+        expect(details.openingBalance).toBe(3_200_000);
+        expect(details.nextDate).not.toBeNull();
+        expect(details.inflows.length).toBeGreaterThan(0);
+        expect(details.inflows[0].invoiceNumber).toBeDefined();
+        expect(details.inflows[0].baseAmount).toBeGreaterThan(0);
+      }
+    }, 30000);
+
+    it("should enforce tenant isolation in getDayForecastDetails: Company B cannot see Company A items", async () => {
+      const todayStr = toUtcMidnight(new Date()).toISOString().slice(0, 10);
+      const detailsB = await getDayForecastDetails(companyBId, todayStr, "expected");
+
+      expect(detailsB).toBeDefined();
+      if (detailsB) {
+        // Company B has zero invoices and zero expenses
+        expect(detailsB.inflows.length).toBe(0);
+        expect(detailsB.outflows.length).toBe(0);
+        expect(detailsB.totalInflows).toBe(0);
+        expect(detailsB.totalOutflows).toBe(0);
+      }
+    }, 30000);
+
+    it("should retrieve day breakdown via getCachedDayForecastDetails", async () => {
+      const todayStr = toUtcMidnight(new Date()).toISOString().slice(0, 10);
+      const cached = await getCachedDayForecastDetails(companyAId, todayStr, "expected");
+
+      expect(cached).toBeDefined();
+      if (cached) {
+        expect(cached.date).toBe(todayStr);
+        expect(cached.dayIndex).toBe(0);
+      }
     }, 20000);
   });
 
