@@ -356,23 +356,23 @@ export async function markExpenseAsPaid(
   const paymentDate = validated.paymentDate ? new Date(validated.paymentDate) : new Date();
   const paymentMethod = validated.paymentMethod || "BANK_TRANSFER";
 
-  const existing = await db.expense.findFirst({
-    where: { id: expenseId, companyId },
-  });
-
-  if (!existing) {
-    throw new Error("Expense not found.");
-  }
-
-  if (existing.isPaid) {
-    throw new Error("Expense is already marked as paid.");
-  }
-
-  const reference =
-    validated.reference?.trim() || `Expense payment: ${existing.title}`;
-
   return await db.$transaction(
     async (tx) => {
+      const existing = await tx.expense.findFirst({
+        where: { id: expenseId, companyId },
+      });
+
+      if (!existing) {
+        throw new Error("Expense not found.");
+      }
+
+      if (existing.isPaid) {
+        throw new Error("Expense is already marked as paid.");
+      }
+
+      const reference =
+        validated.reference?.trim() || `Expense payment: ${existing.title}`;
+
       // 1. Mark expense as paid
       const updated = await tx.expense.update({
         where: { id: existing.id },

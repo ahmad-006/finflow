@@ -97,6 +97,7 @@ export interface InvoiceFilters {
   limit?: number;
   sortBy?: "issueDate" | "dueDate" | "totalAmount" | "invoiceNumber";
   sortOrder?: "asc" | "desc";
+  includeItems?: boolean;
 }
 
 export interface InvoiceKPIs {

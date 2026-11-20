@@ -1,6 +1,6 @@
 import * as React from "react";
 import { redirect } from "next/navigation";
-import { getSession, getCurrentUser } from "@/modules/auth";
+import { getSession } from "@/modules/auth";
 import { getCached30DayForecast } from "@/modules/treasury";
 import { getInvoices } from "@/modules/invoices";
 import { getCachedExpenses } from "@/modules/expenses";
@@ -25,14 +25,13 @@ async function DashboardDataLoader() {
     redirect("/login");
   }
 
-  const currentUser = await getCurrentUser();
-  const baseCurrency = currentUser?.company?.baseCurrency || "PKR";
-
   const [forecast, invoiceResult, rawExpenses] = await Promise.all([
     getCached30DayForecast(session.companyId),
     getInvoices(session.companyId, { limit: 100 }),
     getCachedExpenses(session.companyId),
   ]);
+
+  const baseCurrency = forecast.baseCurrency || "PKR";
 
   const allInvoices = invoiceResult.invoices || [];
   const allExpenses = Array.isArray(rawExpenses)

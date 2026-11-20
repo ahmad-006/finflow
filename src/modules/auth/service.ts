@@ -174,25 +174,21 @@ export async function loginUser(rawInput: LoginInput): Promise<AuthSessionData> 
 export async function getUserWithCompany(userId: string) {
   const user = await db.user.findUnique({
     where: { id: userId },
-    include: { company: true },
+    select: {
+      id: true,
+      companyId: true,
+      email: true,
+      fullName: true,
+      role: true,
+      createdAt: true,
+      updatedAt: true,
+      company: true,
+    },
   });
 
   if (!user) return null;
 
-  const safeUser: SafeUser = {
-    id: user.id,
-    companyId: user.companyId,
-    email: user.email,
-    fullName: user.fullName,
-    role: user.role,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
-  };
-
-  return {
-    ...safeUser,
-    company: user.company,
-  };
+  return user;
 }
 
 /**

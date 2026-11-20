@@ -402,29 +402,29 @@ export async function recordInvoicePayment(
 ): Promise<InvoiceWithItemsAndClient> {
   const validated = recordPaymentSchema.parse(input);
 
-  const existing = await db.invoice.findFirst({
-    where: { id: validated.invoiceId, companyId },
-  });
-
-  if (!existing) {
-    throw new Error("Invoice not found.");
-  }
-
-  if (existing.status === "PAID") {
-    throw new Error("Invoice is already fully paid.");
-  }
-
-  if (existing.status === "CANCELLED") {
-    throw new Error("Cannot record payment on a cancelled invoice.");
-  }
-
-  const currentPaid = Number(existing.paidAmount) || 0;
-  const newPaid = currentPaid + validated.paidAmount;
-  const total = Number(existing.totalAmount);
-  const isFullyPaid = newPaid >= total;
-  const paymentDate = validated.paidAt ? new Date(validated.paidAt) : new Date();
-
   return await db.$transaction(async (tx) => {
+    const existing = await tx.invoice.findFirst({
+      where: { id: validated.invoiceId, companyId },
+    });
+
+    if (!existing) {
+      throw new Error("Invoice not found.");
+    }
+
+    if (existing.status === "PAID") {
+      throw new Error("Invoice is already fully paid.");
+    }
+
+    if (existing.status === "CANCELLED") {
+      throw new Error("Cannot record payment on a cancelled invoice.");
+    }
+
+    const currentPaid = Number(existing.paidAmount) || 0;
+    const newPaid = currentPaid + validated.paidAmount;
+    const total = Number(existing.totalAmount);
+    const isFullyPaid = newPaid >= total;
+    const paymentDate = validated.paidAt ? new Date(validated.paidAt) : new Date();
+
     const updated = await tx.invoice.update({
       where: { id: existing.id },
       data: {
@@ -579,7 +579,7 @@ export async function getInvoices(
             address: true,
           },
         },
-        items: true,
+        items: filters?.includeItems ? true : false,
       },
       orderBy: { [orderByField]: orderDirection },
       skip,

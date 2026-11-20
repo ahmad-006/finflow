@@ -2,9 +2,8 @@
 // Fully optimized for Vercel Serverless + Neon connection pooling.
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -70,8 +69,9 @@ model Client {
 
   invoices Invoice[]
 
-  @@index([companyId])
   @@index([companyId, deletedAt])
+  @@index([companyId, deletedAt, createdAt])
+  @@index([companyId, email])
   @@map("clients")
 }
 
@@ -108,9 +108,11 @@ model Invoice {
   reminders    ReminderLog[]
 
   @@unique([companyId, invoiceNumber])
-  @@index([companyId, status])
-  @@index([companyId, dueDate])
-  @@index([viewToken])
+  @@index([clientId])
+  @@index([companyId, clientId])
+  @@index([companyId, status, dueDate])
+  @@index([companyId, issueDate])
+  @@index([companyId, status, paidAt])
   @@map("invoices")
 }
 
@@ -150,8 +152,9 @@ model Expense {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  @@index([companyId, dueDate])
   @@index([companyId, isPaid])
+  @@index([companyId, isPaid, dueDate])
+  @@index([companyId, category, dueDate])
   @@map("expenses")
 }
 
@@ -174,6 +177,8 @@ model Transaction {
   reference       String?
   createdAt       DateTime @default(now())
 
+  @@index([invoiceId])
+  @@index([companyId, invoiceId])
   @@index([companyId, transactionDate])
   @@map("transactions")
 }
@@ -206,5 +211,7 @@ model AuditLog {
   timestamp  DateTime @default(now())
 
   @@index([companyId, timestamp])
+  @@index([companyId, userId])
+  @@index([companyId, entityType, entityId])
   @@map("audit_logs")
 }
