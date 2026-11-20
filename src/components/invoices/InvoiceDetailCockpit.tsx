@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   Download,
   Loader2,
+  Bell,
 } from "lucide-react";
 import type { InvoiceWithItemsAndClient } from "@/modules/invoices/types";
 import { formatMoney } from "@/modules/invoices/currency";
@@ -29,6 +30,7 @@ import {
   markInvoiceSentAction,
   cancelInvoiceAction,
 } from "@/modules/invoices/actions";
+import { sendInvoiceReminderAction } from "@/modules/notifications/actions";
 
 interface InvoiceDetailCockpitProps {
   invoice: InvoiceWithItemsAndClient;
@@ -46,6 +48,8 @@ export function InvoiceDetailCockpit({
   const [isPaymentModalOpen, setIsPaymentModalOpen] = React.useState(false);
   const [copiedLink, setCopiedLink] = React.useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = React.useState(false);
+  const [isSendingReminder, setIsSendingReminder] = React.useState(false);
+  const [reminderSuccess, setReminderSuccess] = React.useState(false);
   const [actionError, setActionError] = React.useState<string | null>(null);
 
   const remainingBalance = Math.max(0, invoice.totalAmount - invoice.paidAmount);
@@ -118,6 +122,30 @@ export function InvoiceDetailCockpit({
         setActionError(formatUserError(err, "Unable to cancel invoice. Please check your connection."));
       }
     });
+  };
+
+  const handleSendReminder = async () => {
+    setActionError(null);
+    setIsSendingReminder(true);
+    try {
+      const res = await sendInvoiceReminderAction(invoice.id);
+      if (!res.success) {
+        setActionError(res.error || "Failed to send payment reminder.");
+      } else {
+        setReminderSuccess(true);
+        setTimeout(() => setReminderSuccess(false), 3000);
+        router.refresh();
+      }
+    } catch (err) {
+      setActionError(
+        formatUserError(
+          err,
+          "Unable to send payment reminder. Please check your connection."
+        )
+      );
+    } finally {
+      setIsSendingReminder(false);
+    }
   };
 
   const handlePrint = () => {
@@ -215,6 +243,34 @@ export function InvoiceDetailCockpit({
             </button>
           )}
 
+          {/* Send Reminder (if SENT or OVERDUE) */}
+          {(invoice.status === "SENT" || invoice.status === "OVERDUE") && (
+            <button
+              type="button"
+              disabled={isSendingReminder}
+              onClick={handleSendReminder}
+              className="min-h-[44px] inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-line bg-white text-xs font-medium text-ink hover:bg-fog hover:text-ink transition-colors disabled:opacity-50"
+              title="Send email payment reminder to client"
+            >
+              {isSendingReminder ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-ink/70" />
+                  <span>Sending Reminder...</span>
+                </>
+              ) : reminderSuccess ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-moss" />
+                  <span className="text-moss">Reminder Sent</span>
+                </>
+              ) : (
+                <>
+                  <Bell className="w-3.5 h-3.5 text-ink/70" />
+                  <span>Send Reminder</span>
+                </>
+              )}
+            </button>
+          )}
+
           {/* Record Payment (if SENT or OVERDUE) */}
           {(invoice.status === "SENT" || invoice.status === "OVERDUE") && (
             <button
@@ -241,6 +297,13 @@ export function InvoiceDetailCockpit({
           )}
         </div>
       </div>
+
+      {reminderSuccess && (
+        <div className="p-3 rounded-[8px] border border-moss/30 bg-moss/5 text-moss text-xs flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-moss" />
+          <span>Payment reminder sent to {invoice.client.email}.</span>
+        </div>
+      )}
 
       {actionError && (
         <div className="p-3 rounded-[8px] border border-ember/30 bg-ember/5 text-ember text-xs">

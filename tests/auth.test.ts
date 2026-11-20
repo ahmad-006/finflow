@@ -91,6 +91,7 @@ describe("Domain 1: Multi-Tenant Identity & Auth Service", () => {
       email: "finance@rehmansons.pk",
       fullName: "Tariq Rehman",
       role: "OWNER",
+      emailVerified: true,
       createdAt: Date.now(),
       expiresAt: Date.now() + SESSION_MAX_AGE_SECONDS * 1000,
     };
@@ -334,32 +335,32 @@ describe("Domain 1: Multi-Tenant Identity & Auth Service", () => {
     });
 
     it("should reject login with wrong password", async () => {
-      expect(async () => {
-        await loginUser({
+      await expect(
+        loginUser({
           email: testEmail,
           password: "IncorrectPassword123!#",
-        });
-      }).toThrow("Invalid email or password.");
+        })
+      ).rejects.toThrow("Invalid email or password.");
     });
 
     it("should reject login for non-existent user", async () => {
-      expect(async () => {
-        await loginUser({
+      await expect(
+        loginUser({
           email: "doesnotexist@finflow-verification.test",
           password: testPassword,
-        });
-      }).toThrow("Invalid email or password.");
+        })
+      ).rejects.toThrow("Invalid email or password.");
     });
 
     it("should reject duplicate registration with identical email", async () => {
-      expect(async () => {
-        await registerUserAndCompany({
+      await expect(
+        registerUserAndCompany({
           companyName: "Duplicate Corp",
           fullName: "Duplicate User",
           email: testEmail, // same email
           password: testPassword,
-        });
-      }).toThrow("A user with this email address already exists.");
+        })
+      ).rejects.toThrow("A user with this email address already exists.");
     });
 
     it("should fetch user with company details via getUserWithCompany", async () => {

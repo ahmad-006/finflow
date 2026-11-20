@@ -12,8 +12,41 @@ export function getSessionSecretKey(): Uint8Array {
   return new TextEncoder().encode(secret);
 }
 
+export type { SessionPayload };
+
+export interface CreateSessionTokenInput {
+  userId: string;
+  companyId: string;
+  email: string;
+  fullName?: string;
+  role?: string;
+  emailVerified?: boolean;
+  createdAt?: number;
+  expiresAt?: number;
+}
+
 /**
  * Creates an industry-standard signed JWT session token.
+ */
+export async function createSessionToken(
+  payload: CreateSessionTokenInput | SessionPayload,
+  secretKey: Uint8Array = getSessionSecretKey()
+): Promise<string> {
+  const fullPayload: SessionPayload = {
+    userId: payload.userId,
+    companyId: payload.companyId,
+    email: payload.email,
+    fullName: payload.fullName || "",
+    role: payload.role || "OWNER",
+    emailVerified: Boolean(payload.emailVerified),
+    createdAt: payload.createdAt || Date.now(),
+    expiresAt: payload.expiresAt || Date.now() + SESSION_MAX_AGE_SECONDS * 1000,
+  };
+  return await signSession(fullPayload, secretKey);
+}
+
+/**
+ * Signs a session payload into a JWT token.
  */
 export async function signSession(
   payload: SessionPayload,
@@ -42,7 +75,16 @@ export async function verifySessionToken(
     if (!payload.userId || !payload.companyId) {
       return null;
     }
-    return payload as unknown as SessionPayload;
+    return {
+      userId: String(payload.userId),
+      companyId: String(payload.companyId),
+      email: String(payload.email || ""),
+      fullName: String(payload.fullName || ""),
+      role: String(payload.role || "OWNER"),
+      emailVerified: Boolean(payload.emailVerified),
+      createdAt: Number(payload.createdAt || Date.now()),
+      expiresAt: Number(payload.expiresAt || 0),
+    };
   } catch {
     return null;
   }
@@ -52,37 +94,49 @@ export async function verifySessionToken(
  * Sets the signed session token into an HTTP-only secure cookie.
  */
 export async function setSessionCookie(token: string): Promise<void> {
-  const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
-  });
+  try {
+    const cookieStore = await cookies();
+    cookieStore.set(SESSION_COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: SESSION_MAX_AGE_SECONDS,
+    });
+  } catch {
+    // Gracefully handle invocation outside active request context (e.g. testing)
+  }
 }
 
 /**
  * Clears the session cookie on logout.
  */
 export async function clearSessionCookie(): Promise<void> {
-  const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE_NAME, "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
-  cookieStore.delete(SESSION_COOKIE_NAME);
+  try {
+    const cookieStore = await cookies();
+    cookieStore.set(SESSION_COOKIE_NAME, "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 0,
+    });
+    cookieStore.delete(SESSION_COOKIE_NAME);
+  } catch {
+    // Gracefully handle invocation outside active request context
+  }
 }
 
 /**
  * Reads the session token string from cookies.
  */
 export async function getSessionTokenFromCookies(): Promise<string | null> {
-  const cookieStore = await cookies();
-  return cookieStore.get(SESSION_COOKIE_NAME)?.value ?? null;
+  try {
+    const cookieStore = await cookies();
+    return cookieStore.get(SESSION_COOKIE_NAME)?.value ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /**

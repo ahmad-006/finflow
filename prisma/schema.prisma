@@ -40,13 +40,18 @@ model User {
   companyId    String
   company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   email        String   @unique
-  passwordHash String
+  passwordHash String?
   fullName     String
   role         String   @default("OWNER") // OWNER, ADMIN, MEMBER, VIEWER
+  emailVerified Boolean  @default(false)
+  authProvider String   @default("LOCAL") // LOCAL, GOOGLE
+  googleId     String?  @unique
+  avatarUrl    String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   @@index([companyId])
+  @@index([googleId])
   @@map("users")
 }
 
@@ -190,13 +195,17 @@ model Transaction {
 
 model ReminderLog {
   id             String   @id @default(uuid())
+  companyId      String?
   invoiceId      String
   invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   recipientEmail String
   status         String   // SENT, FAILED
+  channel        String   @default("EMAIL")
+  error          String?
   sentAt         DateTime @default(now())
 
   @@index([invoiceId])
+  @@index([companyId])
   @@map("reminder_logs")
 }
 
@@ -215,4 +224,24 @@ model AuditLog {
   @@index([companyId, userId])
   @@index([companyId, entityType, entityId])
   @@map("audit_logs")
+}
+
+// ==========================================
+// 7. VERIFICATION CODES & TOKENS (Hashed)
+// ==========================================
+
+model VerificationCode {
+  id          String    @id @default(uuid())
+  email       String
+  codeHash    String    // SHA-256 HMAC hash of 6-digit OTP or reset token
+  type        String    // SIGNUP_OTP, PASSWORD_RESET_OTP
+  expiresAt   DateTime
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(5)
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([email, type])
+  @@index([codeHash])
+  @@map("verification_codes")
 }

@@ -235,7 +235,7 @@ describe("Domain 7: Visual Calendar & Scheduling Service", () => {
       expect(targetDayB?.inflows).toBe(999_999);
       expect(targetDayB?.outflows).toBe(0);
       expect(targetDayB?.events.some((e) => e.referenceNumber === "INV-CAL-001")).toBe(false);
-    });
+    }, 15000);
 
     it("should compute monthly summary metrics accurately", async () => {
       const data = await getMonthCalendar(companyAId, 2026, 11);

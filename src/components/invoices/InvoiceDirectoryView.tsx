@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Plus,
   Search,
@@ -12,6 +13,8 @@ import {
   Download,
   Loader2,
   CheckCircle2,
+  Bell,
+  Check,
 } from "lucide-react";
 import type {
   InvoiceWithItemsAndClient,
@@ -24,6 +27,8 @@ import { InvoiceStatusBadge } from "./InvoiceStatusBadge";
 import { InvoiceKPIStrip } from "./InvoiceKPIStrip";
 import { RecordPaymentModal } from "./RecordPaymentModal";
 import { downloadInvoicePDF } from "@/modules/documents";
+import { formatUserError } from "@/lib/errors";
+import { sendInvoiceReminderAction } from "@/modules/notifications/actions";
 
 export interface InvoiceDirectoryViewProps {
   initialInvoices: InvoiceWithItemsAndClient[];
@@ -38,7 +43,11 @@ export function InvoiceDirectoryView({
   baseCurrency = "PKR",
   companyName = "FinFlow Commercial Services",
 }: InvoiceDirectoryViewProps) {
+  const router = useRouter();
   const [downloadingId, setDownloadingId] = React.useState<string | null>(null);
+  const [sendingReminderId, setSendingReminderId] = React.useState<string | null>(null);
+  const [reminderSuccessId, setReminderSuccessId] = React.useState<string | null>(null);
+  const [feedbackMessage, setFeedbackMessage] = React.useState<{ text: string; isError?: boolean } | null>(null);
   const [paymentInvoice, setPaymentInvoice] = React.useState<InvoiceWithItemsAndClient | null>(null);
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<InvoiceStatus | "ALL">("ALL");
@@ -112,6 +121,39 @@ export function InvoiceDirectoryView({
     }
   };
 
+  const handleSendReminder = async (inv: InvoiceWithItemsAndClient) => {
+    setFeedbackMessage(null);
+    setSendingReminderId(inv.id);
+    try {
+      const res = await sendInvoiceReminderAction(inv.id);
+      if (!res.success) {
+        setFeedbackMessage({
+          text: res.error || "Failed to dispatch payment reminder.",
+          isError: true,
+        });
+      } else {
+        setReminderSuccessId(inv.id);
+        setFeedbackMessage({
+          text: `Reminder dispatched to ${inv.client.email} for ${inv.invoiceNumber}.`,
+          isError: false,
+        });
+        setTimeout(() => setReminderSuccessId(null), 3000);
+        setTimeout(() => setFeedbackMessage(null), 5000);
+        router.refresh();
+      }
+    } catch (err) {
+      setFeedbackMessage({
+        text: formatUserError(
+          err,
+          "Unable to send payment reminder. Please check your connection."
+        ),
+        isError: true,
+      });
+    } finally {
+      setSendingReminderId(null);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6">
       {/* 1. Header & Primary CTA */}
@@ -136,6 +178,33 @@ export function InvoiceDirectoryView({
           <span>New Invoice</span>
         </Link>
       </div>
+
+      {/* Feedback Banner */}
+      {feedbackMessage && (
+        <div
+          className={`p-3 rounded-[8px] border text-xs flex items-center justify-between gap-2 ${
+            feedbackMessage.isError
+              ? "border-ember/30 bg-ember/5 text-ember"
+              : "border-moss/30 bg-moss/5 text-moss"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {feedbackMessage.isError ? (
+              <span className="font-semibold">Notice:</span>
+            ) : (
+              <Check className="w-3.5 h-3.5 shrink-0 text-moss" />
+            )}
+            <span>{feedbackMessage.text}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFeedbackMessage(null)}
+            className="text-xs opacity-60 hover:opacity-100 p-1 min-h-[32px] min-w-[32px] inline-flex items-center justify-center"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* 2. Executive KPI Strip */}
       <InvoiceKPIStrip kpis={kpis} baseCurrency={baseCurrency} />
@@ -260,6 +329,7 @@ export function InvoiceDirectoryView({
                     inv.status !== "CANCELLED" &&
                     new Date(inv.dueDate).getTime() < new Date().getTime();
                   const canPay = inv.status !== "PAID" && inv.status !== "CANCELLED";
+                  const canRemind = inv.status === "SENT" || inv.status === "OVERDUE";
 
                   return (
                     <tr
@@ -337,6 +407,26 @@ export function InvoiceDirectoryView({
                               <span>Pay</span>
                             </button>
                           )}
+                          {canRemind && (
+                            <button
+                              type="button"
+                              title="Send Email Payment Reminder"
+                              disabled={sendingReminderId === inv.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSendReminder(inv);
+                              }}
+                              className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-2 rounded-full border border-line bg-white text-ink/70 hover:text-ink hover:bg-fog transition-colors disabled:opacity-50"
+                            >
+                              {sendingReminderId === inv.id ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-ink/70" />
+                              ) : reminderSuccessId === inv.id ? (
+                                <Check className="w-3.5 h-3.5 text-moss" />
+                              ) : (
+                                <Bell className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          )}
                           <button
                             type="button"
                             title="Download PDF"
@@ -378,6 +468,7 @@ export function InvoiceDirectoryView({
                 inv.status !== "CANCELLED" &&
                 new Date(inv.dueDate).getTime() < new Date().getTime();
               const canPay = inv.status !== "PAID" && inv.status !== "CANCELLED";
+              const canRemind = inv.status === "SENT" || inv.status === "OVERDUE";
 
               return (
                 <div
@@ -440,6 +531,25 @@ export function InvoiceDirectoryView({
                       >
                         <CheckCircle2 className="w-4 h-4 text-moss shrink-0" />
                         <span>Mark Paid</span>
+                      </button>
+                    )}
+
+                    {canRemind && (
+                      <button
+                        type="button"
+                        disabled={sendingReminderId === inv.id}
+                        onClick={() => handleSendReminder(inv)}
+                        className="min-h-[44px] inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-full border border-line bg-white text-ink/70 hover:text-ink hover:bg-fog transition-colors disabled:opacity-50 text-xs font-medium"
+                        title="Send Payment Reminder"
+                      >
+                        {sendingReminderId === inv.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                        ) : reminderSuccessId === inv.id ? (
+                          <Check className="w-4 h-4 text-moss shrink-0" />
+                        ) : (
+                          <Bell className="w-4 h-4 shrink-0" />
+                        )}
+                        <span>{reminderSuccessId === inv.id ? "Sent" : "Remind"}</span>
                       </button>
                     )}
 

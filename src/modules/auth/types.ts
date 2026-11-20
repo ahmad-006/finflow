@@ -6,6 +6,7 @@ export interface SessionPayload {
   email: string;
   fullName: string;
   role: string;
+  emailVerified: boolean;
   createdAt: number;
   expiresAt: number;
 }
@@ -41,6 +42,7 @@ export interface SafeUser {
   email: string;
   fullName: string;
   role: string;
+  emailVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

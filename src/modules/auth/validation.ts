@@ -101,3 +101,53 @@ export const loginSchema = z.object({
     .min(1, "Password is required"),
   noRedirect: z.boolean().optional(),
 });
+
+export const verifyEmailSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .email("Please provide a valid email address")
+    .toLowerCase(),
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, "Verification code must be 6 digits"),
+  noRedirect: z.boolean().optional(),
+});
+
+export const resendOtpSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .email("Please provide a valid email address")
+    .toLowerCase(),
+});
+
+export const forgotPasswordSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .email("Please provide a valid email address")
+    .toLowerCase(),
+});
+
+export const resetPasswordSchema = z
+  .object({
+    email: z
+      .string()
+      .trim()
+      .email("Please provide a valid email address")
+      .toLowerCase(),
+    code: z
+      .string()
+      .trim()
+      .regex(/^\d{6}$/, "Reset code must be 6 digits"),
+    password: passwordSchema.optional(),
+    newPassword: passwordSchema.optional(),
+    confirmPassword: z.string().optional(),
+    noRedirect: z.boolean().optional(),
+  })
+  .refine((data) => Boolean(data.newPassword || data.password), {
+    message: "New password is required",
+    path: ["newPassword"],
+  });

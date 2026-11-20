@@ -1,61 +1,17 @@
-"use client";
-
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { Eye, EyeOff } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { InlineAlert } from "@/components/feedback/InlineAlert";
-import { formatUserError } from "@/lib/errors";
-import { loginAction } from "@/modules/auth/actions";
+import { Suspense } from "react";
+import { LoginForm } from "@/components/auth/LoginForm";
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [error, setError] = React.useState<string | null>(null);
-  const [isPending, setIsPending] = React.useState(false);
-  const [showPassword, setShowPassword] = React.useState(false);
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError(null);
-    setIsPending(true);
-
-    try {
-      const form = e.currentTarget;
-      const formData = new FormData(form);
-      const res = await loginAction(formData);
-
-      if (res && typeof res === "object" && !res.success && res.error) {
-        setError(res.error);
-        setIsPending(false);
-      } else {
-        router.push("/dashboard");
-        router.refresh();
-      }
-    } catch (err: unknown) {
-      const errObj = err as { message?: string; digest?: string };
-      if (
-        errObj?.message === "NEXT_REDIRECT" ||
-        (typeof errObj?.digest === "string" && errObj.digest.startsWith("NEXT_REDIRECT"))
-      ) {
-        return;
-      }
-      setError(formatUserError(err, "The email or password is incorrect."));
-      setIsPending(false);
-    }
-  };
-
   return (
     <div className="relative min-h-screen flex flex-col justify-between bg-white px-6 py-10 overflow-hidden font-sans">
       {/* Top Left Wordmark */}
       <div className="w-full max-w-[1200px] mx-auto">
         <Link
           href="/"
-          className="inline-flex items-center hover:opacity-80 transition-opacity"
+          className="inline-flex items-center hover:opacity-80 transition-opacity min-h-[44px]"
         >
           <Image
             src="/finflow-logo-on-white.png"
@@ -77,81 +33,9 @@ export default function LoginPage() {
           Use your workspace email.
         </p>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="finance@rehmansons.com"
-              required
-              autoComplete="email"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                name="password"
-                type={showPassword ? "text" : "password"}
-                required
-                autoComplete="current-password"
-                className="pr-12"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink transition-colors p-1 rounded-full focus:outline-none"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-5 w-5" strokeWidth={1.5} />
-                ) : (
-                  <Eye className="h-5 w-5" strokeWidth={1.5} />
-                )}
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <Checkbox
-              id="remember"
-              name="remember"
-              label="Keep me signed in"
-              defaultChecked
-            />
-          </div>
-
-          {error && (
-            <InlineAlert
-              variant="negative"
-              message={error}
-            />
-          )}
-
-          <Button
-            type="submit"
-            variant="primary"
-            size="default"
-            className="w-full h-12 rounded-full text-[17px] font-medium"
-            isLoading={isPending}
-          >
-            Sign in
-          </Button>
-
-          <div className="text-center mt-3">
-            <span className="text-[15px] text-ink-2">New to FinFlow? </span>
-            <Link
-              href="/register"
-              className="text-[15px] font-medium text-ink underline underline-offset-4 decoration-line-strong hover:decoration-ink transition-colors"
-            >
-              Create a workspace
-            </Link>
-          </div>
-        </form>
+        <Suspense fallback={<div className="h-48 animate-pulse bg-fog rounded-[14px]" />}>
+          <LoginForm />
+        </Suspense>
       </div>
 
       {/* Static line along the bottom 26vh, aria-hidden, no ruler, no buffer */}
