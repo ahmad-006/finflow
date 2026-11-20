@@ -31,7 +31,7 @@ export function formatMoney(
     maximumFractionDigits: decimals,
   }).format(absNum);
 
-  const prefix = isNegative ? "\u2212" : ""; // Unicode true minus sign (U+2212)
+  const prefix = isNegative ? "-" : "";
   return `${prefix}${currency} ${formattedNum}`;
 }
 

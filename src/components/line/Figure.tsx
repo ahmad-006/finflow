@@ -60,7 +60,7 @@ export function Figure({
     <span className={`inline-flex items-baseline tabular-nums ${current.container} ${className}`}>
       {currency && <span className={current.currency}>{currency}</span>}
       <span className={current.number}>
-        {isNegative ? "\u2212" : ""}
+        {isNegative ? "-" : ""}
         {intPart}
       </span>
       {showDecimals && <span className={current.decimals}>{decPart}</span>}

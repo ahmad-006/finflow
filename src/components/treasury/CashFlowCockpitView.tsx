@@ -376,7 +376,7 @@ export function CashFlowCockpitView({
               <div>
                 <span className="text-ink-3 block text-[11px] font-mono uppercase">Outflows</span>
                 <span className="font-semibold text-ink">
-                  {activePoint.outflows > 0 ? "\u2212" : ""}
+                  {activePoint.outflows > 0 ? "-" : ""}
                   {formatMoney(activePoint.outflows, baseCurrency)}
                 </span>
               </div>
@@ -392,7 +392,7 @@ export function CashFlowCockpitView({
                       : "text-ink-3"
                   )}
                 >
-                  {activePoint.netChange > 0 ? "+" : activePoint.netChange < 0 ? "\u2212" : ""}
+                  {activePoint.netChange > 0 ? "+" : activePoint.netChange < 0 ? "-" : ""}
                   {formatMoney(Math.abs(activePoint.netChange), baseCurrency)}
                 </span>
               </div>
@@ -575,7 +575,7 @@ export function CashFlowCockpitView({
                           {point.outflows > 0 ? (
                             <div className="flex flex-col gap-1 max-w-[260px]">
                               <span className="font-semibold text-ink">
-                                {"\u2212"}{formatMoney(point.outflows, baseCurrency)}
+                                -{formatMoney(point.outflows, baseCurrency)}
                               </span>
                               <div className="flex flex-wrap gap-1">
                                 {point.outflowEvents.slice(0, 2).map((ev) => (
@@ -610,7 +610,7 @@ export function CashFlowCockpitView({
                                 : "text-ink-3"
                             )}
                           >
-                            {isPositive ? "+" : isNegative ? "\u2212" : ""}
+                            {isPositive ? "+" : isNegative ? "-" : ""}
                             {formatMoney(Math.abs(point.netChange), baseCurrency)}
                           </span>
                         </td>
