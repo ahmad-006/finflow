@@ -131,7 +131,7 @@ export function MarkPaidModal({
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="p-1.5 rounded-full text-ink-3 hover:text-ink hover:bg-fog transition-colors"
+            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-ink-3 hover:text-ink hover:bg-fog transition-colors -mr-2 shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -232,14 +232,14 @@ export function MarkPaidModal({
               variant="secondary"
               onClick={onClose}
               disabled={isPending}
-              className="h-10 px-4 rounded-full text-xs font-medium"
+              className="min-h-[44px] h-11 px-5 rounded-full text-xs font-medium"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={isPending}
-              className="h-10 px-5 rounded-full bg-ink text-white hover:bg-ink-hover text-xs font-medium"
+              className="min-h-[44px] h-11 px-6 rounded-full bg-ink text-white hover:bg-ink-hover text-xs font-medium"
             >
               {isPending ? (
                 <>

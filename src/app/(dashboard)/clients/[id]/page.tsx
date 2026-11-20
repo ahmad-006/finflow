@@ -57,51 +57,51 @@ async function ClientStatementDataLoader({
 
       {/* 2. Client Profile Header */}
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 pb-6 border-b border-line">
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl sm:text-3xl font-semibold tracking-[-0.02em] text-ink">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-[-0.02em] text-ink font-serif break-words">
               {client.clientName}
             </h1>
-            <StatusBadge status={client.metrics.riskStatus} />
+            <StatusBadge status={client.metrics.riskStatus} className="shrink-0" />
           </div>
 
           {/* Contact Metadata */}
-          <div className="flex flex-wrap items-center gap-4 text-xs text-ink-2 pt-1">
-            <div className="flex items-center gap-1.5">
-              <Mail className="h-3.5 w-3.5 text-ink-3" />
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-ink-2 pt-1">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Mail className="h-3.5 w-3.5 text-ink-3 shrink-0" />
               <a
                 href={`mailto:${client.email}`}
-                className="hover:underline text-ink"
+                className="hover:underline text-ink truncate max-w-[280px] sm:max-w-none"
               >
                 {client.email}
               </a>
             </div>
 
             {client.phone && (
-              <div className="flex items-center gap-1.5">
-                <Phone className="h-3.5 w-3.5 text-ink-3" />
+              <div className="flex items-center gap-1.5 whitespace-nowrap">
+                <Phone className="h-3.5 w-3.5 text-ink-3 shrink-0" />
                 <span>{client.phone}</span>
               </div>
             )}
 
             {client.address && (
-              <div className="flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5 text-ink-3" />
-                <span>{client.address}</span>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <MapPin className="h-3.5 w-3.5 text-ink-3 shrink-0" />
+                <span className="truncate max-w-[280px] sm:max-w-none">{client.address}</span>
               </div>
             )}
 
-            <div className="flex items-center gap-1.5 font-mono">
-              <Clock className="h-3.5 w-3.5 text-ink-3" />
+            <div className="flex items-center gap-1.5 font-mono whitespace-nowrap">
+              <Clock className="h-3.5 w-3.5 text-ink-3 shrink-0" />
               <span>Terms: Net {client.paymentTermsDays} days</span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Link
             href="/clients"
-            className="inline-flex items-center justify-center h-9 px-4 rounded-full text-xs font-medium text-ink bg-fog hover:bg-fog-2 transition-colors"
+            className="inline-flex items-center justify-center min-h-[44px] px-5 rounded-full text-xs font-medium text-ink bg-fog hover:bg-fog-2 transition-colors border border-line"
           >
             Back to Directory
           </Link>
@@ -175,7 +175,7 @@ async function ClientStatementDataLoader({
 
       {/* 4. Historical Invoices & Statement Ledger */}
       <div className="flex flex-col gap-4 mt-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold tracking-[-0.01em] text-ink">
               Invoice & Settlement Ledger
@@ -184,7 +184,7 @@ async function ClientStatementDataLoader({
               Historical statement of all issued invoices, payment settlements, and delays.
             </p>
           </div>
-          <span className="text-xs text-ink-3 font-mono">
+          <span className="text-xs text-ink-3 font-mono whitespace-nowrap shrink-0">
             {client.invoices.length} {client.invoices.length === 1 ? "record" : "records"}
           </span>
         </div>

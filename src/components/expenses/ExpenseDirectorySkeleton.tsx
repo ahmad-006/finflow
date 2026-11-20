@@ -44,7 +44,7 @@ export function ExpenseDirectorySkeleton() {
       {/* 4. Table Skeleton */}
       <div className="border border-line rounded-[10px] overflow-hidden bg-white">
         {/* Header row */}
-        <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-3 bg-fog/40 border-b border-line text-xs font-mono">
+        <div className="hidden lg:grid grid-cols-12 gap-4 px-4 py-3 bg-fog/40 border-b border-line text-xs font-mono">
           <div className="col-span-2 h-3 rounded-full bg-fog" />
           <div className="col-span-3 h-3 rounded-full bg-fog" />
           <div className="col-span-2 h-3 rounded-full bg-fog" />
@@ -59,7 +59,7 @@ export function ExpenseDirectorySkeleton() {
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="p-4 flex flex-col md:grid md:grid-cols-12 gap-3 items-start md:items-center"
+              className="p-4 flex flex-col lg:grid lg:grid-cols-12 gap-3 items-start lg:items-center"
             >
               <div className="col-span-2 h-4 w-24 rounded-full bg-fog" />
               <div className="col-span-3 h-4 w-40 rounded-full bg-fog" />

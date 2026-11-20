@@ -270,7 +270,7 @@ export function InvoiceDirectoryView({
                       <td className="py-3 px-4 font-mono font-medium text-ink">
                         <Link
                           href={`/invoices/${inv.id}`}
-                          className="hover:underline flex items-center gap-1.5"
+                          className="hover:underline flex items-center gap-1.5 min-h-[44px]"
                         >
                           <span>{inv.invoiceNumber}</span>
                         </Link>
@@ -330,10 +330,10 @@ export function InvoiceDirectoryView({
                             <button
                               type="button"
                               onClick={() => setPaymentInvoice(inv)}
-                              className="inline-flex items-center gap-1 text-[11px] font-medium text-ink px-2.5 py-1 rounded-full border border-line bg-fog hover:bg-fog-2 transition-colors"
+                              className="min-h-[44px] inline-flex items-center gap-1.5 text-xs font-medium text-ink px-3 py-2 rounded-full border border-line bg-fog hover:bg-fog-2 transition-colors"
                               title="Record Payment"
                             >
-                              <CheckCircle2 className="w-3 h-3 text-moss" />
+                              <CheckCircle2 className="w-3.5 h-3.5 text-moss shrink-0" />
                               <span>Pay</span>
                             </button>
                           )}
@@ -345,7 +345,7 @@ export function InvoiceDirectoryView({
                               e.stopPropagation();
                               handleDownloadPDF(inv);
                             }}
-                            className="inline-flex items-center justify-center p-1.5 rounded-full border border-line bg-white text-ink/70 hover:text-ink hover:bg-fog transition-colors disabled:opacity-50"
+                            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-2 rounded-full border border-line bg-white text-ink/70 hover:text-ink hover:bg-fog transition-colors disabled:opacity-50"
                           >
                             {downloadingId === inv.id ? (
                               <Loader2 className="w-3.5 h-3.5 animate-spin text-ink/70" />
@@ -355,7 +355,7 @@ export function InvoiceDirectoryView({
                           </button>
                           <Link
                             href={`/invoices/${inv.id}`}
-                            className="inline-flex items-center gap-1 text-[11px] font-medium text-ink/70 hover:text-ink px-2.5 py-1 rounded-full border border-line hover:bg-fog transition-colors"
+                            className="min-h-[44px] inline-flex items-center gap-1 text-xs font-medium text-ink/70 hover:text-ink px-3.5 py-2 rounded-full border border-line hover:bg-fog transition-colors"
                           >
                             <span>Manage</span>
                             <ArrowRight className="w-3 h-3" />
@@ -385,10 +385,10 @@ export function InvoiceDirectoryView({
                   className="flex flex-col gap-3 p-4 hover:bg-fog/20 transition-colors"
                 >
                   {/* Card Header: Invoice Number & Status Badge */}
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center justify-between gap-2 min-h-[44px]">
                     <Link
                       href={`/invoices/${inv.id}`}
-                      className="font-mono font-medium text-sm text-ink hover:underline truncate"
+                      className="min-h-[44px] inline-flex items-center font-mono font-medium text-sm text-ink hover:underline truncate"
                     >
                       {inv.invoiceNumber}
                     </Link>

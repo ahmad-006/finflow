@@ -31,7 +31,7 @@ export function ExpenseStatusBadge({ status, className = "" }: ExpenseStatusBadg
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium tracking-tight border ${badgeStyles} ${className}`}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium tracking-tight whitespace-nowrap shrink-0 border ${badgeStyles} ${className}`}
     >
       <span className={`w-1.5 h-1.5 rounded-full ${dotStyle} shrink-0`} aria-hidden="true" />
       <span>{label}</span>

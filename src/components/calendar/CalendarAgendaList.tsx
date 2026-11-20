@@ -99,7 +99,7 @@ export function CalendarAgendaList({
             className="border border-line rounded bg-white overflow-hidden shadow-none"
           >
             {/* Day Header Bar */}
-            <div className="p-3.5 border-b border-line bg-fog/30 flex flex-wrap items-center justify-between gap-3">
+            <div className="p-3.5 border-b border-line bg-fog/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <span className="font-medium text-sm text-ink">
                   {formattedDate}
@@ -115,8 +115,8 @@ export function CalendarAgendaList({
                 </span>
               </div>
 
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-3 text-xs font-mono">
+              <div className="flex flex-wrap items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+                <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 text-xs font-mono">
                   <span className="text-moss">
                     +{formatMoney(day.inflows, baseCurrency)}
                   </span>
@@ -139,9 +139,8 @@ export function CalendarAgendaList({
 
                 <Button
                   variant="ghost"
-                  size="compact"
                   onClick={() => onSelectDay(day)}
-                  className="text-xs h-7 px-2.5"
+                  className="text-xs min-h-[44px] px-3.5 font-medium"
                 >
                   Inspect day
                 </Button>
@@ -160,7 +159,7 @@ export function CalendarAgendaList({
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div
-                        className={`p-1.5 rounded-full ${
+                        className={`p-1.5 rounded-full shrink-0 ${
                           isInflow
                             ? "bg-moss-tint/40 text-moss"
                             : "bg-fog text-ink-3"
@@ -178,13 +177,13 @@ export function CalendarAgendaList({
                           {isInflow ? (
                             <Link
                               href={`/invoices/${event.id}`}
-                              className="font-mono text-xs font-medium text-ink hover:underline flex items-center gap-1"
+                              className="font-mono text-xs font-medium text-ink hover:underline flex items-center gap-1 min-h-[44px] py-1"
                             >
                               <span>{event.referenceNumber}</span>
                               <ExternalLink className="w-3 h-3 text-ink-3" />
                             </Link>
                           ) : (
-                            <span className="font-medium text-xs text-ink truncate">
+                            <span className="font-medium text-xs text-ink truncate min-h-[44px] flex items-center">
                               {event.title}
                             </span>
                           )}

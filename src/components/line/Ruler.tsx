@@ -86,23 +86,32 @@ export function Ruler({
           return (
             <div
               key={d}
+              role={onSelectDay ? "button" : undefined}
+              tabIndex={onSelectDay ? 0 : undefined}
+              aria-label={isToday ? "Today (Day 0)" : `Day ${d}, ${formatDemoDate(d, anchorDate)}`}
               onClick={() => onSelectDay?.(d)}
-              className="group absolute top-0 flex flex-col items-center cursor-pointer"
-              style={{ left: `${leftPercent}%`, transform: "translateX(-50%)" }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onSelectDay?.(d);
+                }
+              }}
+              className="group absolute top-0 flex flex-col items-center cursor-pointer min-h-[44px] w-5 sm:w-6 -translate-x-1/2 pt-1 touch-manipulation focus:outline-none"
+              style={{ left: `${leftPercent}%` }}
             >
               <div
                 style={{ height: `${tickHeight}px`, width: `${tickWidth}px` }}
-                className={`${tickColor} transition-colors`}
+                className={`${tickColor} transition-colors pointer-events-none`}
               />
 
               {/* Labels */}
               {isToday && (
-                <span className="absolute top-6 whitespace-nowrap text-[12px] font-medium text-[var(--ink)]">
+                <span className="pointer-events-none absolute top-6 whitespace-nowrap text-[12px] font-medium text-[var(--ink)]">
                   Today
                 </span>
               )}
               {!isToday && isSeventh && (
-                <span className="absolute top-6 whitespace-nowrap text-[12px] font-normal text-[var(--ink-3)]">
+                <span className="pointer-events-none absolute top-6 whitespace-nowrap text-[12px] font-normal text-[var(--ink-3)]">
                   {formatDemoDate(d, anchorDate)}
                 </span>
               )}

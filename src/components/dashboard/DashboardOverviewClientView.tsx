@@ -256,7 +256,7 @@ export function DashboardOverviewClientView({
                   <button
                     type="button"
                     onClick={() => setActiveDay(0)}
-                    className="text-xs text-ink-3 hover:text-ink underline transition-colors cursor-pointer min-h-[44px] sm:min-h-0 inline-flex items-center"
+                    className="text-xs text-ink-3 hover:text-ink underline transition-colors cursor-pointer min-h-[44px] lg:min-h-0 inline-flex items-center"
                   >
                     Reset to today
                   </button>
@@ -272,7 +272,7 @@ export function DashboardOverviewClientView({
               </div>
               {activeDay === 0 ? (
                 <div className="mt-2">
-                  <StatementSentence>
+                  <StatementSentence className="text-[17px] sm:text-[21px] leading-[25px] sm:leading-[30px] break-words">
                     {hasBreach ? (
                       renderOverviewBreach(
                         formatMoney(currentForecast.maxDeficitAmount, baseCurrency),
@@ -306,7 +306,7 @@ export function DashboardOverviewClientView({
                   <button
                     type="button"
                     onClick={() => setActiveDay(0)}
-                    className="text-xs text-ink-3 hover:text-ink underline transition-colors cursor-pointer min-h-[44px] sm:min-h-0 inline-flex items-center"
+                    className="text-xs text-ink-3 hover:text-ink underline transition-colors cursor-pointer min-h-[44px] lg:min-h-0 inline-flex items-center"
                   >
                     Reset to today
                   </button>
@@ -319,12 +319,12 @@ export function DashboardOverviewClientView({
               <span className="text-[11px] font-medium tracking-[0.08em] uppercase text-ink-3">
                 Forecast Scenario
               </span>
-              <div className="inline-flex h-11 sm:h-9 p-1 rounded-full bg-fog w-full sm:w-auto">
+              <div className="inline-flex min-h-[52px] lg:min-h-0 h-auto lg:h-9 p-1 rounded-full bg-fog w-full sm:w-auto items-center">
                 <button
                   type="button"
                   onClick={() => handleModeChange("onTime")}
                   className={cn(
-                    "flex-1 sm:flex-initial px-4 sm:px-3.5 rounded-full text-xs font-medium transition-all select-none min-h-[36px] sm:min-h-0 flex items-center justify-center cursor-pointer",
+                    "flex-1 sm:flex-initial px-4 lg:px-3.5 rounded-full text-xs font-medium transition-all select-none min-h-[44px] lg:min-h-[28px] flex items-center justify-center cursor-pointer",
                     forecastMode === "onTime"
                       ? "bg-white text-ink shadow-[var(--shadow-thumb)]"
                       : "text-ink-3 hover:text-ink"
@@ -336,7 +336,7 @@ export function DashboardOverviewClientView({
                   type="button"
                   onClick={() => handleModeChange("expected")}
                   className={cn(
-                    "flex-1 sm:flex-initial px-4 sm:px-3.5 rounded-full text-xs font-medium transition-all select-none min-h-[36px] sm:min-h-0 flex items-center justify-center cursor-pointer",
+                    "flex-1 sm:flex-initial px-4 lg:px-3.5 rounded-full text-xs font-medium transition-all select-none min-h-[44px] lg:min-h-[28px] flex items-center justify-center cursor-pointer",
                     forecastMode === "expected"
                       ? "bg-white text-ink shadow-[var(--shadow-thumb)]"
                       : "text-ink-3 hover:text-ink"
@@ -402,6 +402,39 @@ export function DashboardOverviewClientView({
               onSelectDay={setActiveDay}
               ariaLabel="Overview 30-day timeline"
             />
+          </div>
+
+          {/* Synchronized timeline scrubber controls */}
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveDay((prev) => Math.max(0, prev - 1))}
+                disabled={safeActiveDay === 0}
+                className="min-h-[44px] min-w-[44px] px-3.5 py-2 rounded-lg border border-line bg-white hover:bg-fog disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium text-ink transition-colors cursor-pointer inline-flex items-center justify-center select-none"
+                aria-label="Previous day"
+              >
+                ← Prev day
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveDay((prev) => Math.min(30, prev + 1))}
+                disabled={safeActiveDay >= 30}
+                className="min-h-[44px] min-w-[44px] px-3.5 py-2 rounded-lg border border-line bg-white hover:bg-fog disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium text-ink transition-colors cursor-pointer inline-flex items-center justify-center select-none"
+                aria-label="Next day"
+              >
+                Next day →
+              </button>
+            </div>
+            {safeActiveDay !== 0 && (
+              <button
+                type="button"
+                onClick={() => setActiveDay(0)}
+                className="min-h-[44px] px-3.5 py-2 rounded-lg border border-line bg-white hover:bg-fog text-xs font-medium text-ink transition-colors cursor-pointer inline-flex items-center justify-center select-none"
+              >
+                Reset to today
+              </button>
+            )}
           </div>
         </div>
       </section>
@@ -538,7 +571,7 @@ export function DashboardOverviewClientView({
                             variant="secondary"
                             size="compact"
                             onClick={() => handleMarkPaid(inv.id, inv.amount)}
-                            className="min-h-[44px] sm:min-h-[36px]"
+                            className="min-h-[44px] lg:min-h-[36px]"
                           >
                             Mark paid
                           </Button>
@@ -604,7 +637,7 @@ export function DashboardOverviewClientView({
                               variant="secondary"
                               size="compact"
                               onClick={() => handleMarkUpcomingInvoicePaid(inv.id, inv.amount)}
-                              className="min-h-[44px] sm:min-h-[36px]"
+                              className="min-h-[44px] lg:min-h-[36px]"
                             >
                               Mark paid
                             </Button>
@@ -646,7 +679,7 @@ export function DashboardOverviewClientView({
                               variant="secondary"
                               size="compact"
                               onClick={() => handleMarkExpensePaid(exp.id, exp.amount)}
-                              className="min-h-[44px] sm:min-h-[36px]"
+                              className="min-h-[44px] lg:min-h-[36px]"
                               isLoading={isSettlingExpenseId === exp.id}
                             >
                               Mark paid

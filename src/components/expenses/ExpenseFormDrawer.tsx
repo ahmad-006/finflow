@@ -197,7 +197,7 @@ export function ExpenseFormDrawer({
         <div className="flex-1 overflow-y-auto p-6 sm:p-8">
           <div className="flex flex-col gap-6">
             {/* Drawer Header */}
-            <div className="flex items-start justify-between pb-4 border-b border-line">
+            <div className="flex items-start justify-between pb-4 border-b border-line gap-3">
               <div>
                 <span className="text-[11px] font-mono uppercase tracking-wider text-ink-3">
                   Accounts Payable Schedule
@@ -210,7 +210,7 @@ export function ExpenseFormDrawer({
                 type="button"
                 onClick={onClose}
                 aria-label="Close drawer"
-                className="p-1.5 rounded-full text-ink-3 hover:text-ink hover:bg-fog transition-colors"
+                className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-ink-3 hover:text-ink hover:bg-fog transition-colors -mr-2 shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -355,13 +355,13 @@ export function ExpenseFormDrawer({
       </div>
 
       {/* Pinned Drawer Footer Actions */}
-      <div className="flex items-center justify-end gap-3 p-5 sm:px-8 border-t border-line bg-white shrink-0">
+      <div className="flex items-center justify-end gap-3 p-4 sm:p-5 sm:px-8 border-t border-line bg-white shrink-0">
         <Button
           type="button"
           variant="secondary"
           onClick={onClose}
           disabled={isPending}
-          className="h-10 px-5 rounded-full text-xs font-medium"
+          className="min-h-[44px] h-11 px-5 rounded-full text-xs font-medium"
         >
           Cancel
         </Button>
@@ -369,7 +369,7 @@ export function ExpenseFormDrawer({
           type="submit"
           form="expense-form"
           disabled={isPending}
-          className="h-10 px-6 rounded-full bg-ink text-white hover:bg-ink-hover text-xs font-medium"
+          className="min-h-[44px] h-11 px-6 rounded-full bg-ink text-white hover:bg-ink-hover text-xs font-medium"
         >
           {isPending ? (
             <>

@@ -26,8 +26,8 @@ async function CalendarDataLoader() {
 
 export default function CalendarPage() {
   return (
-    <main className="min-h-screen bg-white">
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
+    <main className="min-h-screen bg-white overflow-x-clip">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 min-w-0">
         <React.Suspense fallback={<CalendarSkeleton />}>
           <CalendarDataLoader />
         </React.Suspense>

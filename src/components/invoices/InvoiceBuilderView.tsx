@@ -193,9 +193,9 @@ export function InvoiceBuilderView({
         <div className="flex flex-col gap-1">
           <Link
             href="/invoices"
-            className="inline-flex items-center gap-1.5 text-xs text-ink/60 hover:text-ink transition-colors mb-1"
+            className="inline-flex items-center gap-1.5 min-h-[44px] text-xs text-ink/60 hover:text-ink transition-colors"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
+            <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
             <span>Back to Invoices</span>
           </Link>
           <h1 className="text-2xl sm:text-3xl font-serif tracking-tight text-ink">
@@ -206,17 +206,17 @@ export function InvoiceBuilderView({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 flex-wrap">
           <Link
             href="/invoices"
-            className="px-4 py-2 rounded-full border border-line text-xs font-medium text-ink/70 hover:bg-fog transition-colors"
+            className="min-h-[44px] px-5 py-2 rounded-full border border-line text-xs font-medium text-ink/70 hover:bg-fog transition-colors inline-flex items-center justify-center"
           >
             Discard
           </Link>
           <button
             type="submit"
             disabled={isPending}
-            className="px-5 py-2 rounded-full bg-ink text-white text-xs font-medium hover:bg-ink/90 transition-colors disabled:opacity-50"
+            className="min-h-[44px] px-6 py-2 rounded-full bg-ink text-white text-xs font-medium hover:bg-ink-hover transition-colors disabled:opacity-50 inline-flex items-center justify-center"
           >
             {isPending ? "Generating Invoice..." : "Create & Issue Invoice"}
           </button>
@@ -261,7 +261,7 @@ export function InvoiceBuilderView({
               value={clientId}
               onChange={(e) => handleClientChange(e.target.value)}
               required
-              className="w-full px-3 py-2 text-xs rounded-[8px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50"
+              className="w-full h-11 px-3 py-2 text-xs rounded-[8px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50"
             >
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -285,7 +285,7 @@ export function InvoiceBuilderView({
             <select
               value={currency}
               onChange={(e) => handleCurrencyChange(e.target.value as any)}
-              className="w-full px-3 py-2 text-xs font-mono rounded-[8px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50"
+              className="w-full h-11 px-3 py-2 text-xs font-mono rounded-[8px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50"
             >
               {SUPPORTED_CURRENCIES.map((cur) => (
                 <option key={cur} value={cur}>
@@ -303,7 +303,7 @@ export function InvoiceBuilderView({
                 onChange={(e) => setExchangeRate(e.target.value)}
                 disabled={currency === "PKR"}
                 placeholder="Spot Rate"
-                className="w-full px-3 py-2 text-xs font-mono rounded-[8px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50 disabled:bg-fog disabled:text-ink/40"
+                className="w-full h-11 px-3 py-2 text-xs font-mono rounded-[8px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50 disabled:bg-fog disabled:text-ink/40"
               />
             </div>
           </div>
@@ -328,7 +328,7 @@ export function InvoiceBuilderView({
                 value={issueDate}
                 onChange={(e) => setIssueDate(e.target.value)}
                 required
-                className="w-full px-2.5 py-1.5 text-xs rounded-[8px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50"
+                className="w-full h-11 px-3 py-2 text-xs rounded-[8px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50"
               />
             </div>
             <div className="flex flex-col gap-0.5">
@@ -338,7 +338,7 @@ export function InvoiceBuilderView({
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
                 required
-                className="w-full px-2.5 py-1.5 text-xs rounded-[8px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50"
+                className="w-full h-11 px-3 py-2 text-xs rounded-[8px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50"
               />
             </div>
           </div>
@@ -355,32 +355,46 @@ export function InvoiceBuilderView({
         </div>
 
         <div className="border border-line rounded-[10px] overflow-hidden bg-white">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-line bg-fog/30 text-[11px] font-mono uppercase tracking-wider text-ink/60">
-                <th className="py-2.5 px-3">Description</th>
-                <th className="py-2.5 px-3 w-28 text-right">Quantity</th>
-                <th className="py-2.5 px-3 w-36 text-right">Unit Price</th>
-                <th className="py-2.5 px-3 w-36 text-right">Line Total</th>
-                <th className="py-2.5 px-3 w-12 text-center"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line text-xs">
-              {items.map((item, index) => {
-                const lineCalc = (parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0);
-                return (
-                  <tr key={item.id} className="hover:bg-fog/20 transition-colors">
-                    <td className="py-2 px-3">
-                      <input
-                        type="text"
-                        placeholder="e.g. Full-Stack Software Engineering Retainer"
-                        value={item.description}
-                        onChange={(e) => handleUpdateItem(item.id, "description", e.target.value)}
-                        required
-                        className="w-full px-2.5 py-1.5 text-xs rounded-[6px] border border-line bg-white text-ink placeholder:text-ink/30 focus:outline-none focus:border-ink/50"
-                      />
-                    </td>
-                    <td className="py-2 px-3 text-right">
+          {/* Mobile Card Items Stack (< 768px) */}
+          <div className="md:hidden divide-y divide-line">
+            {items.map((item, index) => {
+              const lineCalc = (parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0);
+              return (
+                <div key={item.id} className="p-4 flex flex-col gap-3 hover:bg-fog/20 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono font-medium uppercase tracking-wider text-ink/60">
+                      Item #{index + 1}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveItem(item.id)}
+                      disabled={items.length <= 1}
+                      className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-2 rounded-full text-ink/40 hover:text-ember hover:bg-ember/5 disabled:opacity-20 transition-colors"
+                      title="Remove item"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-mono uppercase text-ink/50">
+                      Description *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Full-Stack Software Engineering Retainer"
+                      value={item.description}
+                      onChange={(e) => handleUpdateItem(item.id, "description", e.target.value)}
+                      required
+                      className="w-full h-11 px-3 py-2 text-xs rounded-[8px] border border-line bg-white text-ink placeholder:text-ink/30 focus:outline-none focus:border-ink/50"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] font-mono uppercase text-ink/50">
+                        Quantity *
+                      </label>
                       <input
                         type="number"
                         step="0.01"
@@ -388,10 +402,13 @@ export function InvoiceBuilderView({
                         value={item.quantity}
                         onChange={(e) => handleUpdateItem(item.id, "quantity", e.target.value)}
                         required
-                        className="w-full px-2.5 py-1.5 text-xs font-mono text-right rounded-[6px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50"
+                        className="w-full h-11 px-3 py-2 text-xs font-mono rounded-[8px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50"
                       />
-                    </td>
-                    <td className="py-2 px-3 text-right">
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] font-mono uppercase text-ink/50">
+                        Unit Price ({currency}) *
+                      </label>
                       <input
                         type="number"
                         step="0.01"
@@ -399,36 +416,99 @@ export function InvoiceBuilderView({
                         value={item.unitPrice}
                         onChange={(e) => handleUpdateItem(item.id, "unitPrice", e.target.value)}
                         required
-                        className="w-full px-2.5 py-1.5 text-xs font-mono text-right rounded-[6px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50"
+                        className="w-full h-11 px-3 py-2 text-xs font-mono rounded-[8px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50"
                       />
-                    </td>
-                    <td className="py-2 px-3 text-right font-mono font-medium text-ink">
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-line/60 text-xs">
+                    <span className="text-ink/50">Line Total:</span>
+                    <span className="font-mono font-semibold text-ink">
                       {formatMoney(lineCalc, currency)}
-                    </td>
-                    <td className="py-2 px-3 text-center">
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveItem(item.id)}
-                        disabled={items.length <= 1}
-                        className="p-1.5 text-ink/40 hover:text-ember disabled:opacity-20 transition-colors"
-                        title="Remove item"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop Table (>= 768px) */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-line bg-fog/30 text-[11px] font-mono uppercase tracking-wider text-ink/60">
+                  <th scope="col" className="py-2.5 px-3 font-normal">Description</th>
+                  <th scope="col" className="py-2.5 px-3 w-28 text-right font-normal">Quantity</th>
+                  <th scope="col" className="py-2.5 px-3 w-36 text-right font-normal">Unit Price</th>
+                  <th scope="col" className="py-2.5 px-3 w-36 text-right font-normal">Line Total</th>
+                  <th scope="col" className="py-2.5 px-3 w-14 text-center font-normal"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line text-xs">
+                {items.map((item) => {
+                  const lineCalc = (parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0);
+                  return (
+                    <tr key={item.id} className="hover:bg-fog/20 transition-colors">
+                      <td className="py-2 px-3">
+                        <input
+                          type="text"
+                          placeholder="e.g. Full-Stack Software Engineering Retainer"
+                          value={item.description}
+                          onChange={(e) => handleUpdateItem(item.id, "description", e.target.value)}
+                          required
+                          className="w-full h-11 px-3 py-2 text-xs rounded-[6px] border border-line bg-white text-ink placeholder:text-ink/30 focus:outline-none focus:border-ink/50"
+                        />
+                      </td>
+                      <td className="py-2 px-3 text-right">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          value={item.quantity}
+                          onChange={(e) => handleUpdateItem(item.id, "quantity", e.target.value)}
+                          required
+                          className="w-full h-11 px-3 py-2 text-xs font-mono text-right rounded-[6px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50"
+                        />
+                      </td>
+                      <td className="py-2 px-3 text-right">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={item.unitPrice}
+                          onChange={(e) => handleUpdateItem(item.id, "unitPrice", e.target.value)}
+                          required
+                          className="w-full h-11 px-3 py-2 text-xs font-mono text-right rounded-[6px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50"
+                        />
+                      </td>
+                      <td className="py-2 px-3 text-right font-mono font-medium text-ink">
+                        {formatMoney(lineCalc, currency)}
+                      </td>
+                      <td className="py-2 px-3 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItem(item.id)}
+                          disabled={items.length <= 1}
+                          className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-2 rounded-full text-ink/40 hover:text-ember disabled:opacity-20 transition-colors"
+                          title="Remove item"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
           <div className="p-3 border-t border-line bg-fog/20 flex items-center justify-between">
             <button
               type="button"
               onClick={handleAddItem}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-line bg-white text-xs font-medium text-ink hover:bg-fog transition-colors"
+              className="min-h-[44px] inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-line bg-white text-xs font-medium text-ink hover:bg-fog transition-colors"
             >
-              <Plus className="w-3 h-3" />
+              <Plus className="w-4 h-4" />
               <span>Add Item</span>
             </button>
             <span className="text-[11px] text-ink/50">
@@ -478,7 +558,7 @@ export function InvoiceBuilderView({
                   step="0.1"
                   value={taxRate}
                   onChange={(e) => setTaxRate(e.target.value)}
-                  className="w-14 px-1.5 py-0.5 text-xs font-mono text-right rounded border border-line bg-white text-ink focus:outline-none"
+                  className="w-16 h-10 px-2 py-1 text-xs font-mono text-right rounded border border-line bg-white text-ink focus:outline-none"
                 />
                 <span className="font-mono text-ink/50">%</span>
               </div>

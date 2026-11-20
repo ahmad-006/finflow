@@ -149,7 +149,7 @@ export function CalendarCockpitView({ initialData }: CalendarCockpitViewProps) {
             <button
               onClick={() => handleNavigate("prev")}
               disabled={isNavigating}
-              className="p-1.5 text-ink-2 hover:text-ink hover:bg-fog rounded-full transition-colors disabled:opacity-40"
+              className="w-11 h-11 flex items-center justify-center text-ink-2 hover:text-ink hover:bg-fog rounded-full transition-colors disabled:opacity-40"
               aria-label="Previous month"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -157,14 +157,14 @@ export function CalendarCockpitView({ initialData }: CalendarCockpitViewProps) {
             <button
               onClick={() => handleNavigate("today")}
               disabled={isNavigating}
-              className="px-3 py-1 text-xs font-medium text-ink hover:bg-fog rounded-full transition-colors disabled:opacity-40"
+              className="h-11 px-4 flex items-center justify-center text-xs font-medium text-ink hover:bg-fog rounded-full transition-colors disabled:opacity-40"
             >
               Today
             </button>
             <button
               onClick={() => handleNavigate("next")}
               disabled={isNavigating}
-              className="p-1.5 text-ink-2 hover:text-ink hover:bg-fog rounded-full transition-colors disabled:opacity-40"
+              className="w-11 h-11 flex items-center justify-center text-ink-2 hover:text-ink hover:bg-fog rounded-full transition-colors disabled:opacity-40"
               aria-label="Next month"
             >
               <ChevronRight className="w-4 h-4" />
@@ -175,38 +175,119 @@ export function CalendarCockpitView({ initialData }: CalendarCockpitViewProps) {
           <div className="flex items-center border border-line rounded-full bg-white p-0.5 text-xs font-medium">
             <button
               onClick={() => setViewMode("month")}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-colors ${
+              className={`flex items-center gap-1.5 h-11 px-4 rounded-full transition-colors ${
                 viewMode === "month"
                   ? "bg-ink text-white font-medium shadow-none"
                   : "text-ink-2 hover:text-ink hover:bg-fog"
               }`}
             >
-              <CalendarIcon className="w-3.5 h-3.5" />
+              <CalendarIcon className="w-4 h-4" />
               <span>Month</span>
             </button>
             <button
               onClick={() => setViewMode("week")}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-colors ${
+              className={`flex items-center gap-1.5 h-11 px-4 rounded-full transition-colors ${
                 viewMode === "week"
                   ? "bg-ink text-white font-medium shadow-none"
                   : "text-ink-2 hover:text-ink hover:bg-fog"
               }`}
             >
-              <Layers className="w-3.5 h-3.5" />
+              <Layers className="w-4 h-4" />
               <span>Week</span>
             </button>
             <button
               onClick={() => setViewMode("list")}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-colors ${
+              className={`flex items-center gap-1.5 h-11 px-4 rounded-full transition-colors ${
                 viewMode === "list"
                   ? "bg-ink text-white font-medium shadow-none"
                   : "text-ink-2 hover:text-ink hover:bg-fog"
               }`}
             >
-              <List className="w-3.5 h-3.5" />
+              <List className="w-4 h-4" />
               <span>Agenda</span>
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Mobile / Tablet Quick Actions & Stream Filters */}
+      <div className="lg:hidden space-y-3">
+        <div className="grid grid-cols-2 gap-2">
+          <Link
+            href="/invoices/new"
+            className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-full bg-ink text-white text-xs font-medium hover:bg-ink-hover transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New invoice</span>
+          </Link>
+          <Link
+            href="/expenses"
+            className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-full bg-fog text-ink text-xs font-medium hover:bg-fog-2 transition-colors border border-line"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add bill</span>
+          </Link>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setFilterType("ALL")}
+            className={`min-h-[44px] px-3.5 rounded-full text-xs font-medium flex items-center gap-1.5 transition-colors border ${
+              filterType === "ALL"
+                ? "bg-ink text-white border-ink"
+                : "bg-white text-ink border-line hover:bg-fog"
+            }`}
+          >
+            <span>All</span>
+            <span className="font-mono text-[11px] opacity-80">
+              {summary.invoiceCount + summary.expenseCount}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setFilterType("INFLOWS")}
+            className={`min-h-[44px] px-3.5 rounded-full text-xs font-medium flex items-center gap-1.5 transition-colors border ${
+              filterType === "INFLOWS"
+                ? "bg-ink text-white border-ink"
+                : "bg-white text-ink border-line hover:bg-fog"
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-moss shrink-0" />
+            <span>Receivables</span>
+            <span className="font-mono text-[11px] opacity-80">
+              {summary.invoiceCount}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setFilterType("OUTFLOWS")}
+            className={`min-h-[44px] px-3.5 rounded-full text-xs font-medium flex items-center gap-1.5 transition-colors border ${
+              filterType === "OUTFLOWS"
+                ? "bg-ink text-white border-ink"
+                : "bg-white text-ink border-line hover:bg-fog"
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-ink-3 shrink-0" />
+            <span>Payables</span>
+            <span className="font-mono text-[11px] opacity-80">
+              {summary.expenseCount}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setFilterType("OVERDUE")}
+            className={`min-h-[44px] px-3.5 rounded-full text-xs font-medium flex items-center gap-1.5 transition-colors border ${
+              filterType === "OVERDUE"
+                ? "bg-ember-ink text-white border-ember-ink"
+                : "bg-white text-ember-ink border-line hover:bg-ember-tint/50"
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-ember-ink shrink-0" />
+            <span>Overdue</span>
+            <span className="font-mono text-[11px] font-bold">
+              {summary.overdueCount}
+            </span>
+          </button>
         </div>
       </div>
 
@@ -218,14 +299,14 @@ export function CalendarCockpitView({ initialData }: CalendarCockpitViewProps) {
           <div className="grid grid-cols-2 gap-2">
             <Link
               href="/invoices/new"
-              className="inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-full bg-ink text-white text-xs font-medium hover:bg-ink-hover transition-colors"
+              className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3 rounded-full bg-ink text-white text-xs font-medium hover:bg-ink-hover transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>New invoice</span>
             </Link>
             <Link
               href="/expenses"
-              className="inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-full bg-fog text-ink text-xs font-medium hover:bg-fog-2 transition-colors border border-line"
+              className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3 rounded-full bg-fog text-ink text-xs font-medium hover:bg-fog-2 transition-colors border border-line"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add bill</span>
@@ -241,7 +322,7 @@ export function CalendarCockpitView({ initialData }: CalendarCockpitViewProps) {
             <div className="space-y-1">
               <button
                 onClick={() => setFilterType("ALL")}
-                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded text-xs transition-colors ${
+                className={`w-full min-h-[44px] flex items-center justify-between px-3 py-2 rounded text-xs transition-colors ${
                   filterType === "ALL"
                     ? "bg-ink text-white font-medium"
                     : "text-ink hover:bg-fog text-left"
@@ -255,7 +336,7 @@ export function CalendarCockpitView({ initialData }: CalendarCockpitViewProps) {
 
               <button
                 onClick={() => setFilterType("INFLOWS")}
-                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded text-xs transition-colors ${
+                className={`w-full min-h-[44px] flex items-center justify-between px-3 py-2 rounded text-xs transition-colors ${
                   filterType === "INFLOWS"
                     ? "bg-ink text-white font-medium"
                     : "text-ink hover:bg-fog text-left"
@@ -272,7 +353,7 @@ export function CalendarCockpitView({ initialData }: CalendarCockpitViewProps) {
 
               <button
                 onClick={() => setFilterType("OUTFLOWS")}
-                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded text-xs transition-colors ${
+                className={`w-full min-h-[44px] flex items-center justify-between px-3 py-2 rounded text-xs transition-colors ${
                   filterType === "OUTFLOWS"
                     ? "bg-ink text-white font-medium"
                     : "text-ink hover:bg-fog text-left"
@@ -289,7 +370,7 @@ export function CalendarCockpitView({ initialData }: CalendarCockpitViewProps) {
 
               <button
                 onClick={() => setFilterType("OVERDUE")}
-                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded text-xs transition-colors ${
+                className={`w-full min-h-[44px] flex items-center justify-between px-3 py-2 rounded text-xs transition-colors ${
                   filterType === "OVERDUE"
                     ? "bg-ember-ink text-white font-medium"
                     : "text-ember-ink hover:bg-ember-tint/50 text-left"
@@ -408,13 +489,13 @@ export function CalendarCockpitView({ initialData }: CalendarCockpitViewProps) {
                 {summary.overdueCount > 0 ? (
                   <button
                     onClick={() => setFilterType("OVERDUE")}
-                    className="flex items-center gap-1 text-xs font-medium text-ember-ink bg-ember-tint px-2.5 py-1 rounded hover:bg-ember-tint/80 transition-colors"
+                    className="min-h-[44px] flex items-center gap-1.5 text-xs font-medium text-ember-ink bg-ember-tint px-3 py-2 rounded hover:bg-ember-tint/80 transition-colors"
                   >
-                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <AlertTriangle className="w-4 h-4" />
                     <span>{summary.overdueCount} overdue</span>
                   </button>
                 ) : (
-                  <span className="text-xs font-medium text-moss bg-moss-tint px-2.5 py-1 rounded">
+                  <span className="min-h-[44px] flex items-center text-xs font-medium text-moss bg-moss-tint px-3 py-2 rounded">
                     All schedules current
                   </span>
                 )}

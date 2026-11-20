@@ -131,10 +131,10 @@ export function InvoiceDetailCockpit({
         <div className="flex items-center gap-3">
           <Link
             href="/invoices"
-            className="p-2 rounded-full border border-line text-ink/60 hover:text-ink hover:bg-fog transition-colors"
+            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full border border-line text-ink/60 hover:text-ink hover:bg-fog transition-colors"
             title="Back to Invoices"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 shrink-0" />
           </Link>
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
@@ -155,7 +155,7 @@ export function InvoiceDetailCockpit({
           <button
             type="button"
             onClick={handleCopyPublicLink}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-line bg-white text-xs font-medium text-ink/70 hover:bg-fog hover:text-ink transition-colors"
+            className="min-h-[44px] inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-line bg-white text-xs font-medium text-ink/70 hover:bg-fog hover:text-ink transition-colors"
           >
             {copiedLink ? (
               <>
@@ -175,7 +175,7 @@ export function InvoiceDetailCockpit({
             type="button"
             disabled={isDownloadingPdf}
             onClick={handleDownloadPdf}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-line bg-white text-xs font-medium text-ink/70 hover:bg-fog hover:text-ink transition-colors disabled:opacity-50"
+            className="min-h-[44px] inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-line bg-white text-xs font-medium text-ink/70 hover:bg-fog hover:text-ink transition-colors disabled:opacity-50"
             title="Download PDF document (INV-YYYY-XXXX.pdf)"
           >
             {isDownloadingPdf ? (
@@ -195,7 +195,7 @@ export function InvoiceDetailCockpit({
           <Link
             href={`/invoices/${invoice.id}/print`}
             target="_blank"
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-line bg-white text-xs font-medium text-ink/70 hover:bg-fog hover:text-ink transition-colors"
+            className="min-h-[44px] inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-line bg-white text-xs font-medium text-ink/70 hover:bg-fog hover:text-ink transition-colors"
             title="Open printable A4 view"
           >
             <Printer className="w-3.5 h-3.5" />
@@ -208,7 +208,7 @@ export function InvoiceDetailCockpit({
               type="button"
               disabled={isPending}
               onClick={handleMarkSent}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-ink text-white text-xs font-medium hover:bg-ink/90 transition-colors disabled:opacity-50"
+              className="min-h-[44px] inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-ink text-white text-xs font-medium hover:bg-ink-hover transition-colors disabled:opacity-50"
             >
               <Send className="w-3.5 h-3.5" />
               <span>{isPending ? "Issuing..." : "Issue & Send"}</span>
@@ -220,7 +220,7 @@ export function InvoiceDetailCockpit({
             <button
               type="button"
               onClick={() => setIsPaymentModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-ink text-white text-xs font-medium hover:bg-ink/90 transition-colors"
+              className="min-h-[44px] inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-ink text-white text-xs font-medium hover:bg-ink-hover transition-colors"
             >
               <CreditCard className="w-3.5 h-3.5" />
               <span>Record Payment</span>
@@ -233,7 +233,7 @@ export function InvoiceDetailCockpit({
               type="button"
               disabled={isPending}
               onClick={handleCancelInvoice}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-line text-xs text-ember/80 hover:bg-ember/5 hover:text-ember transition-colors disabled:opacity-50"
+              className="min-h-[44px] inline-flex items-center gap-1 px-4 py-2 rounded-full border border-line text-xs text-ember/80 hover:bg-ember/5 hover:text-ember transition-colors disabled:opacity-50"
             >
               <Ban className="w-3 h-3" />
               <span>Cancel</span>
@@ -318,15 +318,34 @@ export function InvoiceDetailCockpit({
           </div>
         </div>
 
-        {/* Line Items Table */}
-        <div className="overflow-x-auto">
+        {/* Line Items Section */}
+        {/* A. Mobile Card Items Stack (< 768px) */}
+        <div className="md:hidden print:hidden divide-y divide-line border border-line rounded-[8px] overflow-hidden">
+          {invoice.items.map((item) => (
+            <div key={item.id} className="p-3.5 flex flex-col gap-2 bg-white">
+              <div className="flex items-start justify-between gap-2">
+                <span className="font-medium text-xs text-ink">{item.description}</span>
+                <span className="font-mono font-semibold text-xs text-ink shrink-0">
+                  {formatMoney(item.lineTotal, invoice.currency)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-ink/60 font-mono">
+                <span>Qty: {item.quantity}</span>
+                <span>Unit: {formatMoney(item.unitPrice, invoice.currency)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* B. Desktop Table (>= 768px, and print) */}
+        <div className="hidden md:block print:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-line text-[11px] font-mono uppercase tracking-wider text-ink/60 bg-fog/30">
-                <th className="py-2.5 px-3">Description</th>
-                <th className="py-2.5 px-3 text-right w-24">Qty</th>
-                <th className="py-2.5 px-3 text-right w-32">Unit Price</th>
-                <th className="py-2.5 px-3 text-right w-36">Amount</th>
+                <th scope="col" className="py-2.5 px-3 font-normal">Description</th>
+                <th scope="col" className="py-2.5 px-3 text-right w-24 font-normal">Qty</th>
+                <th scope="col" className="py-2.5 px-3 text-right w-32 font-normal">Unit Price</th>
+                <th scope="col" className="py-2.5 px-3 text-right w-36 font-normal">Amount</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line text-xs">

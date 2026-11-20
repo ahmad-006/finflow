@@ -77,7 +77,7 @@ export function CalendarDayInspector({
         onClick={onClose}
         aria-label="Close drawer overlay"
       />
-      <div className="fixed inset-y-0 right-0 flex max-w-full pl-10">
+      <div className="fixed inset-y-0 right-0 flex max-w-full pl-0 sm:pl-10">
         <aside
           role="dialog"
           aria-label="Day Details Drawer"
@@ -101,7 +101,7 @@ export function CalendarDayInspector({
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 text-ink-3 hover:text-ink hover:bg-fog rounded-full transition-colors"
+              className="w-11 h-11 flex items-center justify-center text-ink-3 hover:text-ink hover:bg-fog rounded-full transition-colors"
               aria-label="Close drawer"
             >
               <X className="w-5 h-5" />
@@ -144,10 +144,10 @@ export function CalendarDayInspector({
               </span>
               <Link
                 href={`/cash-flow/${day.date}`}
-                className="inline-flex items-center gap-1 text-xs font-medium text-ink hover:underline"
+                className="inline-flex items-center gap-1 text-xs font-medium text-ink hover:underline min-h-[44px] py-1"
               >
                 <span>Open day details</span>
-                <ExternalLink className="w-3 h-3" />
+                <ExternalLink className="w-3.5 h-3.5" />
               </Link>
             </div>
 
@@ -252,7 +252,7 @@ export function CalendarDayInspector({
 
           {/* Drawer Footer */}
           <div className="p-4 border-t border-line bg-fog/30 flex items-center justify-end gap-2">
-            <Button variant="secondary" size="compact" onClick={onClose}>
+            <Button variant="secondary" onClick={onClose} className="min-h-[44px] px-6 text-xs font-medium">
               Close
             </Button>
           </div>

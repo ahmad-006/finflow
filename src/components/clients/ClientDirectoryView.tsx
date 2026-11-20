@@ -171,10 +171,10 @@ export function ClientDirectoryView({
       </div>
 
       {/* 2. Client KPI Strip (Total Receivables, Outstanding Invoices, Average Payment Latency, Overdue Exposure) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 py-4 border-y border-line">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 py-4 border-y border-line">
         {/* KPI 1: Total Receivables */}
-        <div className="flex flex-col gap-1 p-2">
-          <span className="text-xs font-mono uppercase tracking-wider text-ink-3">
+        <div className="flex flex-col gap-1 p-2 min-w-0">
+          <span className="text-xs font-mono uppercase tracking-wider text-ink-3 truncate">
             Total Receivables
           </span>
           <div className="text-lg sm:text-2xl font-serif tracking-tight text-ink num truncate">
@@ -186,13 +186,13 @@ export function ClientDirectoryView({
         </div>
 
         {/* KPI 2: Outstanding Invoices */}
-        <div className="flex flex-col gap-1 p-2">
-          <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-1 p-2 min-w-0">
+          <div className="flex flex-wrap items-baseline justify-between gap-1">
             <span className="text-xs font-mono uppercase tracking-wider text-ink-3">
-              Outstanding Invoices
+              Outstanding
             </span>
             {aging.totalOverdue > 0 && (
-              <span className="text-[11px] font-mono text-ember-ink font-medium">
+              <span className="text-[11px] font-mono text-ember-ink font-medium whitespace-nowrap">
                 Overdue
               </span>
             )}
@@ -206,8 +206,8 @@ export function ClientDirectoryView({
         </div>
 
         {/* KPI 3: Average Payment Latency */}
-        <div className="flex flex-col gap-1 p-2">
-          <span className="text-xs font-mono uppercase tracking-wider text-ink-3">
+        <div className="flex flex-col gap-1 p-2 min-w-0">
+          <span className="text-xs font-mono uppercase tracking-wider text-ink-3 truncate">
             Payment Latency
           </span>
           <div
@@ -223,18 +223,18 @@ export function ClientDirectoryView({
             {avgPaymentLatency <= 0 ? "0.0d (on time)" : `+${avgPaymentLatency.toFixed(1)}d late`}
           </div>
           <span className="text-[11px] text-ink-3">
-            Weighted portfolio average
+            Weighted portfolio avg
           </span>
         </div>
 
         {/* KPI 4: Overdue Delinquency */}
-        <div className="flex flex-col gap-1 p-2">
-          <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-1 p-2 min-w-0">
+          <div className="flex flex-wrap items-baseline justify-between gap-1">
             <span className="text-xs font-mono uppercase tracking-wider text-ink-3">
-              Overdue Exposure
+              Overdue
             </span>
             {overdueAccountsCount > 0 && (
-              <span className="text-[11px] font-mono text-ember-ink font-medium">
+              <span className="text-[11px] font-mono text-ember-ink font-medium whitespace-nowrap">
                 {overdueAccountsCount} delayed
               </span>
             )}
@@ -382,7 +382,7 @@ export function ClientDirectoryView({
                     <div className="flex flex-col min-w-0">
                       <Link
                         href={`/clients/${client.id}`}
-                        className="text-[15px] font-semibold text-ink hover:underline truncate"
+                        className="text-[15px] font-semibold text-ink hover:underline truncate py-0.5 inline-block"
                       >
                         {client.clientName}
                       </Link>
@@ -390,7 +390,7 @@ export function ClientDirectoryView({
                         {client.email}
                       </span>
                     </div>
-                    <StatusBadge status={client.metrics.riskStatus} />
+                    <StatusBadge status={client.metrics.riskStatus} className="shrink-0" />
                   </div>
 
                   {/* Card Terms & Payment Latency */}

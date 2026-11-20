@@ -64,7 +64,7 @@ export function CalendarWeekGrid({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-7 border border-line divide-y md:divide-y-0 md:divide-x divide-line bg-white rounded overflow-hidden select-none">
+    <div className="grid grid-cols-1 md:grid-cols-7 border border-line divide-y md:divide-y-0 md:divide-x divide-line bg-white rounded overflow-x-clip select-none min-w-0">
       {currentWeekDays.map((day, colIdx) => {
         const matchingEvents = filterEvents(day.events);
         const hasEvents = matchingEvents.length > 0;
@@ -74,7 +74,7 @@ export function CalendarWeekGrid({
           <div
             key={day.date}
             onClick={() => onSelectDay(day)}
-            className={`flex flex-col min-h-[380px] p-3 transition-colors cursor-pointer hover:bg-fog/30 ${
+            className={`flex flex-col min-h-[140px] md:min-h-[380px] p-3 transition-colors cursor-pointer hover:bg-fog/30 min-w-0 overflow-hidden ${
               day.isToday
                 ? "bg-fog/10 ring-2 ring-inset ring-ink"
                 : isWeekend
@@ -83,7 +83,7 @@ export function CalendarWeekGrid({
             }`}
           >
             {/* Day Header */}
-            <div className="pb-3 border-b border-line mb-3">
+            <div className="pb-3 border-b border-line mb-3 min-w-0">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-medium text-ink-3 uppercase">
                   {day.dayOfWeek}
@@ -103,7 +103,7 @@ export function CalendarWeekGrid({
               <div className="mt-2 text-right">
                 <p className="text-[10px] text-ink-3">Daily net</p>
                 <p
-                  className={`text-xs font-mono font-medium ${
+                  className={`text-xs font-mono font-medium truncate ${
                     day.netChange > 0
                       ? "text-moss"
                       : day.netChange < 0
@@ -120,9 +120,9 @@ export function CalendarWeekGrid({
             </div>
 
             {/* Events Stack */}
-            <div className="space-y-2 flex-1 overflow-y-auto">
+            <div className="space-y-2 flex-1 overflow-y-auto min-w-0">
               {!hasEvents ? (
-                <div className="h-full flex flex-col items-center justify-center p-4 border border-dashed border-line/60 rounded text-center">
+                <div className="h-full min-h-[80px] flex flex-col items-center justify-center p-3 border border-dashed border-line/60 rounded text-center">
                   <p className="text-[11px] text-ink-3 font-mono">
                     No transactions
                   </p>
@@ -134,7 +134,7 @@ export function CalendarWeekGrid({
                   return (
                     <div
                       key={event.id}
-                      className="p-2.5 border border-line rounded bg-white hover:border-line-strong transition-colors space-y-1.5"
+                      className="p-2.5 border border-line rounded bg-white hover:border-line-strong transition-colors space-y-1.5 min-w-0"
                     >
                       <div className="flex items-center justify-between gap-1">
                         <span className="text-[11px] font-mono text-ink-3 truncate">
@@ -155,8 +155,8 @@ export function CalendarWeekGrid({
                         {event.title}
                       </p>
 
-                      <div className="flex items-center justify-between text-[11px] pt-1 border-t border-line/60">
-                        <span className="text-ink-3 flex items-center gap-1">
+                      <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] pt-1 border-t border-line/60">
+                        <span className="text-ink-3 flex items-center gap-1 shrink-0">
                           {isInflow ? (
                             <ArrowDownLeft className="w-3.5 h-3.5 text-moss" />
                           ) : (
@@ -165,7 +165,7 @@ export function CalendarWeekGrid({
                           <span>{isInflow ? "In" : "Out"}</span>
                         </span>
                         <span
-                          className={`font-mono font-medium ${
+                          className={`font-mono font-medium truncate ${
                             isInflow ? "text-moss" : "text-ink"
                           }`}
                         >

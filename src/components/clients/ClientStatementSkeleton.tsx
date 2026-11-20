@@ -23,7 +23,7 @@ export function ClientStatementSkeleton() {
             <div className="h-3 w-40 rounded-full bg-fog" />
           </div>
         </div>
-        <div className="h-9 w-32 rounded-full bg-fog" />
+        <div className="h-11 w-36 rounded-full bg-fog shrink-0" />
       </div>
 
       {/* 3. 5 KPI Summary Tiles Skeleton */}

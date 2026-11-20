@@ -169,22 +169,22 @@ export function CashFlowDayDetailView({ day, mode = "expected" }: CashFlowDayDet
       )}
 
       {/* 5-Metric Financial Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 py-6 border-b border-line my-4">
-        <div className="flex flex-col gap-1 p-3 md:p-0 rounded-[10px] md:rounded-none bg-fog/20 md:bg-transparent border border-line/50 md:border-0 min-w-0">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 py-6 border-b border-line my-4">
+        <div className="flex flex-col gap-1 p-3 lg:p-0 rounded-[10px] lg:rounded-none bg-fog/20 lg:bg-transparent border border-line/50 lg:border-0 min-w-0">
           <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-wider text-ink-3 truncate">
             Opening balance
           </span>
-          <span className="text-lg sm:text-2xl font-serif font-bold text-ink truncate">
+          <span className="text-base sm:text-lg lg:text-xl xl:text-2xl font-serif font-bold text-ink tabular-nums">
             {formatMoney(day.openingBalance, day.baseCurrency)}
           </span>
           <span className="text-[10px] sm:text-[11px] text-ink-3 truncate">Starting midnight cash</span>
         </div>
 
-        <div className="flex flex-col gap-1 p-3 md:p-0 rounded-[10px] md:rounded-none bg-fog/20 md:bg-transparent border border-line/50 md:border-0 min-w-0">
+        <div className="flex flex-col gap-1 p-3 lg:p-0 rounded-[10px] lg:rounded-none bg-fog/20 lg:bg-transparent border border-line/50 lg:border-0 min-w-0">
           <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-wider text-ink-3 truncate">
             Maturing inflows
           </span>
-          <span className="text-lg sm:text-2xl font-serif font-bold text-moss truncate">
+          <span className="text-base sm:text-lg lg:text-xl xl:text-2xl font-serif font-bold text-moss tabular-nums">
             +{formatMoney(day.totalInflows, day.baseCurrency)}
           </span>
           <span className="text-[10px] sm:text-[11px] text-ink-3 truncate">
@@ -192,11 +192,11 @@ export function CashFlowDayDetailView({ day, mode = "expected" }: CashFlowDayDet
           </span>
         </div>
 
-        <div className="flex flex-col gap-1 p-3 md:p-0 rounded-[10px] md:rounded-none bg-fog/20 md:bg-transparent border border-line/50 md:border-0 min-w-0">
+        <div className="flex flex-col gap-1 p-3 lg:p-0 rounded-[10px] lg:rounded-none bg-fog/20 lg:bg-transparent border border-line/50 lg:border-0 min-w-0">
           <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-wider text-ink-3 truncate">
             Scheduled outflows
           </span>
-          <span className="text-lg sm:text-2xl font-serif font-bold text-ink truncate">
+          <span className="text-base sm:text-lg lg:text-xl xl:text-2xl font-serif font-bold text-ink tabular-nums">
             {day.totalOutflows > 0 ? "-" : ""}
             {formatMoney(day.totalOutflows, day.baseCurrency)}
           </span>
@@ -205,13 +205,13 @@ export function CashFlowDayDetailView({ day, mode = "expected" }: CashFlowDayDet
           </span>
         </div>
 
-        <div className="flex flex-col gap-1 p-3 md:p-0 rounded-[10px] md:rounded-none bg-fog/20 md:bg-transparent border border-line/50 md:border-0 min-w-0">
+        <div className="flex flex-col gap-1 p-3 lg:p-0 rounded-[10px] lg:rounded-none bg-fog/20 lg:bg-transparent border border-line/50 lg:border-0 min-w-0">
           <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-wider text-ink-3 truncate">
             Daily net change
           </span>
           <span
             className={cn(
-              "text-lg sm:text-2xl font-serif font-bold truncate",
+              "text-base sm:text-lg lg:text-xl xl:text-2xl font-serif font-bold tabular-nums",
               day.netChange > 0
                 ? "text-moss"
                 : day.netChange < 0
@@ -225,22 +225,22 @@ export function CashFlowDayDetailView({ day, mode = "expected" }: CashFlowDayDet
           <span className="text-[10px] sm:text-[11px] text-ink-3 truncate">Inflows minus outflows</span>
         </div>
 
-        <div className="col-span-2 md:col-span-1 p-3.5 md:p-0 rounded-[10px] md:rounded-none bg-fog/40 md:bg-transparent border border-line md:border-0 flex flex-col justify-between">
-          <div className="flex items-center justify-between md:block">
+        <div className="col-span-2 lg:col-span-1 p-3.5 lg:p-0 rounded-[10px] lg:rounded-none bg-fog/40 lg:bg-transparent border border-line lg:border-0 flex flex-col justify-between">
+          <div className="flex items-center justify-between lg:block">
             <div>
               <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-wider text-ink-3 block">
                 Closing balance
               </span>
               <span
                 className={cn(
-                  "text-xl sm:text-2xl font-serif font-bold block",
+                  "text-lg sm:text-xl xl:text-2xl font-serif font-bold block tabular-nums",
                   day.isBreach ? "text-ember-ink" : "text-ink"
                 )}
               >
                 {formatMoney(day.closingBalance, day.baseCurrency)}
               </span>
             </div>
-            <div className="text-right md:text-left mt-0.5 md:mt-1">
+            <div className="text-right lg:text-left mt-0.5 lg:mt-1">
               <span className="text-[10px] sm:text-[11px] text-ink-3 block">
                 Buffer: {formatMoney(day.safetyBuffer, day.baseCurrency)}
               </span>
@@ -373,7 +373,7 @@ export function CashFlowDayDetailView({ day, mode = "expected" }: CashFlowDayDet
                         <td className="py-3.5 px-4 font-mono font-semibold text-ink">
                           <Link
                             href={`/invoices/${inv.id}`}
-                            className="hover:underline text-ink flex items-center gap-1"
+                            className="hover:underline text-ink inline-flex items-center gap-1 min-h-[44px] py-1"
                           >
                             <span>{inv.invoiceNumber}</span>
                           </Link>
@@ -412,14 +412,14 @@ export function CashFlowDayDetailView({ day, mode = "expected" }: CashFlowDayDet
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           <Button
-                            variant="ghost"
+                            variant="secondary"
                             size="compact"
                             disabled={settlingInvoiceId === inv.id}
                             onClick={() => handleSettleInvoice(inv)}
-                            className="text-xs h-8 px-3 rounded-full hover:bg-fog border border-transparent hover:border-line"
+                            className="text-xs min-h-[44px] px-3.5 py-2 rounded-full border border-line hover:border-ink-3 font-medium shrink-0 inline-flex items-center justify-center"
                           >
                             {settlingInvoiceId === inv.id ? (
-                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
                             ) : (
                               "Mark paid"
                             )}
@@ -573,14 +573,14 @@ export function CashFlowDayDetailView({ day, mode = "expected" }: CashFlowDayDet
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           <Button
-                            variant="ghost"
+                            variant="secondary"
                             size="compact"
                             disabled={settlingExpenseId === exp.id}
                             onClick={() => handleSettleExpense(exp)}
-                            className="text-xs h-8 px-3 rounded-full hover:bg-fog border border-transparent hover:border-line"
+                            className="text-xs min-h-[44px] px-3.5 py-2 rounded-full border border-line hover:border-ink-3 font-medium shrink-0 inline-flex items-center justify-center"
                           >
                             {settlingExpenseId === exp.id ? (
-                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
                             ) : (
                               "Mark paid"
                             )}

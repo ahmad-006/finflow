@@ -14,7 +14,7 @@ export function ClientDirectorySkeleton() {
       </div>
 
       {/* 2. Client KPI Strip Skeleton */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 py-4 border-y border-line">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 py-4 border-y border-line">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="flex flex-col gap-2 p-2">
             <div className="h-2.5 w-24 rounded-full bg-fog" />

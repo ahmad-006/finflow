@@ -215,7 +215,7 @@ export function ExpenseDirectoryView({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 py-4 border-y border-line">
         {/* KPI 1: Total Scheduled */}
         <div className="flex flex-col gap-1 p-2">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-1 flex-wrap">
             <span className="text-xs font-mono uppercase tracking-wider text-ink-3">
               Total Scheduled
             </span>
@@ -225,7 +225,7 @@ export function ExpenseDirectoryView({
               </span>
             )}
           </div>
-          <div className="text-lg sm:text-2xl font-serif tracking-tight text-ink num truncate">
+          <div className="text-base sm:text-xl lg:text-2xl font-serif tracking-tight text-ink num break-words leading-tight">
             {formatMoney(kpis.totalScheduledAmount, baseCurrency)}
           </div>
           <span className="text-[11px] text-ink-3">
@@ -238,7 +238,7 @@ export function ExpenseDirectoryView({
           <span className="text-xs font-mono uppercase tracking-wider text-ink-3">
             Next 30 Days Outflow
           </span>
-          <div className="text-lg sm:text-2xl font-serif tracking-tight text-ink num truncate">
+          <div className="text-base sm:text-xl lg:text-2xl font-serif tracking-tight text-ink num break-words leading-tight">
             {formatMoney(kpis.next30DaysOutflow, baseCurrency)}
           </div>
           <span className="text-[11px] text-ink-3">
@@ -248,7 +248,7 @@ export function ExpenseDirectoryView({
 
         {/* KPI 3: Overdue Outflow */}
         <div className="flex flex-col gap-1 p-2">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-1 flex-wrap">
             <span className="text-xs font-mono uppercase tracking-wider text-ink-3">
               Overdue Outflow
             </span>
@@ -259,7 +259,7 @@ export function ExpenseDirectoryView({
             )}
           </div>
           <div
-            className={`text-lg sm:text-2xl font-serif tracking-tight num truncate ${
+            className={`text-base sm:text-xl lg:text-2xl font-serif tracking-tight num break-words leading-tight ${
               kpis.overdueAmount > 0 ? "text-ember-ink font-semibold" : "text-ink"
             }`}
           >
@@ -275,7 +275,7 @@ export function ExpenseDirectoryView({
           <span className="text-xs font-mono uppercase tracking-wider text-ink-3">
             Monthly Burn Rate
           </span>
-          <div className="text-lg sm:text-2xl font-serif tracking-tight text-ink num truncate">
+          <div className="text-base sm:text-xl lg:text-2xl font-serif tracking-tight text-ink num break-words leading-tight">
             {formatMoney(kpis.monthlyRecurringBurn, baseCurrency)}
           </div>
           <span className="text-[11px] text-ink-3">
@@ -419,18 +419,18 @@ export function ExpenseDirectoryView({
           </div>
         ) : (
           <>
-            {/* Desktop Table (>= 768px) */}
-            <div className="hidden md:block overflow-x-auto">
+            {/* Desktop Table (>= 1024px) */}
+            <div className="hidden lg:block overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-line bg-fog/50 text-[11px] font-mono uppercase tracking-wider text-ink-3">
-                    <th scope="col" className="py-3 px-4 font-normal">Due Date</th>
-                    <th scope="col" className="py-3 px-4 font-normal">Title & Payee</th>
-                    <th scope="col" className="py-3 px-4 font-normal">Category</th>
-                    <th scope="col" className="py-3 px-4 font-normal">Schedule</th>
-                    <th scope="col" className="py-3 px-4 font-normal text-right">Amount</th>
-                    <th scope="col" className="py-3 px-4 font-normal">Status</th>
-                    <th scope="col" className="py-3 px-4 font-normal text-right">Actions</th>
+                    <th scope="col" className="py-3 px-4 font-normal whitespace-nowrap">Due Date</th>
+                    <th scope="col" className="py-3 px-4 font-normal whitespace-nowrap">Title & Payee</th>
+                    <th scope="col" className="py-3 px-4 font-normal whitespace-nowrap">Category</th>
+                    <th scope="col" className="py-3 px-4 font-normal whitespace-nowrap">Schedule</th>
+                    <th scope="col" className="py-3 px-4 font-normal whitespace-nowrap text-right">Amount</th>
+                    <th scope="col" className="py-3 px-4 font-normal whitespace-nowrap">Status</th>
+                    <th scope="col" className="py-3 px-4 font-normal whitespace-nowrap text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line text-sm">
@@ -496,7 +496,7 @@ export function ExpenseDirectoryView({
                               <button
                                 type="button"
                                 onClick={() => handleOpenPay(exp)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-fog text-ink hover:bg-fog-2 border border-line transition-colors"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[36px] rounded-full text-xs font-medium bg-fog text-ink hover:bg-fog-2 border border-line transition-colors"
                                 title="Mark as Paid"
                               >
                                 <CheckCircle2 className="w-3.5 h-3.5 text-moss" />
@@ -509,7 +509,7 @@ export function ExpenseDirectoryView({
                                 type="button"
                                 onClick={() => handleOpenEdit(exp)}
                                 aria-label={`Edit ${exp.title}`}
-                                className="p-1 rounded text-ink-3 hover:text-ink hover:bg-fog transition-colors"
+                                className="min-h-[36px] min-w-[36px] p-2 inline-flex items-center justify-center rounded-full text-ink-3 hover:text-ink hover:bg-fog transition-colors"
                                 title="Edit expense"
                               >
                                 <Edit2 className="w-3.5 h-3.5" />
@@ -522,7 +522,7 @@ export function ExpenseDirectoryView({
                                 onClick={() => handleDelete(exp.id)}
                                 disabled={isDeleting}
                                 aria-label={`Delete ${exp.title}`}
-                                className="p-1 rounded text-ink-3 hover:text-ember-ink hover:bg-ember-tint/50 transition-colors disabled:opacity-50"
+                                className="min-h-[36px] min-w-[36px] p-2 inline-flex items-center justify-center rounded-full text-ink-3 hover:text-ember-ink hover:bg-ember-tint/50 transition-colors disabled:opacity-50"
                                 title="Delete scheduled expense"
                               >
                                 {isDeleting ? (
@@ -541,8 +541,8 @@ export function ExpenseDirectoryView({
               </table>
             </div>
 
-            {/* Mobile Card Stack Layout (< 768px) with min 44px Touch Targets */}
-            <div className="md:hidden divide-y divide-line">
+            {/* Mobile / Tablet Card Stack Layout (< 1024px) with min 44px Touch Targets */}
+            <div className="lg:hidden divide-y divide-line">
               {filteredExpenses.map((exp) => {
                 const isPaid = exp.status === "PAID";
                 const isOverdue = exp.status === "OVERDUE";
@@ -551,16 +551,16 @@ export function ExpenseDirectoryView({
                 return (
                   <div
                     key={exp.id}
-                    className="p-4 flex flex-col gap-3 hover:bg-fog/20 transition-colors"
+                    className="p-4 sm:p-5 flex flex-col gap-3 hover:bg-fog/20 transition-colors"
                   >
                     {/* Row 1: Title and Status Badge */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex flex-col min-w-0">
-                        <span className="font-medium text-sm text-ink tracking-tight truncate">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="font-medium text-sm sm:text-base text-ink tracking-tight break-words">
                           {exp.title}
                         </span>
                         {exp.notes && (
-                          <span className="text-xs text-ink-3 truncate">
+                          <span className="text-xs text-ink-3 break-words mt-0.5">
                             {exp.notes}
                           </span>
                         )}
@@ -569,16 +569,16 @@ export function ExpenseDirectoryView({
                     </div>
 
                     {/* Row 2: Category, Recurrence & Formatted Amount */}
-                    <div className="flex items-baseline justify-between gap-2">
+                    <div className="flex items-baseline justify-between gap-2 flex-wrap">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono bg-fog text-ink-2 border border-line">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono bg-fog text-ink-2 border border-line whitespace-nowrap">
                           {CATEGORY_LABELS[exp.category] || exp.category}
                         </span>
-                        <span className="text-xs text-ink-3 font-mono">
+                        <span className="text-xs text-ink-3 font-mono whitespace-nowrap">
                           {RECURRENCE_LABELS[exp.recurrence] || exp.recurrence}
                         </span>
                       </div>
-                      <div className="font-serif text-base font-semibold text-ink num shrink-0">
+                      <div className="font-serif text-base sm:text-lg font-semibold text-ink num shrink-0">
                         {formatMoney(exp.amount, baseCurrency)}
                       </div>
                     </div>
@@ -587,7 +587,7 @@ export function ExpenseDirectoryView({
                     <div className="flex items-center justify-between pt-2 border-t border-line/60 text-xs text-ink-3">
                       <div className="flex items-center gap-1.5">
                         <Calendar className="w-3.5 h-3.5 text-ink-3 shrink-0" />
-                        <span className={isOverdue ? "text-ember-ink font-semibold" : "text-ink-2 font-mono"}>
+                        <span className={isOverdue ? "text-ember-ink font-semibold font-mono" : "text-ink-2 font-mono"}>
                           Due {formatDate(exp.dueDate)}
                         </span>
                         {isOverdue && (
@@ -599,39 +599,40 @@ export function ExpenseDirectoryView({
                     </div>
 
                     {/* Row 4: Action buttons with touch targets >= 44px */}
-                    <div className="flex items-center gap-2 pt-1 flex-wrap">
-                      {!isPaid && (
+                    {isPaid ? (
+                      <div className="flex items-center gap-1.5 pt-1 text-xs text-moss font-medium">
+                        <CheckCircle2 className="w-4 h-4 shrink-0" />
+                        <span>Payment settled</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 pt-1 flex-wrap sm:flex-nowrap">
                         <button
                           type="button"
                           onClick={() => handleOpenPay(exp)}
-                          className="flex-1 min-h-[44px] inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-medium bg-fog text-ink hover:bg-fog-2 border border-line transition-colors"
+                          className="flex-1 min-h-[44px] inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-medium bg-fog text-ink hover:bg-fog-2 border border-line transition-colors"
                           title="Mark as Paid"
                         >
                           <CheckCircle2 className="w-4 h-4 text-moss shrink-0" />
                           <span>Mark as Paid</span>
                         </button>
-                      )}
 
-                      {!isPaid && (
                         <button
                           type="button"
                           onClick={() => handleOpenEdit(exp)}
                           aria-label={`Edit ${exp.title}`}
-                          className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-ink-2 hover:text-ink hover:bg-fog border border-line transition-colors px-3 py-2 text-xs font-medium"
+                          className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-ink-2 hover:text-ink hover:bg-fog border border-line transition-colors px-3.5 py-2.5 text-xs font-medium"
                           title="Edit expense"
                         >
                           <Edit2 className="w-4 h-4 shrink-0" />
                           <span className="ml-1.5">Edit</span>
                         </button>
-                      )}
 
-                      {!isPaid && (
                         <button
                           type="button"
                           onClick={() => handleDelete(exp.id)}
                           disabled={isDeleting}
                           aria-label={`Delete ${exp.title}`}
-                          className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-ink-3 hover:text-ember-ink hover:bg-ember-tint border border-line transition-colors px-3 py-2 text-xs font-medium disabled:opacity-50"
+                          className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-ink-3 hover:text-ember-ink hover:bg-ember-tint border border-line transition-colors px-3.5 py-2.5 text-xs font-medium disabled:opacity-50"
                           title="Delete scheduled expense"
                         >
                           {isDeleting ? (
@@ -641,8 +642,8 @@ export function ExpenseDirectoryView({
                           )}
                           <span className="ml-1.5">Delete</span>
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
