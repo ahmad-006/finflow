@@ -88,6 +88,7 @@ export function SettingsCockpitView({
   return (
     <div className="w-full text-ink pb-12 font-sans">
       <PageHeader
+        eyebrow="Configuration & Preferences"
         title="Settings"
         description="Manage workspace parameters, personal profile, and authentication credentials."
       />

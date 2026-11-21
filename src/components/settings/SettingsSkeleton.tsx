@@ -9,6 +9,7 @@ export function SettingsSkeleton() {
       aria-label="Loading settings"
     >
       <PageHeader
+        eyebrow="Configuration & Preferences"
         title="Settings"
         description="Manage workspace parameters, personal profile, and authentication credentials."
       />

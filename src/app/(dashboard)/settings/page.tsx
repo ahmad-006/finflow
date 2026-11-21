@@ -5,6 +5,7 @@ import { getSession } from "@/modules/auth";
 import { getCompanySettings, getUserProfile } from "@/modules/settings/service";
 import { SettingsCockpitView } from "@/components/settings/SettingsCockpitView";
 import { SettingsSkeleton } from "@/components/settings/SettingsSkeleton";
+import { Band } from "@/components/shell/Band";
 
 export const metadata = {
   title: "Settings — FinFlow",
@@ -37,8 +38,12 @@ async function SettingsDataLoader() {
 
 export default function SettingsPage() {
   return (
-    <Suspense fallback={<SettingsSkeleton />}>
-      <SettingsDataLoader />
-    </Suspense>
+    <main className="min-h-screen bg-white">
+      <Band tone="white" className="py-8 md:py-12">
+        <Suspense fallback={<SettingsSkeleton />}>
+          <SettingsDataLoader />
+        </Suspense>
+      </Band>
+    </main>
   );
 }
