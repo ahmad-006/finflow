@@ -30,7 +30,7 @@ export default function ResetPasswordPage() {
           Reset password
         </h1>
         <p className="text-[17px] text-ink-2 text-center mt-2 mb-8">
-          Enter your reset code and set a new password.
+          Enter your reset code and set a new password. Check your spam folder if you have not received your code.
         </p>
 
         <Suspense fallback={<div className="h-48 animate-pulse bg-fog rounded-[14px]" />}>

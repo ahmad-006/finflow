@@ -47,7 +47,7 @@ export function ForgotPasswordForm() {
         />
 
         <p className="text-[15px] text-ink-2">
-          If an account exists for <span className="font-medium text-ink">{email}</span>, you will receive a reset code shortly.
+          If an account exists for <span className="font-medium text-ink">{email}</span>, you will receive a reset code shortly. Be sure to check your spam or junk folder if it does not arrive within a few minutes.
         </p>
 
         <Link

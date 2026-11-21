@@ -301,7 +301,7 @@ export function InvoiceDetailCockpit({
       {reminderSuccess && (
         <div className="p-3 rounded-[8px] border border-moss/30 bg-moss/5 text-moss text-xs flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 shrink-0 text-moss" />
-          <span>Payment reminder sent to {invoice.client.email}.</span>
+          <span>Payment reminder sent to {invoice.client.email}. Advise the recipient to check their spam or junk folder if not received.</span>
         </div>
       )}
 

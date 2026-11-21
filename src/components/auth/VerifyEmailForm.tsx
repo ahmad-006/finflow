@@ -156,7 +156,7 @@ export function VerifyEmailForm({ initialEmail }: VerifyEmailFormProps) {
       if (res && typeof res === "object" && !res.success && res.error) {
         setError(res.error);
       } else {
-        setInfo("A new 6-digit code has been sent to your email.");
+        setInfo("A new 6-digit code has been sent. Please check your inbox and spam folder.");
         setCountdown(60);
       }
     } catch (err: unknown) {
@@ -218,6 +218,10 @@ export function VerifyEmailForm({ initialEmail }: VerifyEmailFormProps) {
             />
           ))}
         </div>
+
+        <p className="text-center text-[13px] text-ink-3">
+          Cannot find the email? Check your spam or junk folder.
+        </p>
 
         <Button
           type="submit"

@@ -30,7 +30,7 @@ export default function VerifyEmailPage() {
           Verify email
         </h1>
         <p className="text-[17px] text-ink-2 text-center mt-2 mb-8">
-          Enter the 6-digit code sent to your email.
+          Enter the 6-digit code sent to your email. Check your spam folder if it does not appear in your inbox.
         </p>
 
         <Suspense fallback={<div className="h-48 animate-pulse bg-fog rounded-[14px]" />}>
