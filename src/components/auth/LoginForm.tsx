@@ -18,6 +18,7 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const resetSuccess = searchParams.get("reset") === "success";
   const oauthError = searchParams.get("error");
+  const oauthMsg = searchParams.get("msg");
 
   const [error, setError] = React.useState<string | null>(null);
   const [isPending, setIsPending] = React.useState(false);
@@ -79,7 +80,15 @@ export function LoginForm() {
         {oauthError && (
           <InlineAlert
             variant="negative"
-            message="Google sign-in was not completed. Please try again."
+            message={
+              oauthMsg
+                ? `Google sign-in error: ${oauthMsg}`
+                : oauthError === "oauth_state_invalid"
+                ? "Google sign-in session expired. Please try again."
+                : oauthError === "oauth_missing_code"
+                ? "Google authorization code missing. Please try again."
+                : "Google sign-in was not completed. Please try again."
+            }
           />
         )}
 

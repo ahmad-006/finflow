@@ -107,8 +107,17 @@ export async function GET(request: Request | NextRequest) {
 
     return response;
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "oauth_failed";
-    console.error("Google OAuth callback processing error:", message);
-    return NextResponse.redirect(getRedirectUrl(request, "/login?error=oauth_failed"));
+    const message = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack : "";
+    console.error("Google OAuth callback processing error:", message, stack);
+    try {
+      const fs = await import("node:fs");
+      fs.writeFileSync("/tmp/finflow_oauth_error.log", `${new Date().toISOString()} - ${message}\n${stack}\n`);
+    } catch {
+      // Ignore file write failure
+    }
+    return NextResponse.redirect(
+      getRedirectUrl(request, `/login?error=oauth_failed&msg=${encodeURIComponent(message.slice(0, 150))}`)
+    );
   }
 }
