@@ -12,6 +12,7 @@ import {
   Coins,
   AlertCircle,
   CheckCircle2,
+  RefreshCw,
 } from "lucide-react";
 import type { InvoiceCurrency } from "@/modules/invoices/types";
 import {
@@ -23,6 +24,7 @@ import {
 } from "@/modules/invoices/currency";
 import { formatUserError } from "@/lib/errors";
 import { createInvoiceAction } from "@/modules/invoices/actions";
+import { getLiveExchangeRatesAction } from "@/modules/invoices/rates";
 
 interface ClientOption {
   id: string;
@@ -34,6 +36,7 @@ interface ClientOption {
 interface InvoiceBuilderViewProps {
   clients: ClientOption[];
   baseCurrency?: string;
+  initialExchangeRates?: Record<InvoiceCurrency, number>;
 }
 
 interface FormLineItem {
@@ -46,15 +49,24 @@ interface FormLineItem {
 export function InvoiceBuilderView({
   clients,
   baseCurrency = "PKR",
+  initialExchangeRates,
 }: InvoiceBuilderViewProps) {
   const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
+
+  // Exchange Rates state
+  const [rates, setRates] = React.useState<Record<InvoiceCurrency, number>>(() => ({
+    ...DEFAULT_EXCHANGE_RATES,
+    ...(initialExchangeRates || {}),
+  }));
+  const [isFetchingRates, setIsFetchingRates] = React.useState(false);
+  const [rateFeedback, setRateFeedback] = React.useState<string | null>(null);
 
   // Form State
   const [clientId, setClientId] = React.useState<string>(clients[0]?.id || "");
   const [currency, setCurrency] = React.useState<InvoiceCurrency>("PKR");
   const [exchangeRate, setExchangeRate] = React.useState<string>(
-    String(DEFAULT_EXCHANGE_RATES.PKR)
+    String(rates.PKR ?? 1.0)
   );
 
   const todayIso = new Date().toISOString().split("T")[0];
@@ -96,7 +108,33 @@ export function InvoiceBuilderView({
   // When currency changes, update spot exchange rate default
   const handleCurrencyChange = (newCurrency: InvoiceCurrency) => {
     setCurrency(newCurrency);
-    setExchangeRate(String(DEFAULT_EXCHANGE_RATES[newCurrency] ?? 1.0));
+    const newRate = rates[newCurrency] ?? DEFAULT_EXCHANGE_RATES[newCurrency] ?? 1.0;
+    setExchangeRate(String(newRate));
+  };
+
+  const handleRefreshRates = async () => {
+    setIsFetchingRates(true);
+    setRateFeedback(null);
+    try {
+      const res = await getLiveExchangeRatesAction(baseCurrency);
+      if (res.success && res.rates) {
+        setRates(res.rates);
+        if (currency !== "PKR") {
+          const freshRate = res.rates[currency] ?? DEFAULT_EXCHANGE_RATES[currency] ?? 1.0;
+          setExchangeRate(String(freshRate));
+        }
+        setRateFeedback("Rates updated");
+        setTimeout(() => setRateFeedback(null), 3000);
+      } else {
+        setRateFeedback("Baseline rates active");
+        setTimeout(() => setRateFeedback(null), 3000);
+      }
+    } catch {
+      setRateFeedback("Unable to refresh");
+      setTimeout(() => setRateFeedback(null), 3000);
+    } finally {
+      setIsFetchingRates(false);
+    }
   };
 
   // Dynamic Item row management
@@ -277,9 +315,23 @@ export function InvoiceBuilderView({
 
         {/* Currency & Spot FX Rate */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-mono uppercase tracking-wider text-ink/60 flex items-center gap-1.5">
-            <Coins className="w-3.5 h-3.5" />
-            <span>Billing Currency *</span>
+          <label className="text-xs font-mono uppercase tracking-wider text-ink/60 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <Coins className="w-3.5 h-3.5" />
+              <span>Billing Currency *</span>
+            </span>
+            {currency !== "PKR" && (
+              <button
+                type="button"
+                onClick={handleRefreshRates}
+                disabled={isFetchingRates}
+                className="inline-flex items-center gap-1 text-[11px] font-mono text-ink/60 hover:text-ink disabled:opacity-50 transition-colors"
+                title="Fetch live market spot exchange rates"
+              >
+                <RefreshCw className={`w-3 h-3 ${isFetchingRates ? "animate-spin text-ink" : ""}`} />
+                <span>{rateFeedback || "Live rates"}</span>
+              </button>
+            )}
           </label>
           <div className="grid grid-cols-2 gap-2">
             <select

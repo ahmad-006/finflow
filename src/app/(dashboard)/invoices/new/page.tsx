@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { getSession, getCurrentUser } from "@/modules/auth";
 import { getCachedClients } from "@/modules/clients/service";
 import { InvoiceBuilderView } from "@/components/invoices/InvoiceBuilderView";
+import { getLiveExchangeRates } from "@/modules/invoices/rates";
+import type { InvoiceCurrency } from "@/modules/invoices/types";
 import { Band } from "@/components/shell/Band";
 
 export const metadata = {
@@ -18,9 +20,12 @@ export default async function NewInvoicePage() {
   }
 
   const currentUser = await getCurrentUser();
-  const baseCurrency = currentUser?.company?.baseCurrency || "PKR";
+  const baseCurrency = (currentUser?.company?.baseCurrency || "PKR") as InvoiceCurrency;
 
-  const clients = await getCachedClients(session.companyId);
+  const [clients, liveRates] = await Promise.all([
+    getCachedClients(session.companyId),
+    getLiveExchangeRates(baseCurrency),
+  ]);
 
   const clientOptions = clients.map((c) => ({
     id: c.id,
@@ -35,6 +40,7 @@ export default async function NewInvoicePage() {
         <InvoiceBuilderView
           clients={clientOptions}
           baseCurrency={baseCurrency}
+          initialExchangeRates={liveRates}
         />
       </Band>
     </main>
