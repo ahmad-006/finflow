@@ -13,13 +13,21 @@ export interface SessionPayload {
 }
 
 export interface RegisterInput {
-  companyName: string;
+  companyName?: string;
   fullName: string;
   email: string;
   password: string;
   baseCurrency?: string;
   liquidReserve?: number | string;
   safetyBuffer?: number | string;
+  inviteToken?: string;
+  noRedirect?: boolean;
+}
+
+export interface AcceptInvitationInput {
+  token: string;
+  fullName?: string;
+  password?: string;
   noRedirect?: boolean;
 }
 

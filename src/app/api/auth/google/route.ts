@@ -30,6 +30,15 @@ export async function GET(request: Request | NextRequest) {
 
     return response;
   } catch (error) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "digest" in error &&
+      typeof (error as { digest?: string }).digest === "string" &&
+      (error as { digest: string }).digest.startsWith("NEXT_")
+    ) {
+      throw error;
+    }
     console.error("Failed to initialize Google OAuth consent flow:", error);
     const hostHeader =
       request.headers.get("x-forwarded-host") ||

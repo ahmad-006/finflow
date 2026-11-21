@@ -21,6 +21,7 @@ async function InvoiceDirectoryDataLoader() {
   const currentUser = await getCurrentUser();
   const companyName = currentUser?.company?.name || "FinFlow Commercial Services";
   const baseCurrency = currentUser?.company?.baseCurrency || "PKR";
+  const role = currentUser?.role || session.role || "MEMBER";
 
   const [invoicesData, kpis] = await Promise.all([
     getCachedInvoices(session.companyId),
@@ -33,6 +34,7 @@ async function InvoiceDirectoryDataLoader() {
       kpis={kpis}
       baseCurrency={baseCurrency}
       companyName={companyName}
+      role={role}
     />
   );
 }

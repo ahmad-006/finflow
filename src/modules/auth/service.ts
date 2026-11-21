@@ -16,6 +16,115 @@ import { registerSchema, loginSchema } from "./validation";
 export async function registerUser(rawInput: RegisterInput): Promise<AuthSessionData> {
   const validated = registerSchema.parse(rawInput);
 
+  // Check if invitation token is supplied
+  if (validated.inviteToken) {
+    const invitation = await db.invitation.findUnique({
+      where: { token: validated.inviteToken.trim() },
+      include: { company: true },
+    });
+
+    if (!invitation) {
+      throw new Error("Invalid invitation token. The invitation may have been revoked.");
+    }
+
+    if (new Date() > invitation.expiresAt) {
+      throw new Error("This invitation has expired. Please request a new invitation.");
+    }
+
+    // Check if user email is already registered
+    const existingUser = await db.user.findUnique({
+      where: { email: validated.email },
+    });
+
+    if (existingUser) {
+      throw new Error("A user with this email address already exists.");
+    }
+
+    const passwordHash = await hashPassword(validated.password);
+
+    const result = await db.$transaction(async (tx) => {
+      // Create user assigned to existing company with assigned role
+      const user = await tx.user.create({
+        data: {
+          companyId: invitation.companyId,
+          email: validated.email,
+          fullName: validated.fullName,
+          passwordHash,
+          role: invitation.role,
+          emailVerified: true,
+          onboardingCompleted: true,
+          authProvider: "LOCAL",
+        },
+      });
+
+      // Remove accepted invitation
+      await tx.invitation.delete({
+        where: { id: invitation.id },
+      });
+
+      // Log join event
+      await tx.auditLog.create({
+        data: {
+          companyId: invitation.companyId,
+          userId: user.id,
+          entityType: "WORKSPACE",
+          entityId: invitation.companyId,
+          action: "JOIN_WORKSPACE",
+          details: JSON.stringify({
+            userId: user.id,
+            email: user.email,
+            role: invitation.role,
+            invitedByUserId: invitation.invitedByUserId,
+          }),
+        },
+      });
+
+      return { company: invitation.company, user };
+    }, { timeout: 30000, maxWait: 20000 });
+
+    const sessionPayload: SessionPayload = {
+      userId: result.user.id,
+      companyId: result.company.id,
+      email: result.user.email,
+      fullName: result.user.fullName,
+      role: result.user.role,
+      emailVerified: true,
+      onboardingCompleted: true,
+      createdAt: Date.now(),
+      expiresAt: Date.now() + SESSION_MAX_AGE_SECONDS * 1000,
+    };
+
+    const token = await createSessionToken(sessionPayload);
+
+    const safeUser: SafeUser = {
+      id: result.user.id,
+      companyId: result.user.companyId,
+      email: result.user.email,
+      fullName: result.user.fullName,
+      role: result.user.role,
+      emailVerified: true,
+      onboardingCompleted: true,
+      createdAt: result.user.createdAt,
+      updatedAt: result.user.updatedAt,
+    };
+
+    const safeCompany: SafeCompany = {
+      id: result.company.id,
+      name: result.company.name,
+      baseCurrency: result.company.baseCurrency,
+      liquidReserve: result.company.liquidReserve.toString(),
+      safetyBuffer: result.company.safetyBuffer.toString(),
+      createdAt: result.company.createdAt,
+      updatedAt: result.company.updatedAt,
+    };
+
+    return {
+      user: safeUser,
+      company: safeCompany,
+      token,
+    };
+  }
+
   // Check if user email is already registered
   const existingUser = await db.user.findUnique({
     where: { email: validated.email },
@@ -286,7 +395,7 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
 
   return {
     success: true,
-    message: "If an account exists with this email address, a password reset code has been sent.",
+    message: "If an account exists with this email address, a password reset code has been sent. Please check your inbox and spam folder.",
   };
 }
 
@@ -463,4 +572,174 @@ export async function getCompanyById(companyId: string) {
   return db.company.findUnique({
     where: { id: companyId },
   });
+}
+
+/**
+ * Accepts a workspace invitation and joins the target company with the assigned role.
+ * Can be called with userId for an existing user or with credentials for a new user.
+ */
+export async function acceptInvitation(
+  token: string,
+  userId?: string,
+  credentials?: { fullName?: string; password?: string }
+): Promise<AuthSessionData> {
+  const normalizedToken = token.trim();
+  const invitation = await db.invitation.findUnique({
+    where: { token: normalizedToken },
+    include: { company: true },
+  });
+
+  if (!invitation) {
+    throw new Error("Invalid invitation token. The invitation may have been revoked.");
+  }
+
+  if (new Date() > invitation.expiresAt) {
+    throw new Error("This invitation has expired. Please request a new invitation.");
+  }
+
+  const result = await db.$transaction(async (tx) => {
+    let targetUser;
+
+    if (userId) {
+      targetUser = await tx.user.update({
+        where: { id: userId },
+        data: {
+          companyId: invitation.companyId,
+          role: invitation.role,
+          onboardingCompleted: true,
+        },
+      });
+    } else {
+      const existingUser = await tx.user.findUnique({
+        where: { email: invitation.email.toLowerCase() },
+      });
+
+      if (existingUser) {
+        if (credentials?.password && existingUser.passwordHash) {
+          const valid = await verifyPassword(credentials.password, existingUser.passwordHash);
+          if (!valid) {
+            throw new Error("Invalid password for existing account.");
+          }
+        }
+        targetUser = await tx.user.update({
+          where: { id: existingUser.id },
+          data: {
+            companyId: invitation.companyId,
+            role: invitation.role,
+            onboardingCompleted: true,
+          },
+        });
+      } else {
+        if (!credentials?.password) {
+          throw new Error("Password is required to set up your account.");
+        }
+        const passwordHash = await hashPassword(credentials.password);
+        const fullName =
+          credentials.fullName?.trim() || invitation.email.split("@")[0] || "Team Member";
+
+        targetUser = await tx.user.create({
+          data: {
+            companyId: invitation.companyId,
+            email: invitation.email.toLowerCase(),
+            fullName,
+            passwordHash,
+            role: invitation.role,
+            emailVerified: true,
+            onboardingCompleted: true,
+            authProvider: "LOCAL",
+          },
+        });
+      }
+    }
+
+    await tx.invitation.delete({
+      where: { id: invitation.id },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        companyId: invitation.companyId,
+        userId: targetUser.id,
+        entityType: "WORKSPACE",
+        entityId: invitation.companyId,
+        action: "JOIN_WORKSPACE",
+        details: JSON.stringify({
+          userId: targetUser.id,
+          email: targetUser.email,
+          role: invitation.role,
+          invitedByUserId: invitation.invitedByUserId,
+        }),
+      },
+    });
+
+    return { user: targetUser, company: invitation.company };
+  }, { timeout: 30000, maxWait: 20000 });
+
+  const sessionPayload: SessionPayload = {
+    userId: result.user.id,
+    companyId: result.company.id,
+    email: result.user.email,
+    fullName: result.user.fullName,
+    role: result.user.role,
+    emailVerified: result.user.emailVerified,
+    onboardingCompleted: true,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + SESSION_MAX_AGE_SECONDS * 1000,
+  };
+
+  const sessionToken = await createSessionToken(sessionPayload);
+
+  return {
+    user: {
+      id: result.user.id,
+      companyId: result.user.companyId,
+      email: result.user.email,
+      fullName: result.user.fullName,
+      role: result.user.role,
+      emailVerified: result.user.emailVerified,
+      onboardingCompleted: true,
+      createdAt: result.user.createdAt,
+      updatedAt: result.user.updatedAt,
+    },
+    company: {
+      id: result.company.id,
+      name: result.company.name,
+      baseCurrency: result.company.baseCurrency,
+      liquidReserve: result.company.liquidReserve.toString(),
+      safetyBuffer: result.company.safetyBuffer.toString(),
+      createdAt: result.company.createdAt,
+      updatedAt: result.company.updatedAt,
+    },
+    token: sessionToken,
+  };
+}
+
+/**
+ * Validates an invitation token and returns details for UI display.
+ */
+export async function getInvitationByToken(token: string) {
+  const invitation = await db.invitation.findUnique({
+    where: { token: token.trim() },
+    include: {
+      company: {
+        select: { id: true, name: true, baseCurrency: true },
+      },
+    },
+  });
+
+  if (!invitation) {
+    return null;
+  }
+
+  const isExpired = new Date() > invitation.expiresAt;
+
+  return {
+    id: invitation.id,
+    companyId: invitation.companyId,
+    companyName: invitation.company.name,
+    email: invitation.email,
+    role: invitation.role,
+    expiresAt: invitation.expiresAt,
+    isExpired,
+  };
 }

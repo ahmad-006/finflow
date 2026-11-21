@@ -11,11 +11,15 @@ import {
   updateCompanySettingsAction,
   updateUserProfileAction,
   changePasswordAction,
+  inviteMemberAction,
+  revokeInvitationAction,
 } from "@/modules/settings/actions";
 import type {
   CompanySettingsRecord,
   UserProfileRecord,
   ActionState,
+  MemberRecord,
+  InvitationRecord,
 } from "@/modules/settings/types";
 import {
   Building2,
@@ -28,11 +32,21 @@ import {
   Coins,
   ShieldCheck,
   Info,
+  Users,
+  Mail,
+  UserPlus,
+  Clock,
+  Trash2,
+  Loader2,
+  Copy,
+  Check,
 } from "lucide-react";
 
 interface SettingsCockpitViewProps {
   initialCompany: CompanySettingsRecord;
   initialProfile: UserProfileRecord;
+  initialMembers?: MemberRecord[];
+  initialInvitations?: InvitationRecord[];
 }
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -45,11 +59,13 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   CAD: "CA$",
 };
 
-type SettingsTab = "company" | "profile" | "security";
+type SettingsTab = "company" | "team" | "profile" | "security";
 
 export function SettingsCockpitView({
   initialCompany,
   initialProfile,
+  initialMembers,
+  initialInvitations,
 }: SettingsCockpitViewProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>("company");
 
@@ -57,6 +73,43 @@ export function SettingsCockpitView({
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Team states
+  const [members, setMembers] = useState<MemberRecord[]>(() => {
+    if (initialMembers && initialMembers.length > 0) {
+      return initialMembers;
+    }
+    return [
+      {
+        id: initialProfile.id,
+        companyId: initialProfile.companyId,
+        email: initialProfile.email,
+        fullName: initialProfile.fullName,
+        role: initialProfile.role,
+        emailVerified: initialProfile.emailVerified,
+        avatarUrl: initialProfile.avatarUrl,
+        createdAt: initialProfile.createdAt,
+      },
+    ];
+  });
+
+  const [invitations, setInvitations] = useState<InvitationRecord[]>(
+    initialInvitations || []
+  );
+  const [isRevokingId, setIsRevokingId] = useState<string | null>(null);
+  const [revokeError, setRevokeError] = useState<string | null>(null);
+  const [copiedToken, setCopiedToken] = useState<string | null>(null);
+
+  const handleCopyInviteLink = async (token: string) => {
+    try {
+      const inviteUrl = `${window.location.origin}/invite?token=${token}`;
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopiedToken(token);
+      setTimeout(() => setCopiedToken(null), 2500);
+    } catch {
+      // Fallback
+    }
+  };
 
   // Company settings action
   const [companyState, companyAction, isCompanyPending] = useActionState(
@@ -76,6 +129,67 @@ export function SettingsCockpitView({
     { success: false } as ActionState
   );
 
+  // Invite member action
+  const [inviteState, inviteAction, isInvitePending] = useActionState(
+    inviteMemberAction,
+    { success: false } as ActionState<InvitationRecord>
+  );
+
+  // Sync members/invitations if props change
+  React.useEffect(() => {
+    if (initialMembers && initialMembers.length > 0) {
+      setMembers(initialMembers);
+    }
+  }, [initialMembers]);
+
+  React.useEffect(() => {
+    if (initialInvitations) {
+      setInvitations(initialInvitations);
+    }
+  }, [initialInvitations]);
+
+  // Sync new invitation when invite action succeeds
+  React.useEffect(() => {
+    if (inviteState?.success && inviteState?.data) {
+      const newInv = inviteState.data;
+      setInvitations((prev) => {
+        if (prev.some((inv) => inv.id === newInv.id)) return prev;
+        return [newInv, ...prev];
+      });
+    }
+  }, [inviteState]);
+
+  const handleRevokeInvitation = async (invitationId: string) => {
+    setIsRevokingId(invitationId);
+    setRevokeError(null);
+    try {
+      const res = await revokeInvitationAction(invitationId);
+      if (res.success) {
+        setInvitations((prev) => prev.filter((inv) => inv.id !== invitationId));
+      } else {
+        setRevokeError(res.error || "Failed to revoke invitation.");
+      }
+    } catch (err: unknown) {
+      setRevokeError(
+        err instanceof Error ? err.message : "Failed to revoke invitation."
+      );
+    } finally {
+      setIsRevokingId(null);
+    }
+  };
+
+  const formatInviteDate = (date: Date | string) => {
+    try {
+      return new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }).format(new Date(date));
+    } catch {
+      return "—";
+    }
+  };
+
   const currentCompany = companyState.data || initialCompany;
   const currentProfile = profileState.data || initialProfile;
   const currencySymbol =
@@ -84,6 +198,9 @@ export function SettingsCockpitView({
   const isOAuthUser =
     currentProfile.authProvider === "GOOGLE" ||
     currentProfile.authProvider.toUpperCase() === "GOOGLE";
+
+  const canInvite =
+    currentProfile.role === "OWNER" || currentProfile.role === "ADMIN";
 
   return (
     <div className="w-full text-ink pb-12 font-sans">
@@ -127,6 +244,34 @@ export function SettingsCockpitView({
                 <span className="text-[14px] leading-tight">Workspace</span>
                 <span className="text-[12px] text-ink-3 font-normal hidden lg:inline">
                   Reserves and parameters
+                </span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "team"}
+              aria-controls="panel-team"
+              id="tab-team"
+              onClick={() => setActiveTab("team")}
+              className={`flex items-center gap-3 px-4 py-3 rounded-[12px] text-left transition-all min-h-[44px] shrink-0 lg:w-full ${
+                activeTab === "team"
+                  ? "bg-white text-ink font-semibold shadow-none border border-line/60"
+                  : "text-ink-2 hover:text-ink hover:bg-white/60 font-medium"
+              }`}
+            >
+              <div
+                className={`w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0 ${
+                  activeTab === "team" ? "bg-ink text-white" : "bg-fog text-ink-2"
+                }`}
+              >
+                <Users className="w-4 h-4 stroke-[1.8]" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[14px] leading-tight">Team</span>
+                <span className="text-[12px] text-ink-3 font-normal hidden lg:inline">
+                  Members and access
                 </span>
               </div>
             </button>
@@ -391,7 +536,264 @@ export function SettingsCockpitView({
             </div>
           )}
 
-          {/* Tab 2: User Profile Settings */}
+          {/* Tab 2: Team Settings */}
+          {activeTab === "team" && (
+            <div
+              role="tabpanel"
+              id="panel-team"
+              aria-labelledby="tab-team"
+              className="rounded-[16px] border border-line bg-white p-6 sm:p-8 flex flex-col gap-8"
+            >
+              <div className="pb-5 border-b border-line">
+                <h2 className="text-xl font-semibold text-ink">Team management</h2>
+                <p className="text-[14px] text-ink-2 mt-1">
+                  Manage workspace collaborators, assign access permissions, and issue invitations.
+                </p>
+              </div>
+
+              {/* Invite Form: Only rendered if OWNER or ADMIN */}
+              {canInvite ? (
+                <div className="rounded-[16px] border border-line bg-fog/20 p-5 sm:p-6 flex flex-col gap-5">
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-[15px] font-semibold text-ink flex items-center gap-2">
+                      <UserPlus className="w-4 h-4 text-ink-2 shrink-0" />
+                      <span>Invite team member</span>
+                    </h3>
+                    <p className="text-[13px] text-ink-2">
+                      Send an invitation to grant collaborator access to this workspace. Advise recipients to check their spam folder if the email does not appear.
+                    </p>
+                  </div>
+
+                  <form action={inviteAction} className="flex flex-col gap-4">
+                    {inviteState?.success && inviteState?.message && (
+                      <InlineAlert
+                        variant="positive"
+                        message={inviteState.message}
+                      />
+                    )}
+
+                    {inviteState?.error && (
+                      <InlineAlert
+                        variant="negative"
+                        message={inviteState.error}
+                      />
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
+                      <div className="sm:col-span-6 flex flex-col gap-1.5">
+                        <Label htmlFor="inviteEmail">Email address</Label>
+                        <Input
+                          id="inviteEmail"
+                          name="email"
+                          type="email"
+                          required
+                          placeholder="colleague@company.com"
+                          className="min-h-[44px]"
+                          isInvalid={Boolean(inviteState?.errors?.email)}
+                        />
+                        {inviteState?.errors?.email && (
+                          <p className="text-[13px] text-ember-ink">
+                            {inviteState.errors.email[0]}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="sm:col-span-3 flex flex-col gap-1.5">
+                        <Label htmlFor="inviteRole">Role</Label>
+                        <select
+                          id="inviteRole"
+                          name="role"
+                          defaultValue="MEMBER"
+                          className="w-full min-h-[44px] h-11 px-3.5 rounded-[10px] border border-line bg-white text-ink text-sm focus:outline-none focus:border-ink/50 cursor-pointer"
+                        >
+                          <option value="ADMIN">ADMIN</option>
+                          <option value="MEMBER">MEMBER</option>
+                          <option value="VIEWER">VIEWER</option>
+                        </select>
+                      </div>
+
+                      <div className="sm:col-span-3">
+                        <Button
+                          type="submit"
+                          variant="primary"
+                          size="default"
+                          className="w-full min-h-[44px] h-11 rounded-full text-sm font-medium"
+                          isLoading={isInvitePending}
+                          disabled={isInvitePending}
+                        >
+                          Send invitation
+                        </Button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              ) : (
+                <div className="p-4 rounded-[12px] bg-fog/30 border border-line flex items-center justify-between text-xs text-ink-2">
+                  <span>Directory view: your role ({currentProfile.role}) has read-only access to team membership.</span>
+                </div>
+              )}
+
+              {/* Section 1: Active Team Members */}
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-[15px] font-semibold text-ink uppercase tracking-wider text-ink-3">
+                      Active members
+                    </h3>
+                    <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-fog border border-line text-ink-2">
+                      {members.length}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="border border-line rounded-[12px] overflow-hidden bg-white divide-y divide-line">
+                  {members.map((member) => (
+                    <div
+                      key={member.id}
+                      className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-fog/20 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-fog border border-line flex items-center justify-center font-medium text-xs text-ink shrink-0">
+                          {member.fullName
+                            ? member.fullName
+                                .split(" ")
+                                .map((n) => n[0])
+                                .slice(0, 2)
+                                .join("")
+                                .toUpperCase()
+                            : "U"}
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-ink truncate">
+                              {member.fullName}
+                            </span>
+                            {member.id === currentProfile.id && (
+                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-fog border border-line text-ink-3">
+                                You
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs text-ink-3 truncate">
+                            {member.email}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 self-end sm:self-center">
+                        <span
+                          className={`text-[11px] font-mono px-2.5 py-1 rounded-full border ${
+                            member.role === "OWNER"
+                              ? "bg-ink text-white border-ink font-semibold"
+                              : member.role === "ADMIN"
+                              ? "bg-fog text-ink border-line font-medium"
+                              : "bg-white text-ink-2 border-line"
+                          }`}
+                        >
+                          {member.role}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Section 2: Pending Invitations */}
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-[15px] font-semibold text-ink uppercase tracking-wider text-ink-3">
+                      Pending invitations
+                    </h3>
+                    <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-fog border border-line text-ink-2">
+                      {invitations.length}
+                    </span>
+                  </div>
+                </div>
+
+                {revokeError && (
+                  <InlineAlert variant="negative" message={revokeError} />
+                )}
+
+                {invitations.length === 0 ? (
+                  <div className="p-6 rounded-[12px] border border-line bg-fog/20 text-center text-xs text-ink-3">
+                    No pending invitations.
+                  </div>
+                ) : (
+                  <div className="border border-line rounded-[12px] overflow-hidden bg-white divide-y divide-line">
+                    {invitations.map((inv) => (
+                      <div
+                        key={inv.id}
+                        className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-fog/20 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-fog border border-line flex items-center justify-center text-ink-3 shrink-0">
+                            <Mail className="w-4 h-4" />
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-sm font-medium text-ink truncate">
+                              {inv.email}
+                            </span>
+                            <span className="text-xs text-ink-3 flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-ink-3 shrink-0" />
+                              Expires {formatInviteDate(inv.expiresAt)}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 self-end sm:self-center">
+                          <span className="text-[11px] font-mono px-2.5 py-1 rounded-full bg-fog text-ink-2 border border-line">
+                            {inv.role}
+                          </span>
+                          <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-fog text-ink-3 border border-line">
+                            Pending
+                          </span>
+                          {canInvite && inv.token && (
+                            <button
+                              type="button"
+                              onClick={() => handleCopyInviteLink(inv.token)}
+                              className="min-h-[44px] px-3.5 py-1.5 rounded-full border border-line text-xs font-medium text-ink-2 hover:text-ink hover:bg-fog transition-colors inline-flex items-center gap-1.5"
+                              title="Copy invitation link"
+                            >
+                              {copiedToken === inv.token ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5 text-moss shrink-0" />
+                                  <span className="text-moss">Copied</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3.5 h-3.5 shrink-0" />
+                                  <span>Copy link</span>
+                                </>
+                              )}
+                            </button>
+                          )}
+                          {canInvite && (
+                            <button
+                              type="button"
+                              onClick={() => handleRevokeInvitation(inv.id)}
+                              disabled={isRevokingId === inv.id}
+                              className="min-h-[44px] px-3.5 py-1.5 rounded-full border border-line text-xs font-medium text-ink-2 hover:text-ember-ink hover:bg-fog transition-colors disabled:opacity-50 inline-flex items-center gap-1"
+                              title="Revoke invitation"
+                            >
+                              {isRevokingId === inv.id ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                              ) : (
+                                <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                              )}
+                              <span>Revoke</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Tab 3: User Profile Settings */}
           {activeTab === "profile" && (
             <div
               role="tabpanel"

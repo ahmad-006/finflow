@@ -13,6 +13,8 @@ import {
   resendSignupOtp,
   requestPasswordReset,
   resetPasswordWithOtp,
+  acceptInvitation,
+  getInvitationByToken,
 } from "./service";
 import { completeCompanyOnboarding } from "./onboarding";
 import {
@@ -86,27 +88,33 @@ export async function registerAction(
       : extractData(prevStateOrData);
 
     const input: RegisterInput = {
-      companyName: String(rawData.companyName || rawData.name || "").trim(),
+      companyName:
+        rawData.companyName || rawData.name
+          ? String(rawData.companyName || rawData.name).trim()
+          : undefined,
       fullName: String(rawData.fullName || rawData.userName || "").trim(),
       email: String(rawData.email || "").trim(),
       password: String(rawData.password || ""),
       baseCurrency: rawData.baseCurrency ? String(rawData.baseCurrency).trim() : undefined,
       liquidReserve: (rawData.liquidReserve ?? rawData.openingCash ?? 0) as string | number,
       safetyBuffer: (rawData.safetyBuffer ?? 0) as string | number,
+      inviteToken: rawData.inviteToken ? String(rawData.inviteToken).trim() : undefined,
       noRedirect: Boolean(rawData.noRedirect),
     };
 
     const sessionData = await registerUser(input);
     await setSessionCookie(sessionData.token);
 
+    const redirectTarget = sessionData.user.emailVerified ? "/dashboard" : "/verify-email";
+
     if (!input.noRedirect) {
-      redirect("/verify-email");
+      redirect(redirectTarget);
     }
 
     return {
       success: true,
       data: sessionData,
-      redirectUrl: "/verify-email",
+      redirectUrl: redirectTarget,
     };
   } catch (err: unknown) {
     if (isRedirectError(err)) {
@@ -252,7 +260,7 @@ export async function resendOtpAction(
 
     return {
       success: true,
-      data: { message: "A new 6-digit verification code has been dispatched." },
+      data: { message: "A new 6-digit verification code has been dispatched. Please check your inbox and spam folder." },
     };
   } catch (err: unknown) {
     if (isRedirectError(err)) {
@@ -493,4 +501,74 @@ export async function requireAuth(): Promise<SessionPayload> {
     redirect("/login");
   }
   return session;
+}
+
+/**
+ * Server Action: Accepts a workspace invitation and joins the target company.
+ */
+export async function acceptInvitationAction(
+  prevStateOrData: unknown,
+  formDataOrUndefined?: FormData
+): Promise<AuthActionResult> {
+  try {
+    const rawData = formDataOrUndefined
+      ? extractData(formDataOrUndefined)
+      : extractData(prevStateOrData);
+
+    const token = String(rawData.token || rawData.inviteToken || "").trim();
+    if (!token) {
+      return {
+        success: false,
+        error: "Invitation token is required.",
+      };
+    }
+
+    const currentSession = await getSession();
+    const fullName = rawData.fullName ? String(rawData.fullName).trim() : undefined;
+    const password = rawData.password ? String(rawData.password) : undefined;
+    const noRedirect = Boolean(rawData.noRedirect);
+
+    const sessionData = await acceptInvitation(
+      token,
+      currentSession?.userId,
+      { fullName, password }
+    );
+
+    await setSessionCookie(sessionData.token);
+
+    if (!noRedirect) {
+      redirect("/dashboard");
+    }
+
+    return {
+      success: true,
+      data: sessionData,
+      redirectUrl: "/dashboard",
+    };
+  } catch (err: unknown) {
+    if (isRedirectError(err)) {
+      throw err;
+    }
+
+    const message = getErrorMessage(err, "Failed to accept invitation.");
+    return {
+      success: false,
+      error: message,
+    };
+  }
+}
+
+/**
+ * Server Action: Fetches invitation information by token.
+ */
+export async function getInvitationByTokenAction(token: string) {
+  try {
+    const invitation = await getInvitationByToken(token);
+    if (!invitation) {
+      return { success: false, error: "Invitation not found." };
+    }
+    return { success: true, data: invitation };
+  } catch (err: unknown) {
+    return { success: false, error: getErrorMessage(err, "Failed to retrieve invitation.") };
+  }
 }

@@ -46,3 +46,35 @@ export interface UserProfileRecord {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface InviteMemberInput {
+  email: string;
+  role: "ADMIN" | "MEMBER" | "VIEWER";
+}
+
+export interface InvitationRecord {
+  id: string;
+  companyId: string;
+  email: string;
+  role: string;
+  token: string;
+  expiresAt: Date;
+  invitedByUserId: string;
+  createdAt: Date;
+}
+
+export interface MemberRecord {
+  id: string;
+  companyId: string;
+  email: string;
+  fullName: string;
+  role: string;
+  emailVerified: boolean;
+  avatarUrl: string | null;
+  createdAt: Date;
+}
+
+export interface CompanyMembersAndInvitesResult {
+  members: MemberRecord[];
+  invitations: InvitationRecord[];
+}

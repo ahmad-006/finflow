@@ -37,3 +37,18 @@ export const changePasswordSchema = z
     message: "New password and confirm password do not match.",
     path: ["confirmPassword"],
   });
+
+export const inviteMemberSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .email("Please provide a valid email address.")
+    .toLowerCase(),
+  role: z.enum(["ADMIN", "MEMBER", "VIEWER"], {
+    message: "Role must be ADMIN, MEMBER, or VIEWER.",
+  }),
+});
+
+export const revokeInvitationSchema = z.object({
+  invitationId: z.string().min(1, "Invitation ID is required."),
+});

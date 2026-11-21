@@ -5,3 +5,4 @@ export * from "./session";
 export * from "./service";
 export * from "./actions";
 export * from "./oauth";
+export * from "./rbac";

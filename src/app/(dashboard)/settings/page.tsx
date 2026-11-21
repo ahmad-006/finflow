@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/modules/auth";
 import { getCompanySettings, getUserProfile } from "@/modules/settings/service";
+import { getCompanyMembersAndInvites } from "@/modules/settings/actions";
 import { SettingsCockpitView } from "@/components/settings/SettingsCockpitView";
 import { SettingsSkeleton } from "@/components/settings/SettingsSkeleton";
 import { Band } from "@/components/shell/Band";
@@ -19,9 +20,10 @@ async function SettingsDataLoader() {
     redirect("/login");
   }
 
-  const [company, profile] = await Promise.all([
+  const [company, profile, teamData] = await Promise.all([
     getCompanySettings(session.companyId),
     getUserProfile(session.userId),
+    getCompanyMembersAndInvites(session),
   ]);
 
   if (!profile) {
@@ -32,6 +34,8 @@ async function SettingsDataLoader() {
     <SettingsCockpitView
       initialCompany={company}
       initialProfile={profile}
+      initialMembers={teamData.members}
+      initialInvitations={teamData.invitations}
     />
   );
 }

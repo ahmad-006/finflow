@@ -31,6 +31,7 @@ model Company {
   expenses     Expense[]
   transactions Transaction[]
   auditLogs    AuditLog[]
+  invitations  Invitation[]
 
   @@map("companies")
 }
@@ -245,4 +246,24 @@ model VerificationCode {
   @@index([email, type])
   @@index([codeHash])
   @@map("verification_codes")
+}
+
+// ==========================================
+// 8. WORKSPACE INVITATIONS (RBAC)
+// ==========================================
+
+model Invitation {
+  id              String   @id @default(uuid())
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  email           String
+  role            String   @default("MEMBER") // ADMIN, MEMBER, VIEWER
+  token           String   @unique
+  expiresAt       DateTime
+  invitedByUserId String
+  createdAt       DateTime @default(now())
+
+  @@index([companyId])
+  @@index([email])
+  @@map("invitations")
 }

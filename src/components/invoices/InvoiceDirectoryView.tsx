@@ -35,6 +35,7 @@ export interface InvoiceDirectoryViewProps {
   kpis: InvoiceKPIs;
   baseCurrency?: string;
   companyName?: string;
+  role?: string;
 }
 
 export function InvoiceDirectoryView({
@@ -42,7 +43,9 @@ export function InvoiceDirectoryView({
   kpis,
   baseCurrency = "PKR",
   companyName = "FinFlow Commercial Services",
+  role,
 }: InvoiceDirectoryViewProps) {
+  const isViewer = role?.toUpperCase() === "VIEWER";
   const router = useRouter();
   const [downloadingId, setDownloadingId] = React.useState<string | null>(null);
   const [sendingReminderId, setSendingReminderId] = React.useState<string | null>(null);
@@ -134,7 +137,7 @@ export function InvoiceDirectoryView({
       } else {
         setReminderSuccessId(inv.id);
         setFeedbackMessage({
-          text: `Reminder dispatched to ${inv.client.email} for ${inv.invoiceNumber}.`,
+          text: `Reminder dispatched to ${inv.client.email} for ${inv.invoiceNumber}. Advise the recipient to check their spam folder if not received.`,
           isError: false,
         });
         setTimeout(() => setReminderSuccessId(null), 3000);
@@ -170,13 +173,15 @@ export function InvoiceDirectoryView({
           </p>
         </div>
 
-        <Link
-          href="/invoices/new"
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 min-h-[44px] rounded-full bg-ink text-white text-sm font-medium hover:bg-ink-hover transition-colors w-full sm:w-auto shrink-0"
-        >
-          <Plus className="w-4 h-4 shrink-0" />
-          <span>New Invoice</span>
-        </Link>
+        {!isViewer && (
+          <Link
+            href="/invoices/new"
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 min-h-[44px] rounded-full bg-ink text-white text-sm font-medium hover:bg-ink-hover transition-colors w-full sm:w-auto shrink-0"
+          >
+            <Plus className="w-4 h-4 shrink-0" />
+            <span>New Invoice</span>
+          </Link>
+        )}
       </div>
 
       {/* Feedback Banner */}
@@ -296,14 +301,14 @@ export function InvoiceDirectoryView({
             >
               Reset Filters
             </button>
-          ) : (
+          ) : !isViewer ? (
             <Link
               href="/invoices/new"
               className="min-h-[44px] px-5 py-2 text-xs rounded-full bg-ink text-white font-medium hover:bg-ink-hover transition-colors inline-flex items-center justify-center"
             >
               Create First Invoice
             </Link>
-          )}
+          ) : null}
         </div>
       ) : (
         <div className="border border-line rounded-[10px] overflow-hidden bg-white">
@@ -328,7 +333,7 @@ export function InvoiceDirectoryView({
                     inv.status !== "PAID" &&
                     inv.status !== "CANCELLED" &&
                     new Date(inv.dueDate).getTime() < new Date().getTime();
-                  const canPay = inv.status !== "PAID" && inv.status !== "CANCELLED";
+                  const canPay = !isViewer && inv.status !== "PAID" && inv.status !== "CANCELLED";
                   const canRemind = inv.status === "SENT" || inv.status === "OVERDUE";
 
                   return (
@@ -467,7 +472,7 @@ export function InvoiceDirectoryView({
                 inv.status !== "PAID" &&
                 inv.status !== "CANCELLED" &&
                 new Date(inv.dueDate).getTime() < new Date().getTime();
-              const canPay = inv.status !== "PAID" && inv.status !== "CANCELLED";
+              const canPay = !isViewer && inv.status !== "PAID" && inv.status !== "CANCELLED";
               const canRemind = inv.status === "SENT" || inv.status === "OVERDUE";
 
               return (

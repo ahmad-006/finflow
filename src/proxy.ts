@@ -43,6 +43,7 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
   const isApiAuthRoute = pathname.startsWith("/api/auth");
   const isVerifyEmailRoute = pathname === "/verify-email" || pathname.startsWith("/verify-email/");
   const isOnboardingRoute = pathname === "/onboarding" || pathname.startsWith("/onboarding/");
+  const isInviteRoute = pathname === "/invite" || pathname.startsWith("/invite/");
 
   const isPublicAuthRoute =
     pathname === "/login" ||
@@ -141,8 +142,8 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
     });
   }
 
-  // Allow unauthenticated access to login, register, forgot-password, reset-password, pay, verify-email, api/auth
-  if (isPublicAuthRoute || isPublicUtilityRoute || isVerifyEmailRoute || isApiAuthRoute) {
+  // Allow unauthenticated access to login, register, forgot-password, reset-password, pay, verify-email, invite, api/auth
+  if (isInviteRoute || isPublicAuthRoute || isPublicUtilityRoute || isVerifyEmailRoute || isApiAuthRoute) {
     return NextResponse.next({
       request: {
         headers: requestHeaders,

@@ -6,8 +6,13 @@ import { formatUserError } from "@/lib/errors";
 import {
   getSessionTokenFromCookies,
   verifySessionToken,
+  getSession,
 } from "@/modules/auth/session";
 import type { SessionPayload } from "@/modules/auth/types";
+import {
+  assertCanMutateLedger,
+  assertCanManageBilling,
+} from "@/modules/auth/rbac";
 import {
   createExpense,
   updateExpense,
@@ -47,18 +52,27 @@ function extractData(input: unknown): Record<string, unknown> {
 /**
  * Verifies session cookie and extracts authenticated user's company tenancy.
  */
-export async function requireAuthSession(): Promise<SessionPayload> {
+export async function requireAuthSession(sessionOverride?: SessionPayload): Promise<SessionPayload> {
+  if (sessionOverride?.userId && sessionOverride?.companyId) {
+    return sessionOverride;
+  }
+
+  const session = await getSession();
+  if (session?.userId && session?.companyId) {
+    return session;
+  }
+
   const token = await getSessionTokenFromCookies();
   if (!token) {
     throw new Error("Unauthorized: Please sign in to manage expenses.");
   }
 
-  const session = await verifySessionToken(token);
-  if (!session || !session.companyId) {
+  const verified = await verifySessionToken(token);
+  if (!verified || !verified.companyId) {
     throw new Error("Session expired or invalid: Please sign in again.");
   }
 
-  return session;
+  return verified;
 }
 
 /**
@@ -111,10 +125,12 @@ function invalidateTenantTags(companyId: string, extraTags: string[] = []) {
  */
 export async function createExpenseAction(
   prevStateOrData: unknown,
-  formDataOrUndefined?: FormData
+  formDataOrUndefined?: FormData,
+  sessionOverride?: SessionPayload
 ): Promise<ExpenseActionResult<ExpenseRecord>> {
   try {
-    const session = await requireAuthSession();
+    const session = await requireAuthSession(sessionOverride);
+    assertCanMutateLedger(session.role);
 
     let rawData: Record<string, unknown>;
     if (formDataOrUndefined instanceof FormData) {
@@ -139,8 +155,12 @@ export async function createExpenseAction(
     const expense = await createExpense(session.companyId, validated);
 
     invalidateTenantTags(session.companyId);
-    revalidatePath("/expenses");
-    revalidatePath("/dashboard");
+    try {
+      revalidatePath("/expenses");
+      revalidatePath("/dashboard");
+    } catch {
+      // Revalidation best effort
+    }
 
     return {
       success: true,
@@ -207,8 +227,12 @@ export async function updateExpenseAction(
     const expense = await updateExpense(session.companyId, expenseId, validated);
 
     invalidateTenantTags(session.companyId, [`expense-${session.companyId}-${expenseId}`]);
-    revalidatePath("/expenses");
-    revalidatePath("/dashboard");
+    try {
+      revalidatePath("/expenses");
+      revalidatePath("/dashboard");
+    } catch {
+      // Revalidation best effort
+    }
 
     return {
       success: true,
@@ -248,8 +272,12 @@ export async function deleteExpenseAction(
     const result = await deleteExpense(session.companyId, expenseId);
 
     invalidateTenantTags(session.companyId, [`expense-${session.companyId}-${expenseId}`]);
-    revalidatePath("/expenses");
-    revalidatePath("/dashboard");
+    try {
+      revalidatePath("/expenses");
+      revalidatePath("/dashboard");
+    } catch {
+      // Revalidation best effort
+    }
 
     return {
       success: true,
@@ -269,10 +297,12 @@ export async function deleteExpenseAction(
  */
 export async function markExpensePaidAction(
   expenseId: string,
-  paymentData?: MarkExpensePaidInput
+  paymentData?: MarkExpensePaidInput,
+  sessionOverride?: SessionPayload
 ): Promise<ExpenseActionResult<ExpenseRecord>> {
   try {
-    const session = await requireAuthSession();
+    const session = await requireAuthSession(sessionOverride);
+    assertCanManageBilling(session.role);
 
     if (!expenseId || typeof expenseId !== "string") {
       return {
@@ -291,8 +321,12 @@ export async function markExpensePaidAction(
     );
 
     invalidateTenantTags(session.companyId, [`expense-${session.companyId}-${expenseId}`]);
-    revalidatePath("/expenses");
-    revalidatePath("/dashboard");
+    try {
+      revalidatePath("/expenses");
+      revalidatePath("/dashboard");
+    } catch {
+      // Revalidation best effort
+    }
 
     return {
       success: true,

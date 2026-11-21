@@ -89,6 +89,7 @@ export const registerSchema = z.object({
       }
       return num;
     }),
+  inviteToken: z.string().trim().optional(),
   noRedirect: z.boolean().optional(),
 });
 
@@ -203,4 +204,19 @@ export const onboardingSchema = z.object({
 });
 
 export type OnboardingSchemaInput = z.infer<typeof onboardingSchema>;
+
+export const acceptInvitationSchema = z.object({
+  token: z
+    .string()
+    .trim()
+    .min(1, "Invitation token is required."),
+  fullName: z
+    .string()
+    .trim()
+    .min(2, "Full name must be at least 2 characters.")
+    .max(100)
+    .optional(),
+  password: passwordSchema.optional(),
+  noRedirect: z.boolean().optional(),
+});
 

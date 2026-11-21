@@ -6,8 +6,13 @@ import { formatUserError } from "@/lib/errors";
 import {
   getSessionTokenFromCookies,
   verifySessionToken,
+  getSession,
 } from "@/modules/auth/session";
 import type { SessionPayload } from "@/modules/auth/types";
+import {
+  assertCanMutateLedger,
+  assertCanManageBilling,
+} from "@/modules/auth/rbac";
 import {
   createInvoice,
   updateInvoice,
@@ -31,18 +36,27 @@ import type {
 /**
  * Verifies session cookie and extracts authenticated user's company tenancy.
  */
-async function requireAuthSession(): Promise<SessionPayload> {
+async function requireAuthSession(sessionOverride?: SessionPayload): Promise<SessionPayload> {
+  if (sessionOverride?.userId && sessionOverride?.companyId) {
+    return sessionOverride;
+  }
+
+  const session = await getSession();
+  if (session?.userId && session?.companyId) {
+    return session;
+  }
+
   const token = await getSessionTokenFromCookies();
   if (!token) {
     throw new Error("Unauthorized: Please sign in to manage invoices.");
   }
 
-  const session = await verifySessionToken(token);
-  if (!session || !session.companyId) {
+  const verified = await verifySessionToken(token);
+  if (!verified || !verified.companyId) {
     throw new Error("Session expired or invalid: Please sign in again.");
   }
 
-  return session;
+  return verified;
 }
 
 /**
@@ -89,18 +103,24 @@ function invalidateTenantTags(companyId: string, extraTags: string[] = []) {
  * Server Action: Creates a new invoice with atomic sequential numbering.
  */
 export async function createInvoiceAction(
-  data: CreateInvoiceInput
+  data: CreateInvoiceInput,
+  sessionOverride?: SessionPayload
 ): Promise<InvoiceActionResult<InvoiceWithItemsAndClient>> {
   try {
-    const session = await requireAuthSession();
+    const session = await requireAuthSession(sessionOverride);
+    assertCanMutateLedger(session.role);
     const validated = createInvoiceSchema.parse(data);
 
     const invoice = await createInvoice(session.companyId, validated);
 
     invalidateTenantTags(session.companyId);
-    revalidatePath("/invoices");
-    revalidatePath("/clients");
-    revalidatePath("/dashboard");
+    try {
+      revalidatePath("/invoices");
+      revalidatePath("/clients");
+      revalidatePath("/dashboard");
+    } catch {
+      // Best effort revalidation
+    }
 
     return {
       success: true,
@@ -134,9 +154,13 @@ export async function updateInvoiceAction(
     const invoice = await updateInvoice(session.companyId, validated);
 
     invalidateTenantTags(session.companyId, [`invoice-${session.companyId}-${data.id}`]);
-    revalidatePath("/invoices");
-    revalidatePath(`/invoices/${data.id}`);
-    revalidatePath("/dashboard");
+    try {
+      revalidatePath("/invoices");
+      revalidatePath(`/invoices/${data.id}`);
+      revalidatePath("/dashboard");
+    } catch {
+      // Revalidation best effort
+    }
 
     return {
       success: true,
@@ -172,10 +196,14 @@ export async function markInvoiceSentAction(
     const invoice = await markInvoiceSent(session.companyId, invoiceId);
 
     invalidateTenantTags(session.companyId, [`invoice-${session.companyId}-${invoiceId}`]);
-    revalidatePath("/invoices");
-    revalidatePath(`/invoices/${invoiceId}`);
-    revalidatePath("/clients");
-    revalidatePath("/dashboard");
+    try {
+      revalidatePath("/invoices");
+      revalidatePath(`/invoices/${invoiceId}`);
+      revalidatePath("/clients");
+      revalidatePath("/dashboard");
+    } catch {
+      // Revalidation best effort
+    }
 
     return {
       success: true,
@@ -193,19 +221,25 @@ export async function markInvoiceSentAction(
  * Server Action: Records a payment against an invoice and emits an INFLOW transaction.
  */
 export async function recordPaymentAction(
-  data: RecordPaymentInput
+  data: RecordPaymentInput,
+  sessionOverride?: SessionPayload
 ): Promise<InvoiceActionResult<InvoiceWithItemsAndClient>> {
   try {
-    const session = await requireAuthSession();
+    const session = await requireAuthSession(sessionOverride);
+    assertCanManageBilling(session.role);
     const validated = recordPaymentSchema.parse(data);
 
     const invoice = await recordInvoicePayment(session.companyId, validated);
 
     invalidateTenantTags(session.companyId, [`invoice-${session.companyId}-${data.invoiceId}`]);
-    revalidatePath("/invoices");
-    revalidatePath(`/invoices/${data.invoiceId}`);
-    revalidatePath("/clients");
-    revalidatePath("/dashboard");
+    try {
+      revalidatePath("/invoices");
+      revalidatePath(`/invoices/${data.invoiceId}`);
+      revalidatePath("/clients");
+      revalidatePath("/dashboard");
+    } catch {
+      // Revalidation best effort
+    }
 
     return {
       success: true,
@@ -241,9 +275,13 @@ export async function cancelInvoiceAction(
     const invoice = await cancelInvoice(session.companyId, invoiceId);
 
     invalidateTenantTags(session.companyId, [`invoice-${session.companyId}-${invoiceId}`]);
-    revalidatePath("/invoices");
-    revalidatePath(`/invoices/${invoiceId}`);
-    revalidatePath("/dashboard");
+    try {
+      revalidatePath("/invoices");
+      revalidatePath(`/invoices/${invoiceId}`);
+      revalidatePath("/dashboard");
+    } catch {
+      // Revalidation best effort
+    }
 
     return {
       success: true,

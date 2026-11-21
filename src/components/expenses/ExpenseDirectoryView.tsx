@@ -31,6 +31,7 @@ export interface ExpenseDirectoryViewProps {
   kpis: ExpenseKPIs;
   baseCurrency?: string;
   companyName?: string;
+  role?: string;
 }
 
 const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
@@ -56,7 +57,9 @@ export function ExpenseDirectoryView({
   kpis,
   baseCurrency = "PKR",
   companyName = "FinFlow",
+  role,
 }: ExpenseDirectoryViewProps) {
+  const isViewer = role?.toUpperCase() === "VIEWER";
   const [expenses, setExpenses] = React.useState<ExpenseRecord[]>(initialExpenses);
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<ExpenseStatus | "ALL">("ALL");
@@ -194,14 +197,16 @@ export function ExpenseDirectoryView({
           </p>
         </div>
 
-        <Button
-          type="button"
-          onClick={handleOpenAdd}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 min-h-[44px] rounded-full bg-ink text-white text-sm font-medium hover:bg-ink-hover transition-colors w-full sm:w-auto shrink-0"
-        >
-          <Plus className="w-4 h-4 shrink-0" />
-          <span>Add Expense</span>
-        </Button>
+        {!isViewer && (
+          <Button
+            type="button"
+            onClick={handleOpenAdd}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 min-h-[44px] rounded-full bg-ink text-white text-sm font-medium hover:bg-ink-hover transition-colors w-full sm:w-auto shrink-0"
+          >
+            <Plus className="w-4 h-4 shrink-0" />
+            <span>Add Expense</span>
+          </Button>
+        )}
       </div>
 
       {actionError && (
@@ -406,7 +411,7 @@ export function ExpenseDirectoryView({
               >
                 Clear all filters
               </Button>
-            ) : (
+            ) : !isViewer ? (
               <Button
                 type="button"
                 onClick={handleOpenAdd}
@@ -415,7 +420,7 @@ export function ExpenseDirectoryView({
                 <Plus className="w-4 h-4 mr-1.5" />
                 Schedule First Expense
               </Button>
-            )}
+            ) : null}
           </div>
         ) : (
           <>
@@ -492,7 +497,7 @@ export function ExpenseDirectoryView({
                         {/* Actions */}
                         <td className="py-3.5 px-4 whitespace-nowrap text-right">
                           <div className="inline-flex items-center justify-end gap-2">
-                            {!isPaid && (
+                            {!isPaid && !isViewer && (
                               <button
                                 type="button"
                                 onClick={() => handleOpenPay(exp)}
@@ -504,7 +509,7 @@ export function ExpenseDirectoryView({
                               </button>
                             )}
 
-                            {!isPaid && (
+                            {!isPaid && !isViewer && (
                               <button
                                 type="button"
                                 onClick={() => handleOpenEdit(exp)}
@@ -516,7 +521,7 @@ export function ExpenseDirectoryView({
                               </button>
                             )}
 
-                            {!isPaid && (
+                            {!isPaid && !isViewer && (
                               <button
                                 type="button"
                                 onClick={() => handleDelete(exp.id)}
@@ -604,7 +609,7 @@ export function ExpenseDirectoryView({
                         <CheckCircle2 className="w-4 h-4 shrink-0" />
                         <span>Payment settled</span>
                       </div>
-                    ) : (
+                    ) : isViewer ? null : (
                       <div className="flex items-center gap-2 pt-1 flex-wrap sm:flex-nowrap">
                         <button
                           type="button"

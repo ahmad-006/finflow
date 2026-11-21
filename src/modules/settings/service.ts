@@ -2,15 +2,21 @@ import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { hashPassword } from "@/modules/auth/password";
+import { generateSecureToken } from "@/lib/tokens";
+import { sendWorkspaceInvitationEmail } from "@/lib/mail";
 import type {
   CompanySettingsInput,
   CompanySettingsRecord,
   UserProfileInput,
   UserProfileRecord,
+  InviteMemberInput,
+  InvitationRecord,
+  CompanyMembersAndInvitesResult,
 } from "./types";
 import {
   updateCompanySettingsSchema,
   updateUserProfileSchema,
+  inviteMemberSchema,
 } from "./validation";
 
 /**
@@ -246,4 +252,168 @@ export async function getUserProfile(userId: string): Promise<UserProfileRecord 
       updatedAt: true,
     },
   });
+}
+
+/**
+ * Creates a workspace member invitation with a secure unique token.
+ */
+export async function inviteMember(
+  companyId: string,
+  invitedByUserId: string,
+  data: InviteMemberInput
+): Promise<InvitationRecord> {
+  const validated = inviteMemberSchema.parse(data);
+
+  if (!companyId) {
+    throw new Error("Company ID is required.");
+  }
+
+  const existingMember = await db.user.findFirst({
+    where: { companyId, email: validated.email },
+  });
+
+  if (existingMember) {
+    throw new Error("A member with this email address already belongs to this workspace.");
+  }
+
+  // Remove previous pending invitation for this email in this company if exists
+  await db.invitation.deleteMany({
+    where: { companyId, email: validated.email },
+  });
+
+  const token = generateSecureToken(32);
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+  const invitation = await db.$transaction(async (tx) => {
+    const inv = await tx.invitation.create({
+      data: {
+        companyId,
+        email: validated.email,
+        role: validated.role,
+        token,
+        expiresAt,
+        invitedByUserId,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        companyId,
+        userId: invitedByUserId,
+        entityType: "WORKSPACE",
+        entityId: inv.id,
+        action: "INVITE_MEMBER",
+        details: JSON.stringify({
+          email: validated.email,
+          role: validated.role,
+          invitationId: inv.id,
+        }),
+      },
+    });
+
+    return inv;
+  }, { timeout: 30000, maxWait: 20000 });
+
+  // Dispatches invitation notification via email
+  try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const inviteUrl = `${appUrl.replace(/\/$/, "")}/invite?token=${token}`;
+
+    const [company, inviter] = await Promise.all([
+      db.company.findUnique({ where: { id: companyId }, select: { name: true } }),
+      db.user.findUnique({ where: { id: invitedByUserId }, select: { fullName: true, email: true } }),
+    ]);
+
+    await sendWorkspaceInvitationEmail({
+      email: validated.email,
+      companyName: company?.name || "FinFlow Workspace",
+      inviterName: inviter?.fullName || inviter?.email || "Workspace Administrator",
+      role: validated.role,
+      inviteUrl,
+    });
+  } catch (emailErr) {
+    console.error("[Invite Email Dispatch Error]:", emailErr);
+  }
+
+  return invitation;
+}
+
+/**
+ * Revokes a pending workspace invitation.
+ */
+export async function revokeInvitation(
+  companyId: string,
+  invitationId: string,
+  userId?: string
+): Promise<{ success: boolean; id: string }> {
+  if (!companyId || !invitationId) {
+    throw new Error("Company ID and Invitation ID are required.");
+  }
+
+  const invitation = await db.invitation.findFirst({
+    where: { id: invitationId, companyId },
+  });
+
+  if (!invitation) {
+    throw new Error("Invitation not found or has already been processed.");
+  }
+
+  await db.$transaction(async (tx) => {
+    await tx.invitation.delete({
+      where: { id: invitationId },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        companyId,
+        userId: userId || null,
+        entityType: "WORKSPACE",
+        entityId: invitationId,
+        action: "REVOKE_INVITE",
+        details: JSON.stringify({
+          email: invitation.email,
+          role: invitation.role,
+        }),
+      },
+    });
+  }, { timeout: 30000, maxWait: 20000 });
+
+  return { success: true, id: invitationId };
+}
+
+/**
+ * Retrieves members and pending invitations for a company.
+ */
+export async function getCompanyMembersAndInvitesService(
+  companyId: string
+): Promise<CompanyMembersAndInvitesResult> {
+  if (!companyId) {
+    throw new Error("Company ID is required.");
+  }
+
+  const [members, invitations] = await Promise.all([
+    db.user.findMany({
+      where: { companyId },
+      select: {
+        id: true,
+        companyId: true,
+        email: true,
+        fullName: true,
+        role: true,
+        avatarUrl: true,
+        emailVerified: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+    db.invitation.findMany({
+      where: { companyId },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
+
+  return {
+    members,
+    invitations,
+  };
 }

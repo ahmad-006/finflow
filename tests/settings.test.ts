@@ -331,7 +331,7 @@ describe("Settings Module: Validation, Service & Server Actions", () => {
 
     it("executes updateCompanySettingsAction successfully with authenticated session", async () => {
       const companyId = createdCompanyIds[0];
-      const user = await db.user.findFirst({ where: { companyId } });
+      const user = await db.user.findFirst({ where: { companyId, role: "OWNER" } });
       expect(user).not.toBeNull();
 
       const session = {

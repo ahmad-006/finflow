@@ -107,6 +107,15 @@ export async function GET(request: Request | NextRequest) {
 
     return response;
   } catch (err: unknown) {
+    if (
+      err &&
+      typeof err === "object" &&
+      "digest" in err &&
+      typeof (err as { digest?: string }).digest === "string" &&
+      (err as { digest: string }).digest.startsWith("NEXT_")
+    ) {
+      throw err;
+    }
     const message = err instanceof Error ? err.message : String(err);
     const stack = err instanceof Error ? err.stack : "";
     console.error("Google OAuth callback processing error:", message, stack);

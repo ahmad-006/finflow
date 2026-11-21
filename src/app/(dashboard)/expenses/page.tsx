@@ -23,6 +23,7 @@ async function ExpenseDirectoryDataLoader() {
   const currentUser = await getCurrentUser();
   const companyName = currentUser?.company?.name || "FinFlow Commercial Services";
   const baseCurrency = currentUser?.company?.baseCurrency || "PKR";
+  const role = currentUser?.role || session.role || "MEMBER";
 
   const [rawExpenses, kpis] = await Promise.all([
     getCachedExpenses(session.companyId),
@@ -40,6 +41,7 @@ async function ExpenseDirectoryDataLoader() {
       kpis={kpis}
       baseCurrency={baseCurrency}
       companyName={companyName}
+      role={role}
     />
   );
 }

@@ -218,3 +218,64 @@ export async function sendInvoiceReminderEmail(params: {
 
   return res.success;
 }
+
+export interface WorkspaceInvitationEmailParams {
+  email: string;
+  companyName: string;
+  inviterName: string;
+  role: string;
+  inviteUrl: string;
+  expiresInDays?: number;
+}
+
+/**
+ * Sends Workspace Member Invitation Email with secure accept URL.
+ */
+export async function sendWorkspaceInvitationEmail(
+  params: WorkspaceInvitationEmailParams
+): Promise<boolean> {
+  const expiresInDays = params.expiresInDays || 7;
+  const content = `
+    <h2 style="margin: 0 0 12px 0; font-size: 20px; font-weight: 600; color: #0D1B2A; letter-spacing: -0.02em;">You're invited to join ${params.companyName}</h2>
+    <p style="margin: 0 0 18px 0; font-size: 14px; color: #4B5563; line-height: 1.6;">
+      <strong>${params.inviterName}</strong> has invited you to collaborate on <strong>${params.companyName}</strong> on FinFlow as a <strong>${params.role}</strong>.
+    </p>
+    <div style="margin: 24px 0; padding: 20px; background-color: #F8F9FA; border: 1px solid #E5E7EB;">
+      <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%;">
+        <tr>
+          <td style="font-size: 13px; color: #6B7280; padding-bottom: 8px;">Workspace:</td>
+          <td style="font-size: 14px; font-weight: 600; color: #0D1B2A; text-align: right; padding-bottom: 8px;">${params.companyName}</td>
+        </tr>
+        <tr>
+          <td style="font-size: 13px; color: #6B7280; padding-bottom: 8px;">Assigned Role:</td>
+          <td style="font-size: 14px; font-weight: 600; color: #0D1B2A; text-align: right; padding-bottom: 8px;">${params.role}</td>
+        </tr>
+        <tr>
+          <td style="font-size: 13px; color: #6B7280;">Invited by:</td>
+          <td style="font-size: 14px; font-weight: 600; color: #0D1B2A; text-align: right;">${params.inviterName}</td>
+        </tr>
+      </table>
+    </div>
+    <div style="margin: 28px 0; text-align: center;">
+      <a href="${params.inviteUrl}" style="display: inline-block; background-color: #0D1B2A; color: #FFFFFF; padding: 12px 28px; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 9999px;">Accept Invitation</a>
+    </div>
+    <p style="margin: 0 0 12px 0; font-size: 13px; color: #6B7280; line-height: 1.5;">
+      Or copy and paste this link into your browser:<br />
+      <span style="font-family: monospace; font-size: 12px; color: #0D1B2A; word-break: break-all;">${params.inviteUrl}</span>
+    </p>
+    <p style="margin: 0; font-size: 12px; color: #9CA3AF;">
+      This invitation expires in ${expiresInDays} days. If you were not expecting this invitation, you can ignore this email.
+    </p>
+  `;
+
+  const text = `You're invited to join ${params.companyName} on FinFlow\n\n${params.inviterName} has invited you to collaborate as a ${params.role}.\n\nAccept your invitation: ${params.inviteUrl}\n\nThis invitation expires in ${expiresInDays} days.`;
+
+  const res = await sendEmail({
+    to: params.email,
+    subject: `Invitation: Join ${params.companyName} on FinFlow`,
+    html: wrapInklineEmail("Workspace Invitation", content),
+    text,
+  });
+
+  return res.success;
+}

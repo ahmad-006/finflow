@@ -203,6 +203,13 @@ export function categorizeError(err: unknown): ParsedAppError {
     const msg = err.message || "";
 
     // Auth errors
+    if (msg.includes("Forbidden")) {
+      return {
+        code: "AUTH_UNAUTHORIZED",
+        userMessage: msg,
+        isNetworkOrDb: false,
+      };
+    }
     if (msg.includes("Unauthorized") || msg.includes("Please sign in")) {
       return {
         code: "AUTH_UNAUTHORIZED",
@@ -253,7 +260,7 @@ export function categorizeError(err: unknown): ParsedAppError {
 
     if (isSafeMessage && msg.length < 150) {
       return {
-        code: "GENERIC_ERROR",
+        code: "VALIDATION_ERROR",
         userMessage: msg,
         isNetworkOrDb: false,
       };
