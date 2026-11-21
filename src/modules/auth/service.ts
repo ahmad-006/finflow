@@ -29,8 +29,10 @@ export async function registerUser(rawInput: RegisterInput): Promise<AuthSession
   const passwordHash = await hashPassword(validated.password);
 
   // Format liquidReserve and safetyBuffer with Decimal precision
-  const liquidReserveDecimal = new Prisma.Decimal(new Decimal(validated.liquidReserve).toFixed(2));
-  const safetyBufferDecimal = new Prisma.Decimal(new Decimal(validated.safetyBuffer).toFixed(2));
+  const companyName = validated.companyName?.trim() || `${validated.fullName.trim()}'s Company`;
+  const baseCurrency = validated.baseCurrency || "PKR";
+  const liquidReserveDecimal = new Prisma.Decimal(new Decimal(validated.liquidReserve ?? 0).toFixed(2));
+  const safetyBufferDecimal = new Prisma.Decimal(new Decimal(validated.safetyBuffer ?? 0).toFixed(2));
 
   // Generate 6-digit OTP and SHA-256 HMAC hash
   const otp = generateNumericOtp();
@@ -42,14 +44,14 @@ export async function registerUser(rawInput: RegisterInput): Promise<AuthSession
     // 1. Create company
     const company = await tx.company.create({
       data: {
-        name: validated.companyName,
-        baseCurrency: validated.baseCurrency,
+        name: companyName,
+        baseCurrency: baseCurrency,
         liquidReserve: liquidReserveDecimal,
         safetyBuffer: safetyBufferDecimal,
       },
     });
 
-    // 2. Create user with OWNER role, unverified email
+    // 2. Create user with OWNER role, unverified email, and incomplete onboarding
     const user = await tx.user.create({
       data: {
         companyId: company.id,
@@ -58,6 +60,7 @@ export async function registerUser(rawInput: RegisterInput): Promise<AuthSession
         passwordHash,
         role: "OWNER",
         emailVerified: false,
+        onboardingCompleted: false,
         authProvider: "LOCAL",
       },
     });
@@ -101,7 +104,7 @@ export async function registerUser(rawInput: RegisterInput): Promise<AuthSession
     fullName: result.user.fullName,
     role: result.user.role,
     emailVerified: false,
-    onboardingCompleted: true,
+    onboardingCompleted: false,
     createdAt: Date.now(),
     expiresAt: Date.now() + SESSION_MAX_AGE_SECONDS * 1000,
   };
@@ -115,7 +118,7 @@ export async function registerUser(rawInput: RegisterInput): Promise<AuthSession
     fullName: result.user.fullName,
     role: result.user.role,
     emailVerified: false,
-    onboardingCompleted: true,
+    onboardingCompleted: false,
     createdAt: result.user.createdAt,
     updatedAt: result.user.updatedAt,
   };

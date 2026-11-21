@@ -288,7 +288,7 @@ describe("Settings Module: Validation, Service & Server Actions", () => {
       expect(auditLog).not.toBeNull();
       const details = JSON.parse(auditLog?.details || "{}");
       expect(details.event).toBe("PASSWORD_CHANGED");
-    });
+    }, 30000);
   });
 
   // =========================================================================

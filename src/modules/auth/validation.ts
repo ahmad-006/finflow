@@ -44,7 +44,8 @@ export const registerSchema = z.object({
     .string()
     .trim()
     .min(2, "Company name must be at least 2 characters")
-    .max(100, "Company name must be under 100 characters"),
+    .max(100, "Company name must be under 100 characters")
+    .optional(),
   fullName: z
     .string()
     .trim()
@@ -61,6 +62,7 @@ export const registerSchema = z.object({
     .trim()
     .min(3, "Currency code must be at least 3 characters")
     .max(5)
+    .optional()
     .default("PKR")
     .transform((val) => toUpper(val)),
   liquidReserve: z

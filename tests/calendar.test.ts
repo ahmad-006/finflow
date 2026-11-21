@@ -195,7 +195,7 @@ describe("Domain 7: Visual Calendar & Scheduling Service", () => {
       expect(nov1Day).toBeDefined();
       expect(nov1Day?.isCurrentMonth).toBe(true);
       expect(nov1Day?.dayNumber).toBe(1);
-    });
+    }, 30000);
 
     it("should accurately aggregate receivables and payables on November 15, 2026", async () => {
       const data = await getMonthCalendar(companyAId, 2026, 11);

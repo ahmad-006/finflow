@@ -121,7 +121,8 @@ export function VerifyEmailForm({ initialEmail }: VerifyEmailFormProps) {
         setError(res.error);
         setIsPending(false);
       } else {
-        router.push("/dashboard");
+        const destination = (res && typeof res === "object" && res.redirectUrl) || "/onboarding";
+        router.push(destination);
         router.refresh();
       }
     } catch (err: unknown) {

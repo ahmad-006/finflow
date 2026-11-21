@@ -79,7 +79,7 @@ describe("Domain 1: Auth Server Actions (verifyEmailAction, resendOtpAction, etc
     });
 
     expect(res.success).toBe(true);
-    expect(res.redirectUrl).toBe("/dashboard");
+    expect(res.redirectUrl).toBe("/onboarding");
 
     const user = await db.user.findUnique({
       where: { email: testEmail },

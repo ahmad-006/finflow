@@ -26,7 +26,7 @@ export default function RegisterPage() {
       {/* Centered Single Column Auth Form (Template E: 440px wide) */}
       <div className="w-full max-w-[440px] mx-auto my-auto py-8">
         <h1 className="text-3xl sm:text-4xl font-semibold tracking-[-0.04em] text-ink text-center leading-tight">
-          Create workspace
+          Create your account
         </h1>
         <p className="text-[17px] text-ink-2 text-center mt-2 mb-8">
           Start forecasting your cash 30 days ahead.

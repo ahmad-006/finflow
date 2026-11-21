@@ -200,6 +200,7 @@ export async function verifyEmailAction(
       fullName: user.fullName,
       role: user.role,
       emailVerified: true,
+      onboardingCompleted: user.onboardingCompleted,
       createdAt: Date.now(),
       expiresAt: Date.now() + SESSION_MAX_AGE_SECONDS * 1000,
     };
@@ -207,14 +208,16 @@ export async function verifyEmailAction(
     const token = await createSessionToken(sessionPayload);
     await setSessionCookie(token);
 
+    const targetUrl = user.onboardingCompleted ? "/dashboard" : "/onboarding";
+
     if (!validated.noRedirect) {
-      redirect("/dashboard");
+      redirect(targetUrl);
     }
 
     return {
       success: true,
-      redirectUrl: "/dashboard",
-      data: { emailVerified: true },
+      redirectUrl: targetUrl,
+      data: { emailVerified: true, onboardingCompleted: user.onboardingCompleted },
     };
   } catch (err: unknown) {
     if (isRedirectError(err)) {
