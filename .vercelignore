@@ -1,0 +1,7 @@
+screenshots/
+tests/
+docs/
+.env*
+*.log
+prisma/*.db
+prisma/*.db-journal
