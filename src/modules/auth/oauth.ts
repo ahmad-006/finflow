@@ -191,13 +191,14 @@ export async function handleGoogleLoginOrSignup(profile: {
         googleId: profile.sub,
         avatarUrl: profile.picture || null,
         emailVerified: true,
+        onboardingCompleted: false,
         passwordHash: null,
       },
       include: { company: true },
     });
 
     return user;
-  });
+  }, { timeout: 30000, maxWait: 20000 });
 
   return newUser as UserWithCompany;
 }

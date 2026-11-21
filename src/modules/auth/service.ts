@@ -101,6 +101,7 @@ export async function registerUser(rawInput: RegisterInput): Promise<AuthSession
     fullName: result.user.fullName,
     role: result.user.role,
     emailVerified: false,
+    onboardingCompleted: true,
     createdAt: Date.now(),
     expiresAt: Date.now() + SESSION_MAX_AGE_SECONDS * 1000,
   };
@@ -114,6 +115,7 @@ export async function registerUser(rawInput: RegisterInput): Promise<AuthSession
     fullName: result.user.fullName,
     role: result.user.role,
     emailVerified: false,
+    onboardingCompleted: true,
     createdAt: result.user.createdAt,
     updatedAt: result.user.updatedAt,
   };
@@ -390,6 +392,7 @@ export async function loginUser(rawInput: LoginInput): Promise<AuthSessionData> 
     fullName: user.fullName,
     role: user.role,
     emailVerified: user.emailVerified,
+    onboardingCompleted: user.onboardingCompleted !== false,
     createdAt: Date.now(),
     expiresAt: Date.now() + SESSION_MAX_AGE_SECONDS * 1000,
   };
@@ -403,6 +406,7 @@ export async function loginUser(rawInput: LoginInput): Promise<AuthSessionData> 
     fullName: user.fullName,
     role: user.role,
     emailVerified: user.emailVerified,
+    onboardingCompleted: user.onboardingCompleted !== false,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
@@ -437,6 +441,7 @@ export async function getUserWithCompany(userId: string) {
       fullName: true,
       role: true,
       emailVerified: true,
+      onboardingCompleted: true,
       createdAt: true,
       updatedAt: true,
       company: true,

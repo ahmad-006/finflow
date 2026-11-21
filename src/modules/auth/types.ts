@@ -7,6 +7,7 @@ export interface SessionPayload {
   fullName: string;
   role: string;
   emailVerified: boolean;
+  onboardingCompleted?: boolean;
   createdAt: number;
   expiresAt: number;
 }
@@ -43,6 +44,7 @@ export interface SafeUser {
   fullName: string;
   role: string;
   emailVerified: boolean;
+  onboardingCompleted?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

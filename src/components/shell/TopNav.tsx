@@ -64,6 +64,10 @@ export function TopNav({
     { label: "Calendar", href: "/calendar", active: pathname.startsWith("/calendar") },
   ];
 
+  if (pathname === "/onboarding") {
+    return null;
+  }
+
   return (
     <header
       className={cn(

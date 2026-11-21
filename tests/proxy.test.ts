@@ -6,7 +6,7 @@ import { createSessionToken, SESSION_COOKIE_NAME } from "@/modules/auth/session"
 describe("Domain 1: Proxy Route Interception & Email Verification Guard", () => {
   const baseUrl = "https://finflow.test";
 
-  async function createTestCookie(emailVerified: boolean): Promise<string> {
+  async function createTestCookie(emailVerified: boolean, onboardingCompleted: boolean = true): Promise<string> {
     const token = await createSessionToken({
       userId: "usr_proxy_test",
       companyId: "cmp_proxy_test",
@@ -14,6 +14,7 @@ describe("Domain 1: Proxy Route Interception & Email Verification Guard", () => 
       fullName: "Test User",
       role: "OWNER",
       emailVerified,
+      onboardingCompleted,
     });
     return `${SESSION_COOKIE_NAME}=${token}`;
   }
@@ -66,6 +67,13 @@ describe("Domain 1: Proxy Route Interception & Email Verification Guard", () => 
       const res = await proxy(req);
       expect(res.status).toBe(307);
       expect(res.headers.get("location")).toContain("/login?from=%2Finvoices");
+    });
+
+    it("should redirect /onboarding to /login when unauthenticated", async () => {
+      const req = new NextRequest(new URL("/onboarding", baseUrl));
+      const res = await proxy(req);
+      expect(res.status).toBe(307);
+      expect(res.headers.get("location")).toContain("/login?from=%2Fonboarding");
     });
   });
 
@@ -187,6 +195,76 @@ describe("Domain 1: Proxy Route Interception & Email Verification Guard", () => 
       const res = await proxy(req);
       // In NextResponse.next(), the injected request headers are on res
       expect(res.status).toBe(200);
+    });
+
+    it("should redirect /onboarding to /dashboard when onboarding is completed", async () => {
+      const cookie = await createTestCookie(true, true);
+      const req = new NextRequest(new URL("/onboarding", baseUrl), {
+        headers: { cookie },
+      });
+      const res = await proxy(req);
+      expect(res.status).toBe(307);
+      expect(res.headers.get("location")).toBe(`${baseUrl}/dashboard`);
+    });
+  });
+
+  describe("Authenticated User with Incomplete Onboarding (emailVerified: true, onboardingCompleted: false)", () => {
+    it("should allow /onboarding", async () => {
+      const cookie = await createTestCookie(true, false);
+      const req = new NextRequest(new URL("/onboarding", baseUrl), {
+        headers: { cookie },
+      });
+      const res = await proxy(req);
+      expect(res.status).toBe(200);
+    });
+
+    it("should allow /api/auth endpoints", async () => {
+      const cookie = await createTestCookie(true, false);
+      const req = new NextRequest(new URL("/api/auth/google", baseUrl), {
+        headers: { cookie },
+      });
+      const res = await proxy(req);
+      expect(res.status).toBe(200);
+    });
+
+    it("should redirect /dashboard to /onboarding", async () => {
+      const cookie = await createTestCookie(true, false);
+      const req = new NextRequest(new URL("/dashboard", baseUrl), {
+        headers: { cookie },
+      });
+      const res = await proxy(req);
+      expect(res.status).toBe(307);
+      expect(res.headers.get("location")).toBe(`${baseUrl}/onboarding`);
+    });
+
+    it("should redirect /invoices to /onboarding", async () => {
+      const cookie = await createTestCookie(true, false);
+      const req = new NextRequest(new URL("/invoices", baseUrl), {
+        headers: { cookie },
+      });
+      const res = await proxy(req);
+      expect(res.status).toBe(307);
+      expect(res.headers.get("location")).toBe(`${baseUrl}/onboarding`);
+    });
+
+    it("should redirect /settings to /onboarding", async () => {
+      const cookie = await createTestCookie(true, false);
+      const req = new NextRequest(new URL("/settings", baseUrl), {
+        headers: { cookie },
+      });
+      const res = await proxy(req);
+      expect(res.status).toBe(307);
+      expect(res.headers.get("location")).toBe(`${baseUrl}/onboarding`);
+    });
+
+    it("should redirect /login to /onboarding", async () => {
+      const cookie = await createTestCookie(true, false);
+      const req = new NextRequest(new URL("/login", baseUrl), {
+        headers: { cookie },
+      });
+      const res = await proxy(req);
+      expect(res.status).toBe(307);
+      expect(res.headers.get("location")).toBe(`${baseUrl}/onboarding`);
     });
   });
 });

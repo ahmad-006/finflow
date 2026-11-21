@@ -151,3 +151,54 @@ export const resetPasswordSchema = z
     message: "New password is required",
     path: ["newPassword"],
   });
+
+export const onboardingSchema = z.object({
+  companyName: z
+    .string()
+    .trim()
+    .min(2, "Company name must be at least 2 characters")
+    .max(100, "Company name must be under 100 characters"),
+  baseCurrency: z
+    .string()
+    .trim()
+    .min(3, "Currency code must be at least 3 characters")
+    .max(5, "Currency code must be at most 5 characters")
+    .default("PKR")
+    .transform((val) => toUpper(val)),
+  liquidReserve: z
+    .union([z.number(), z.string()])
+    .optional()
+    .default(0)
+    .transform((val, ctx) => {
+      if (val === undefined || val === null || val === "") return 0;
+      const num = typeof val === "string" ? parseFloat(val) : Number(val);
+      if (isNaN(num) || num < 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Opening cash reserve must be a non-negative number",
+        });
+        return z.NEVER;
+      }
+      return num;
+    }),
+  safetyBuffer: z
+    .union([z.number(), z.string()])
+    .optional()
+    .default(0)
+    .transform((val, ctx) => {
+      if (val === undefined || val === null || val === "") return 0;
+      const num = typeof val === "string" ? parseFloat(val) : Number(val);
+      if (isNaN(num) || num < 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Safety buffer must be a non-negative number",
+        });
+        return z.NEVER;
+      }
+      return num;
+    }),
+  noRedirect: z.boolean().optional(),
+});
+
+export type OnboardingSchemaInput = z.infer<typeof onboardingSchema>;
+

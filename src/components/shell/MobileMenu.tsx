@@ -101,6 +101,7 @@ export function MobileMenu({
     { label: "Expenses", href: "/expenses", active: pathname.startsWith("/expenses") },
     { label: "Cash flow", href: "/cash-flow", active: pathname.startsWith("/cash-flow") },
     { label: "Calendar", href: "/calendar", active: pathname.startsWith("/calendar") },
+    { label: "Settings", href: "/settings", active: pathname.startsWith("/settings") },
   ];
 
   const marketingLinks = [

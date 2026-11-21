@@ -82,9 +82,11 @@ export async function GET(request: Request | NextRequest) {
       fullName: user.fullName,
       role: user.role,
       emailVerified: true,
+      onboardingCompleted: user.onboardingCompleted,
     });
 
-    const response = NextResponse.redirect(getRedirectUrl(request, "/dashboard"));
+    const targetUrl = user.onboardingCompleted ? "/dashboard" : "/onboarding";
+    const response = NextResponse.redirect(getRedirectUrl(request, targetUrl));
 
     response.cookies.set(SESSION_COOKIE_NAME, sessionToken, {
       httpOnly: true,

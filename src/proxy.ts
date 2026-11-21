@@ -23,6 +23,7 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
   requestHeaders.delete("x-user-id");
   requestHeaders.delete("x-user-role");
   requestHeaders.delete("x-email-verified");
+  requestHeaders.delete("x-onboarding-completed");
 
   // 2. Read and verify session cookie
   const sessionToken = request.cookies.get(SESSION_COOKIE_NAME)?.value;
@@ -34,12 +35,14 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
     requestHeaders.set("x-user-id", session.userId);
     requestHeaders.set("x-user-role", session.role);
     requestHeaders.set("x-email-verified", String(session.emailVerified));
+    requestHeaders.set("x-onboarding-completed", String(session.onboardingCompleted));
   }
 
   // 4. Route classification
   const isLogoutRoute = pathname === "/logout" || pathname.startsWith("/logout/");
   const isApiAuthRoute = pathname.startsWith("/api/auth");
   const isVerifyEmailRoute = pathname === "/verify-email" || pathname.startsWith("/verify-email/");
+  const isOnboardingRoute = pathname === "/onboarding" || pathname.startsWith("/onboarding/");
 
   const isPublicAuthRoute =
     pathname === "/login" ||
@@ -92,10 +95,25 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(new URL("/verify-email", request.url));
   }
 
-  // Case B: Authenticated user with VERIFIED email (emailVerified = true)
-  if (session && session.emailVerified) {
-    // If authenticated & verified user visits login, register, or verify-email, redirect to /dashboard
-    if (isPublicAuthRoute || isVerifyEmailRoute || isRootRoute) {
+  // Case B1: Authenticated user with VERIFIED email but INCOMPLETE onboarding (onboardingCompleted = false)
+  if (session && session.emailVerified && !session.onboardingCompleted) {
+    // Allow /onboarding, /api/auth/*, and static assets
+    if (isOnboardingRoute || isApiAuthRoute) {
+      return NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      });
+    }
+
+    // Redirect cockpit routes, public auth routes, verify-email, and root to /onboarding
+    return NextResponse.redirect(new URL("/onboarding", request.url));
+  }
+
+  // Case B2: Authenticated user with VERIFIED email and COMPLETED onboarding (onboardingCompleted = true)
+  if (session && session.emailVerified && session.onboardingCompleted) {
+    // If authenticated user with onboardingCompleted === true requests /onboarding, redirect to /dashboard
+    if (isOnboardingRoute || isPublicAuthRoute || isVerifyEmailRoute || isRootRoute) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
 
@@ -107,6 +125,13 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
   }
 
   // Case C: Unauthenticated visitor (no active session)
+  // If unauthenticated visitor requests /onboarding, redirect to /login
+  if (isOnboardingRoute) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("from", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
   // Allow landing page
   if (isRootRoute) {
     return NextResponse.next({

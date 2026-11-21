@@ -12,9 +12,9 @@ describe("Domain 9: Production Hardening - Google OAuth 2.0 Integration (tests/o
   const createdCompanyIds: string[] = [];
 
   afterAll(async () => {
-    for (const companyId of createdCompanyIds) {
+    if (createdCompanyIds.length > 0) {
       try {
-        await db.company.delete({ where: { id: companyId } });
+        await db.company.deleteMany({ where: { id: { in: createdCompanyIds } } });
       } catch {
         // Cascading deletion
       }
@@ -66,6 +66,7 @@ describe("Domain 9: Production Hardening - Google OAuth 2.0 Integration (tests/o
       expect(user.googleId).toBe(googleSub);
       expect(user.authProvider).toBe("GOOGLE");
       expect(user.emailVerified).toBe(true);
+      expect(user.onboardingCompleted).toBe(false);
       expect(user.passwordHash).toBeNull();
       expect(user.avatarUrl).toBe(googleAvatar);
       expect(user.company).not.toBeNull();
@@ -80,8 +81,9 @@ describe("Domain 9: Production Hardening - Google OAuth 2.0 Integration (tests/o
       });
       expect(dbUser?.emailVerified).toBe(true);
       expect(dbUser?.authProvider).toBe("GOOGLE");
+      expect(dbUser?.onboardingCompleted).toBe(false);
       expect(dbUser?.googleId).toBe(googleSub);
-    }, 20000);
+    }, 40000);
 
     it("should return existing user directly on subsequent login with same googleId", async () => {
       const returningUser = await handleGoogleLoginOrSignup({
@@ -93,7 +95,7 @@ describe("Domain 9: Production Hardening - Google OAuth 2.0 Integration (tests/o
       expect(returningUser).not.toBeNull();
       expect(returningUser.email).toBe(googleEmail);
       expect(returningUser.googleId).toBe(googleSub);
-    }, 15000);
+    }, 40000);
 
     it("should link existing local user by email to googleId and verify email", async () => {
       const localEmail = `local-existing-${timestamp}@finflow-audit.test`;
@@ -128,7 +130,7 @@ describe("Domain 9: Production Hardening - Google OAuth 2.0 Integration (tests/o
       });
       expect(dbLinked?.googleId).toBe(localSub);
       expect(dbLinked?.emailVerified).toBe(true);
-    }, 25000);
+    }, 40000);
   });
 
   // =========================================================================

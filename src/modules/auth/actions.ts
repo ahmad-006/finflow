@@ -1,6 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidateTag, updateTag } from "next/cache";
+import { ZodError } from "zod";
 import { formatUserError } from "@/lib/errors";
 import {
   registerUser,
@@ -12,6 +14,7 @@ import {
   requestPasswordReset,
   resetPasswordWithOtp,
 } from "./service";
+import { completeCompanyOnboarding } from "./onboarding";
 import {
   setSessionCookie,
   clearSessionCookie,
@@ -28,6 +31,7 @@ import {
   resendOtpSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  onboardingSchema,
 } from "./validation";
 
 function extractData(input: unknown): Record<string, unknown> {
@@ -342,6 +346,103 @@ export async function resetPasswordAction(
     }
 
     const message = getErrorMessage(err, "Failed to reset password.");
+    return {
+      success: false,
+      error: message,
+    };
+  }
+}
+
+/**
+ * Server Action: Completes company onboarding workspace setup, refreshes session token,
+ * revalidates company cache tags, and redirects to /dashboard.
+ */
+export async function completeOnboardingAction(
+  prevStateOrData: unknown,
+  formDataOrUndefined?: FormData
+): Promise<AuthActionResult> {
+  try {
+    let session = await getSession();
+    if (!session) {
+      const token = await getSessionTokenFromCookies();
+      if (token) {
+        session = await verifySessionToken(token);
+      }
+    }
+
+    if (!session || !session.userId || !session.companyId) {
+      return {
+        success: false,
+        error: "Unauthorized. Please log in to complete onboarding.",
+      };
+    }
+
+    const rawData = formDataOrUndefined
+      ? extractData(formDataOrUndefined)
+      : extractData(prevStateOrData);
+
+    const validated = onboardingSchema.parse({
+      companyName: rawData.companyName !== undefined ? String(rawData.companyName).trim() : undefined,
+      baseCurrency: rawData.baseCurrency !== undefined ? String(rawData.baseCurrency).trim() : undefined,
+      liquidReserve: rawData.liquidReserve !== undefined ? rawData.liquidReserve : undefined,
+      safetyBuffer: rawData.safetyBuffer !== undefined ? rawData.safetyBuffer : undefined,
+      noRedirect: Boolean(rawData.noRedirect),
+    });
+
+    const updatedUser = await completeCompanyOnboarding(session.userId, session.companyId, {
+      companyName: validated.companyName,
+      baseCurrency: validated.baseCurrency,
+      liquidReserve: validated.liquidReserve,
+      safetyBuffer: validated.safetyBuffer,
+    });
+
+    const refreshedToken = await createSessionToken({
+      userId: updatedUser.id,
+      companyId: updatedUser.companyId,
+      email: updatedUser.email,
+      fullName: updatedUser.fullName,
+      role: updatedUser.role,
+      emailVerified: updatedUser.emailVerified,
+      onboardingCompleted: true,
+    });
+
+    await setSessionCookie(refreshedToken);
+
+    try {
+      updateTag(`company-${session.companyId}`);
+    } catch {
+      // updateTag fallback
+    }
+
+    try {
+      revalidateTag(`company-${session.companyId}`, { expire: 0 });
+    } catch {
+      // cache context fallback
+    }
+
+    if (!validated.noRedirect) {
+      redirect("/dashboard");
+    }
+
+    return {
+      success: true,
+      data: updatedUser,
+      redirectUrl: "/dashboard",
+    };
+  } catch (err: unknown) {
+    if (isRedirectError(err)) {
+      throw err;
+    }
+
+    if (err instanceof ZodError) {
+      return {
+        success: false,
+        error: err.issues[0]?.message || "Validation failed.",
+        errors: err.flatten().fieldErrors,
+      };
+    }
+
+    const message = getErrorMessage(err, "Failed to complete onboarding.");
     return {
       success: false,
       error: message,

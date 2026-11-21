@@ -21,6 +21,7 @@ export interface CreateSessionTokenInput {
   fullName?: string;
   role?: string;
   emailVerified?: boolean;
+  onboardingCompleted?: boolean;
   createdAt?: number;
   expiresAt?: number;
 }
@@ -39,6 +40,7 @@ export async function createSessionToken(
     fullName: payload.fullName || "",
     role: payload.role || "OWNER",
     emailVerified: Boolean(payload.emailVerified),
+    onboardingCompleted: payload.onboardingCompleted !== false,
     createdAt: payload.createdAt || Date.now(),
     expiresAt: payload.expiresAt || Date.now() + SESSION_MAX_AGE_SECONDS * 1000,
   };
@@ -75,6 +77,11 @@ export async function verifySessionToken(
     if (!payload.userId || !payload.companyId) {
       return null;
     }
+    const onboardingCompleted =
+      payload.onboardingCompleted === false || payload.onboardingCompleted === "false"
+        ? false
+        : true;
+
     return {
       userId: String(payload.userId),
       companyId: String(payload.companyId),
@@ -82,6 +89,7 @@ export async function verifySessionToken(
       fullName: String(payload.fullName || ""),
       role: String(payload.role || "OWNER"),
       emailVerified: Boolean(payload.emailVerified),
+      onboardingCompleted,
       createdAt: Number(payload.createdAt || Date.now()),
       expiresAt: Number(payload.expiresAt || 0),
     };
