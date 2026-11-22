@@ -1,8 +1,8 @@
 import nodemailer from "nodemailer";
 
-const smtpUser = process.env.SMTP_USER || "inform.finflow@gmail.com";
-const smtpPass = process.env.SMTP_PASS || "dlsxvzkgsbaykqdt";
-const smtpFrom = process.env.SMTP_FROM || `FinFlow <${smtpUser}>`;
+const smtpUser = process.env.SMTP_USER || "";
+const smtpPass = process.env.SMTP_PASS || "";
+const smtpFrom = process.env.SMTP_FROM || (smtpUser ? `FinFlow <${smtpUser}>` : "FinFlow");
 
 export const mailTransporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || "smtp.gmail.com",

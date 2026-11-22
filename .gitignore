@@ -60,3 +60,10 @@ AGENTS.md
 AGENTS*.md
 .jules/
 .github/ISSUE_TEMPLATE/agent-task.md
+
+# temporary visual audit artifacts, screenshots, and scratch
+screenshots/
+/screenshots/
+scratch/
+/scratch/
+*.log
