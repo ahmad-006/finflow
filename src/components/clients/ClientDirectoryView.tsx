@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   Plus,
   Search,
+  ChevronLeft,
   ChevronRight,
   Trash2,
   Pencil,
@@ -66,6 +67,7 @@ export function ClientDirectoryView({
   const [sortBy, setSortBy] = React.useState<SortField>("createdAt");
   const [sortOrder, setSortOrder] = React.useState<"asc" | "desc">("desc");
   const [viewMode, setViewMode] = React.useState<"grid" | "table">("grid");
+  const [page, setPage] = React.useState(1);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [clientToEdit, setClientToEdit] = React.useState<ClientWithMetrics | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = React.useState(false);
@@ -135,6 +137,14 @@ export function ClientDirectoryView({
         return sortOrder === "asc" ? diff : -diff;
       });
   }, [clients, searchQuery, selectedRisk, sortBy, sortOrder]);
+
+  const clientPageSize = 24;
+  const totalClientPages = Math.max(1, Math.ceil(filteredClients.length / clientPageSize));
+  const safeClientPage = Math.min(page, totalClientPages);
+  const paginatedClients = React.useMemo(() => {
+    const start = (safeClientPage - 1) * clientPageSize;
+    return filteredClients.slice(start, start + clientPageSize);
+  }, [filteredClients, safeClientPage]);
 
   function handleSort(field: SortField) {
     if (sortBy === field) {
@@ -434,7 +444,7 @@ export function ClientDirectoryView({
               viewMode === "table" ? "lg:hidden" : ""
             )}
           >
-            {filteredClients.map((client) => {
+            {paginatedClients.map((client) => {
               const latency = client.metrics.avgPaymentDelayDays;
 
               return (
@@ -599,7 +609,7 @@ export function ClientDirectoryView({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line/60">
-                  {filteredClients.map((client) => {
+                  {paginatedClients.map((client) => {
                     const latency = client.metrics.avgPaymentDelayDays;
                     return (
                       <tr
@@ -720,6 +730,39 @@ export function ClientDirectoryView({
               </table>
             </div>
           )}
+
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-ink-3 px-1">
+            <span>
+              Showing {(safeClientPage - 1) * clientPageSize + 1}–
+              {(safeClientPage - 1) * clientPageSize + paginatedClients.length} of{" "}
+              {filteredClients.length} clients
+            </span>
+            {totalClientPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={safeClientPage <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="min-h-[44px] inline-flex items-center gap-1 px-3.5 py-2 rounded-full border border-line bg-white text-ink hover:bg-fog transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <span>Previous</span>
+                </button>
+                <span className="font-mono text-[11px] px-2 text-ink-2">
+                  Page {safeClientPage} of {totalClientPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={safeClientPage >= totalClientPages}
+                  onClick={() => setPage((p) => Math.min(totalClientPages, p + 1))}
+                  className="min-h-[44px] inline-flex items-center gap-1 px-3.5 py-2 rounded-full border border-line bg-white text-ink hover:bg-fog transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                >
+                  <span>Next</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
         </>
       ) : (
         <div className="py-16 text-center border-t border-b border-line">

@@ -20,6 +20,10 @@ async function InvoiceDetailDataLoader({ params }: { params: Promise<{ id: strin
   const currentUser = await getCurrentUser();
   const companyName = currentUser?.company?.name || "FinFlow Commercial Services";
   const baseCurrency = currentUser?.company?.baseCurrency || "PKR";
+  const companyEmail = currentUser?.company?.billingEmail || null;
+  const companyPhone = currentUser?.company?.phone || null;
+  const companyAddress = currentUser?.company?.address || null;
+  const wireRemittanceNotes = currentUser?.company?.remittanceInstructions || null;
   const role = currentUser?.role || session.role || "MEMBER";
 
   const invoice = await getCachedInvoiceById(session.companyId, id);
@@ -33,6 +37,10 @@ async function InvoiceDetailDataLoader({ params }: { params: Promise<{ id: strin
       invoice={invoice}
       companyName={companyName}
       baseCurrency={baseCurrency}
+      companyEmail={companyEmail}
+      companyPhone={companyPhone}
+      companyAddress={companyAddress}
+      wireRemittanceNotes={wireRemittanceNotes}
       role={role}
     />
   );

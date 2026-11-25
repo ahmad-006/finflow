@@ -11,6 +11,9 @@ import {
   Trash2,
   Edit2,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Upload,
 } from "lucide-react";
 import type {
   ExpenseRecord,
@@ -23,6 +26,7 @@ import { formatMoney } from "@/lib/format";
 import { canManageBilling, canMutateLedger } from "@/modules/auth/rbac";
 import { ExpenseStatusBadge } from "./ExpenseStatusBadge";
 import { ExpenseFormDrawer } from "./ExpenseFormDrawer";
+import { BulkImportExpensesModal } from "./BulkImportExpensesModal";
 import { MarkPaidModal } from "./MarkPaidModal";
 import { ConfirmModal } from "@/components/ui/Modal";
 import { deleteExpenseAction } from "@/modules/expenses/actions";
@@ -76,6 +80,9 @@ export function ExpenseDirectoryView({
 
   // Drawer & Modal state
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = React.useState(false);
+  const [page, setPage] = React.useState(1);
+  const [importBanner, setImportBanner] = React.useState<string | null>(null);
   const [expenseToEdit, setExpenseToEdit] = React.useState<ExpenseRecord | null>(null);
   const [expenseToPay, setExpenseToPay] = React.useState<ExpenseRecord | null>(null);
   const [expenseToDelete, setExpenseToDelete] = React.useState<ExpenseRecord | null>(null);
@@ -130,6 +137,14 @@ export function ExpenseDirectoryView({
       return true;
     });
   }, [expenses, statusFilter, categoryFilter, recurrenceFilter, search]);
+
+  const pageSize = 20;
+  const totalPages = Math.max(1, Math.ceil(filteredExpenses.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paginatedExpenses = React.useMemo(() => {
+    const start = (safePage - 1) * pageSize;
+    return filteredExpenses.slice(start, start + pageSize);
+  }, [filteredExpenses, safePage]);
 
   const formatDate = (date: Date | string) => {
     const d = new Date(date);
@@ -204,16 +219,43 @@ export function ExpenseDirectoryView({
         </div>
 
         {canMutate && (
-          <Button
-            type="button"
-            onClick={handleOpenAdd}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 min-h-[44px] rounded-full bg-ink text-white text-sm font-medium hover:bg-ink-hover transition-colors w-full sm:w-auto shrink-0"
-          >
-            <Plus className="w-4 h-4 shrink-0" />
-            <span>Add Expense</span>
-          </Button>
+          <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto shrink-0">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsImportModalOpen(true)}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-full border border-line bg-white hover:bg-fog text-sm font-medium flex-1 sm:flex-initial"
+            >
+              <Upload className="w-4 h-4 shrink-0" />
+              <span>Import CSV</span>
+            </Button>
+            <Button
+              type="button"
+              onClick={handleOpenAdd}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 min-h-[44px] rounded-full bg-ink text-white text-sm font-medium hover:bg-ink-hover transition-colors flex-1 sm:flex-initial"
+            >
+              <Plus className="w-4 h-4 shrink-0" />
+              <span>Add Expense</span>
+            </Button>
+          </div>
         )}
       </div>
+
+      {importBanner && (
+        <div className="flex items-center justify-between gap-2 p-3 rounded-[10px] border border-moss/30 bg-moss-tint text-moss text-xs">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{importBanner}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setImportBanner(null)}
+            className="text-xs underline px-2 py-1"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {actionError && (
         <div className="flex items-center gap-2 p-3 rounded-[10px] border border-ember/30 bg-ember-tint text-ember-ink text-xs">
@@ -445,7 +487,7 @@ export function ExpenseDirectoryView({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line text-sm">
-                  {filteredExpenses.map((exp) => {
+                  {paginatedExpenses.map((exp) => {
                     const isPaid = exp.status === "PAID";
                     const isOverdue = exp.status === "OVERDUE";
 
@@ -551,7 +593,7 @@ export function ExpenseDirectoryView({
 
             {/* Mobile / Tablet Card Stack Layout (< 1024px) with min 44px Touch Targets */}
             <div className="lg:hidden divide-y divide-line">
-              {filteredExpenses.map((exp) => {
+              {paginatedExpenses.map((exp) => {
                 const isPaid = exp.status === "PAID";
                 const isOverdue = exp.status === "OVERDUE";
 
@@ -662,6 +704,62 @@ export function ExpenseDirectoryView({
           </>
         )}
       </div>
+
+      {/* Pagination Footer */}
+      {filteredExpenses.length > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-ink-3 px-1">
+          <span>
+            Showing {(safePage - 1) * pageSize + 1}–
+            {(safePage - 1) * pageSize + paginatedExpenses.length} of{" "}
+            {filteredExpenses.length} expenses
+          </span>
+
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                disabled={safePage <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className="min-h-[44px] inline-flex items-center gap-1 px-3.5 py-2 rounded-full border border-line bg-white text-ink hover:bg-fog transition-colors disabled:opacity-40 disabled:pointer-events-none"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span>Previous</span>
+              </button>
+              <span className="font-mono text-[11px] px-2 text-ink-2">
+                Page {safePage} of {totalPages}
+              </span>
+              <button
+                type="button"
+                disabled={safePage >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                className="min-h-[44px] inline-flex items-center gap-1 px-3.5 py-2 rounded-full border border-line bg-white text-ink hover:bg-fog transition-colors disabled:opacity-40 disabled:pointer-events-none"
+              >
+                <span>Next</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Bulk CSV Import Expenses Modal */}
+      {canMutate && (
+        <BulkImportExpensesModal
+          isOpen={isImportModalOpen}
+          onClose={() => setIsImportModalOpen(false)}
+          baseCurrency={baseCurrency}
+          onSuccess={(result) => {
+            if (result.createdCount > 0) {
+              setImportBanner(
+                `Imported ${result.createdCount} ${
+                  result.createdCount === 1 ? "expense" : "expenses"
+                }.`
+              );
+              router.refresh();
+            }
+          }}
+        />
+      )}
 
       {/* Expense Form Modal */}
       {canMutate && (

@@ -35,10 +35,15 @@ import {
   cancelInvoiceAction,
   bulkImportInvoicesAction,
 } from "@/modules/invoices/actions";
-import { createExpense } from "@/modules/expenses/service";
+import {
+  parseExpenseCategory,
+  parseExpenseRecurrence,
+} from "@/modules/expenses/validation";
+import { createExpense, bulkImportExpenses } from "@/modules/expenses/service";
 import {
   updateExpenseAction,
   deleteExpenseAction,
+  bulkImportExpensesAction,
 } from "@/modules/expenses/actions";
 import { updateTreasurySettingsAction } from "@/modules/treasury/actions";
 import type { SessionPayload } from "@/modules/auth/types";
@@ -717,6 +722,76 @@ describe("CSV Parsing, Bulk Imports, FX Regression & RBAC Guards", () => {
       );
       expect(tOwner.success).toBe(true);
       expect(tOwner.data?.liquidReserve).toBe(600000);
+    }, 30000);
+  });
+
+  // =========================================================================
+  // 5. Contract E: Expenses Bulk CSV Import & Normalization
+  // =========================================================================
+  describe("Contract E: Expenses Bulk CSV Import & Normalization", () => {
+    it("normalizes categories and recurrence aliases cleanly", () => {
+      expect(parseExpenseCategory("SaaS")).toBe("SOFTWARE");
+      expect(parseExpenseCategory("Salaries")).toBe("PAYROLL");
+      expect(parseExpenseCategory("Office Lease")).toBe("OTHER");
+      expect(parseExpenseCategory("Rent")).toBe("RENT");
+      expect(parseExpenseRecurrence("monthly")).toBe("MONTHLY");
+      expect(parseExpenseRecurrence("yearly")).toBe("ANNUALLY");
+      expect(parseExpenseRecurrence("once")).toBe("NONE");
+    });
+
+    it("imports valid expense rows atomically, skips bad rows, and enforces RBAC", async () => {
+      const viewerSession = makeSession("VIEWER", companyPkrId, ownerUserId);
+      const memberSession = makeSession("MEMBER", companyPkrId, ownerUserId);
+
+      const denied = await bulkImportExpensesAction(
+        [{ title: "Blocked", amount: 100, dueDate: "2026-12-01" }],
+        viewerSession
+      );
+      expect(denied.success).toBe(false);
+      expect(denied.error).toContain("Forbidden");
+
+      const res = await bulkImportExpenses(
+        companyPkrId,
+        [
+          {
+            rowNumber: 2,
+            title: "CSV Cloud Database",
+            category: "CLOUD",
+            amount: 18500,
+            dueDate: "2026-12-10",
+            recurrence: "MONTHLY",
+            notes: "Neon cluster",
+          },
+          {
+            rowNumber: 3,
+            title: "Invalid Zero Amount",
+            category: "OTHER",
+            amount: 0,
+            dueDate: "2026-12-10",
+          },
+        ],
+        ownerUserId
+      );
+
+      expect(res.createdCount).toBe(1);
+      expect(res.failedCount).toBe(1);
+      expect(res.createdExpenses[0].category).toBe("SOFTWARE");
+      expect(res.createdExpenses[0].recurrence).toBe("MONTHLY");
+
+      const viaAction = await bulkImportExpensesAction(
+        [
+          {
+            title: "CSV Fiber Internet",
+            category: "INTERNET",
+            amount: 7500,
+            dueDate: "2026-12-15",
+            recurrence: "MONTHLY",
+          },
+        ],
+        memberSession
+      );
+      expect(viaAction.success).toBe(true);
+      expect(viaAction.data?.createdCount).toBe(1);
     }, 30000);
   });
 });

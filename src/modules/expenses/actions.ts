@@ -18,6 +18,7 @@ import {
   updateExpense,
   deleteExpense,
   markExpenseAsPaid,
+  bulkImportExpenses,
 } from "./service";
 import {
   createExpenseSchema,
@@ -30,6 +31,8 @@ import type {
   CreateExpenseInput,
   UpdateExpenseInput,
   MarkExpensePaidInput,
+  BulkExpenseRowInput,
+  BulkImportExpensesResult,
 } from "./types";
 
 /**
@@ -344,6 +347,34 @@ export async function markExpensePaidAction(
     return {
       success: false,
       error: formatUserError(err, "Failed to mark expense as paid."),
+    };
+  }
+}
+
+/**
+ * Server Action: Bulk imports up to 500 expense rows parsed from CSV.
+ */
+export async function bulkImportExpensesAction(
+  rows: BulkExpenseRowInput[],
+  sessionOverride?: SessionPayload
+): Promise<ExpenseActionResult<BulkImportExpensesResult>> {
+  try {
+    const session = await requireAuthSession(sessionOverride);
+    assertCanMutateLedger(session.role);
+
+    const result = await bulkImportExpenses(session.companyId, rows, session.userId);
+
+    invalidateTenantTags(session.companyId);
+    revalidateExpensePaths();
+
+    return {
+      success: true,
+      data: result,
+    };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: formatUserError(err, "Failed to import expenses from CSV."),
     };
   }
 }

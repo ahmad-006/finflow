@@ -2,7 +2,8 @@ import * as React from "react";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/modules/auth";
-import { getCompanySettings, getUserProfile } from "@/modules/settings/service";
+import { canManageBilling } from "@/modules/auth/rbac";
+import { getCompanySettings, getUserProfile, getCompanyAuditLogs } from "@/modules/settings/service";
 import { getCompanyMembersAndInvites } from "@/modules/settings/actions";
 import { SettingsCockpitView } from "@/components/settings/SettingsCockpitView";
 import { SettingsSkeleton } from "@/components/settings/SettingsSkeleton";
@@ -20,10 +21,12 @@ async function SettingsDataLoader() {
     redirect("/login");
   }
 
-  const [company, profile, teamData] = await Promise.all([
+  const canViewAuditLogs = canManageBilling(session.role);
+  const [company, profile, teamData, auditLogs] = await Promise.all([
     getCompanySettings(session.companyId),
     getUserProfile(session.userId),
     getCompanyMembersAndInvites(session),
+    canViewAuditLogs ? getCompanyAuditLogs(session.companyId, 50) : Promise.resolve([]),
   ]);
 
   if (!profile) {
@@ -36,6 +39,7 @@ async function SettingsDataLoader() {
       initialProfile={profile}
       initialMembers={teamData.members}
       initialInvitations={teamData.invitations}
+      initialAuditLogs={auditLogs}
     />
   );
 }

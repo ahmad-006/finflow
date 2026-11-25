@@ -15,6 +15,11 @@ export interface GuestPayViewProps {
     id?: string;
     name: string;
     baseCurrency?: string;
+    billingEmail?: string | null;
+    phone?: string | null;
+    address?: string | null;
+    taxId?: string | null;
+    remittanceInstructions?: string | null;
   };
 }
 
@@ -47,6 +52,10 @@ export function GuestPayView({ invoice, company }: GuestPayViewProps) {
       downloadInvoicePDF(invoice, {
         companyName: company.name,
         baseCurrency: company.baseCurrency || "PKR",
+        companyEmail: company.billingEmail || undefined,
+        companyPhone: company.phone || undefined,
+        companyAddress: company.address || undefined,
+        wireRemittanceNotes: company.remittanceInstructions || undefined,
       });
     } catch (err) {
       console.error("PDF download failed:", err);
@@ -124,6 +133,18 @@ export function GuestPayView({ invoice, company }: GuestPayViewProps) {
             <h1 className="text-2xl sm:text-3xl font-sans font-semibold text-ink tracking-tight">
               {company.name}
             </h1>
+            {(company.billingEmail || company.phone || company.taxId) && (
+              <span className="text-xs text-ink/60">
+                {[company.billingEmail, company.phone, company.taxId ? `Tax ID: ${company.taxId}` : null]
+                  .filter(Boolean)
+                  .join(" • ")}
+              </span>
+            )}
+            {company.address && (
+              <span className="text-xs text-ink/50 whitespace-pre-line">
+                {company.address}
+              </span>
+            )}
           </div>
 
           <div className="flex flex-col sm:items-end gap-1">
@@ -209,6 +230,7 @@ export function GuestPayView({ invoice, company }: GuestPayViewProps) {
             </span>
             <p className="text-xs text-ink/70 whitespace-pre-line leading-relaxed">
               {invoice.notes ||
+                company.remittanceInstructions ||
                 "Please remit full payment according to specified payment terms. Cite invoice number on wire transfer."}
             </p>
           </div>

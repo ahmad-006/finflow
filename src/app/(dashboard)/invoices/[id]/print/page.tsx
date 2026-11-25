@@ -32,12 +32,22 @@ async function InvoicePrintDataLoader({ params }: { params: Promise<{ id: string
 
   const companyName = currentUser?.company?.name || "FinFlow Commercial Services";
   const baseCurrency = currentUser?.company?.baseCurrency || "PKR";
+  const companyEmail = currentUser?.company?.billingEmail || null;
+  const companyPhone = currentUser?.company?.phone || null;
+  const companyAddress = currentUser?.company?.address || null;
+  const companyTaxId = currentUser?.company?.taxId || null;
+  const wireRemittanceNotes = currentUser?.company?.remittanceInstructions || null;
 
   return (
     <PrintInvoiceDocument
       invoice={invoice}
       companyName={companyName}
       baseCurrency={baseCurrency}
+      companyEmail={companyEmail}
+      companyPhone={companyPhone}
+      companyAddress={companyAddress}
+      companyTaxId={companyTaxId}
+      wireRemittanceNotes={wireRemittanceNotes}
     />
   );
 }

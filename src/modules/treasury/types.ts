@@ -141,6 +141,18 @@ export interface DayForecastDetails {
   outflows: DetailedOutflowEvent[];
 }
 
+export interface TransactionLedgerRow {
+  id: string;
+  type: "INFLOW" | "OUTFLOW";
+  amount: number;
+  currency: string;
+  baseAmount: number;
+  paymentMethod: string;
+  reference: string | null;
+  date: string;
+  relatedLabel: string;
+}
+
 export interface TreasuryActionResult<T = unknown> {
   success: boolean;
   data?: T;

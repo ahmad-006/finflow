@@ -15,6 +15,7 @@ import type {
   DetailedInflowEvent,
   DetailedOutflowEvent,
   DayForecastDetails,
+  TransactionLedgerRow,
 } from "./types";
 import { updateTreasurySettingsSchema } from "./validation";
 
@@ -802,6 +803,83 @@ export async function getCachedDayForecastDetails(
   } catch (err: unknown) {
     if (err instanceof Error && err.message.includes("incrementalCache missing")) {
       return getDayForecastDetails(companyId, targetDateStr, mode);
+    }
+    throw err;
+  }
+}
+
+/**
+ * Retrieves recent posted cash transactions (INFLOW and OUTFLOW) for the company.
+ */
+export async function getCompanyTransactions(
+  companyId: string,
+  limit: number = 100
+): Promise<TransactionLedgerRow[]> {
+  if (!companyId) {
+    throw new Error("Tenant companyId is required.");
+  }
+
+  const [company, rows] = await Promise.all([
+    db.company.findUnique({
+      where: { id: companyId },
+      select: { baseCurrency: true },
+    }),
+    db.transaction.findMany({
+      where: { companyId },
+      include: {
+        invoice: {
+          select: {
+            invoiceNumber: true,
+            currency: true,
+            client: { select: { clientName: true } },
+          },
+        },
+      },
+      orderBy: [{ transactionDate: "desc" }, { id: "desc" }],
+      take: Math.min(250, Math.max(1, limit)),
+    }),
+  ]);
+
+  const fallbackCurrency = company?.baseCurrency || "PKR";
+
+  return rows.map((row) => ({
+    id: row.id,
+    type: row.type === "INFLOW" ? "INFLOW" : "OUTFLOW",
+    amount: Number(row.amount),
+    currency: row.invoice?.currency || fallbackCurrency,
+    baseAmount: Number(row.baseAmount),
+    paymentMethod: row.paymentMethod,
+    reference: row.reference,
+    date: row.transactionDate.toISOString(),
+    relatedLabel: row.invoice
+      ? `${row.invoice.invoiceNumber} — ${row.invoice.client.clientName}`
+      : `${row.category} Outflow`,
+  }));
+}
+
+/**
+ * Multi-tenant tagged cache wrapper for posted company transactions.
+ */
+export async function getCachedCompanyTransactions(
+  companyId: string,
+  limit: number = 100
+): Promise<TransactionLedgerRow[]> {
+  try {
+    return await unstable_cache(
+      async () => getCompanyTransactions(companyId, limit),
+      [`treasury-transactions-${companyId}`, String(limit)],
+      {
+        tags: [
+          `treasury-${companyId}`,
+          `invoices-${companyId}`,
+          `expenses-${companyId}`,
+        ],
+        revalidate: 3600,
+      }
+    )();
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message.includes("incrementalCache missing")) {
+      return getCompanyTransactions(companyId, limit);
     }
     throw err;
   }

@@ -15,6 +15,9 @@ export interface PrintInvoiceDocumentProps {
   baseCurrency?: string;
   companyAddress?: string | null;
   companyEmail?: string | null;
+  companyPhone?: string | null;
+  companyTaxId?: string | null;
+  wireRemittanceNotes?: string | null;
 }
 
 export function PrintInvoiceDocument({
@@ -23,6 +26,9 @@ export function PrintInvoiceDocument({
   baseCurrency = "PKR",
   companyAddress,
   companyEmail,
+  companyPhone,
+  companyTaxId,
+  wireRemittanceNotes,
 }: PrintInvoiceDocumentProps) {
   const [isDownloading, setIsDownloading] = React.useState(false);
 
@@ -62,6 +68,10 @@ export function PrintInvoiceDocument({
       downloadInvoicePDF(invoice, {
         companyName,
         baseCurrency,
+        companyAddress: companyAddress || undefined,
+        companyEmail: companyEmail || undefined,
+        companyPhone: companyPhone || undefined,
+        wireRemittanceNotes: wireRemittanceNotes || undefined,
       });
     } catch (err) {
       console.error("PDF download failed:", err);
@@ -149,8 +159,12 @@ export function PrintInvoiceDocument({
             <span className="text-[10px] font-mono uppercase tracking-wider text-ink/50">
               Commercial Invoice &middot; FinFlow Treasury Systems
             </span>
-            {companyEmail && (
-              <span className="text-[11px] text-ink/70">{companyEmail}</span>
+            {(companyEmail || companyPhone || companyTaxId) && (
+              <span className="text-[11px] text-ink/70">
+                {[companyEmail, companyPhone, companyTaxId ? `Tax ID: ${companyTaxId}` : null]
+                  .filter(Boolean)
+                  .join(" • ")}
+              </span>
             )}
             {companyAddress && (
               <span className="text-[11px] text-ink/60 whitespace-pre-line mt-0.5">
@@ -266,6 +280,7 @@ export function PrintInvoiceDocument({
             </span>
             <p className="text-ink/70 whitespace-pre-line leading-relaxed">
               {invoice.notes ||
+                wireRemittanceNotes ||
                 "Please remit full payment according to specified terms. Cite invoice number on wire remittance."}
             </p>
           </div>

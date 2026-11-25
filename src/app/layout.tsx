@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { hanken } from "./fonts";
+import { hanken, instrumentSerif, jetbrainsMono } from "./fonts";
 import { OfflineBanner } from "@/components/shell/OfflineBanner";
 import "./globals.css";
 
@@ -138,7 +138,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${hanken.variable} scroll-smooth`}
+      className={`${hanken.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} scroll-smooth`}
     >
       <head>
         <script

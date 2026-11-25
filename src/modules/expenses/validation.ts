@@ -89,3 +89,40 @@ export const expenseFilterSchema = z.object({
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
 });
+
+export function parseExpenseCategory(raw: unknown): (typeof EXPENSE_CATEGORIES)[number] {
+  const normalized = String(raw ?? "OTHER")
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, "_");
+  if (["PAYROLL", "SALARY", "SALARIES", "WAGES"].includes(normalized)) return "PAYROLL";
+  if (["RENT", "LEASE", "OFFICE"].includes(normalized)) return "RENT";
+  if (["UTILITIES", "UTILITY", "ELECTRICITY", "INTERNET", "GAS", "WATER"].includes(normalized)) {
+    return "UTILITIES";
+  }
+  if (["SUPPLIERS", "SUPPLIER", "VENDOR", "VENDORS", "INVENTORY"].includes(normalized)) {
+    return "SUPPLIERS";
+  }
+  if (["SOFTWARE", "SAAS", "CLOUD", "SUBSCRIPTION", "SUBSCRIPTIONS"].includes(normalized)) {
+    return "SOFTWARE";
+  }
+  if (["TAX", "TAXES", "VAT", "GST"].includes(normalized)) return "TAX";
+  return "OTHER";
+}
+
+export function parseExpenseRecurrence(raw: unknown): (typeof EXPENSE_RECURRENCES)[number] {
+  const normalized = String(raw ?? "NONE")
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, "_");
+  if (["WEEKLY", "WEEK"].includes(normalized)) return "WEEKLY";
+  if (["MONTHLY", "MONTH"].includes(normalized)) return "MONTHLY";
+  if (["QUARTERLY", "QUARTER"].includes(normalized)) return "QUARTERLY";
+  if (["ANNUALLY", "ANNUAL", "YEARLY", "YEAR"].includes(normalized)) return "ANNUALLY";
+  return "NONE";
+}
+
+export const bulkExpenseRowSchema = createExpenseSchema.extend({
+  category: z.preprocess((v) => parseExpenseCategory(v), z.enum(EXPENSE_CATEGORIES)),
+  recurrence: z.preprocess((v) => parseExpenseRecurrence(v), z.enum(EXPENSE_RECURRENCES)),
+});

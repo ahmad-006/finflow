@@ -9,11 +9,13 @@ import {
   ArrowRight,
   Calendar,
   HelpCircle,
+  Download,
 } from "lucide-react";
 import type {
   ForecastSummary,
   ForecastMode,
   DailyForecastPoint,
+  TransactionLedgerRow,
 } from "@/modules/treasury/types";
 import { getForecastAction } from "@/modules/treasury/actions";
 import { canManageWorkspace, canMutateLedger } from "@/modules/auth/rbac";
@@ -23,6 +25,7 @@ import { Figure } from "@/components/line/Figure";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/format";
+import { generateCsv } from "@/lib/csv";
 import {
   renderOverviewBreach,
   renderOverviewNoBreach,
@@ -34,6 +37,7 @@ import { cn } from "@/lib/utils";
 
 export interface CashFlowCockpitViewProps {
   initialForecast: ForecastSummary;
+  initialTransactions?: TransactionLedgerRow[];
   role?: string;
 }
 
@@ -41,6 +45,7 @@ type TableFilter = "ALL" | "INFLOWS" | "OUTFLOWS" | "DEFICITS";
 
 export function CashFlowCockpitView({
   initialForecast,
+  initialTransactions = [],
   role = "MEMBER",
 }: CashFlowCockpitViewProps) {
   const router = useRouter();
@@ -55,6 +60,7 @@ export function CashFlowCockpitView({
     data: ForecastSummary;
   } | null>(null);
   const [tableFilter, setTableFilter] = React.useState<TableFilter>("ALL");
+  const [txTypeFilter, setTxTypeFilter] = React.useState<"ALL" | "INFLOW" | "OUTFLOW">("ALL");
   const [isPendingMode, startModeTransition] = React.useTransition();
 
   // Modals and Drawers
@@ -851,6 +857,132 @@ export function CashFlowCockpitView({
             </table>
           </div>
         </div>
+      </section>
+
+      {/* Posted Cash Transactions & CSV Export */}
+      <section aria-label="Posted ledger transactions" className="my-10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-line">
+          <div>
+            <h2 className="text-xl font-serif text-ink tracking-tight">
+              Posted ledger transactions
+            </h2>
+            <p className="text-xs text-ink-3 mt-0.5">
+              Recorded cash inflows from settled invoices and outflows from paid expenses.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {(["ALL", "INFLOW", "OUTFLOW"] as const).map((kind) => (
+              <button
+                key={kind}
+                type="button"
+                onClick={() => setTxTypeFilter(kind)}
+                className={cn(
+                  "min-h-[44px] px-3.5 py-2 rounded-full text-xs font-medium transition-colors",
+                  txTypeFilter === kind
+                    ? "bg-ink text-white"
+                    : "bg-fog text-ink hover:bg-fog-2 border border-line/60"
+                )}
+              >
+                {kind === "ALL" ? "All entries" : kind === "INFLOW" ? "Inflows" : "Outflows"}
+              </button>
+            ))}
+
+            {initialTransactions.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  const csvContent = generateCsv(
+                    ["date", "type", "related", "payment_method", "reference", "currency", "amount", "base_amount", "base_currency"],
+                    initialTransactions.map((tx) => [
+                      tx.date.split("T")[0],
+                      tx.type,
+                      tx.relatedLabel,
+                      tx.paymentMethod,
+                      tx.reference || "",
+                      tx.currency,
+                      String(tx.amount),
+                      String(tx.baseAmount),
+                      baseCurrency,
+                    ])
+                  );
+                  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.setAttribute("download", `finflow-transactions-${new Date().toISOString().split("T")[0]}.csv`);
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                }}
+                className="min-h-[44px] inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-line bg-white text-xs font-medium text-ink hover:bg-fog transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Export CSV</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {(() => {
+          const visibleTx =
+            txTypeFilter === "ALL"
+              ? initialTransactions
+              : initialTransactions.filter((t) => t.type === txTypeFilter);
+
+          if (visibleTx.length === 0) {
+            return (
+              <div className="mt-4 py-10 px-4 text-center text-xs text-ink-3 rounded-[12px] border border-line bg-fog/20">
+                No posted cash transactions match the selected filter.
+              </div>
+            );
+          }
+
+          return (
+            <div className="mt-4 border border-line rounded-[12px] overflow-x-auto bg-white">
+              <table className="w-full text-left border-collapse min-w-[640px]">
+                <thead>
+                  <tr className="border-b border-line bg-fog/40 text-[11px] font-mono uppercase tracking-wider text-ink-3">
+                    <th scope="col" className="py-3 px-4 font-normal">Date</th>
+                    <th scope="col" className="py-3 px-4 font-normal">Ledger Source</th>
+                    <th scope="col" className="py-3 px-4 font-normal">Method &amp; Ref</th>
+                    <th scope="col" className="py-3 px-4 font-normal">Type</th>
+                    <th scope="col" className="py-3 px-4 font-normal text-right">Base Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line text-xs">
+                  {visibleTx.slice(0, 25).map((tx) => (
+                    <tr key={tx.id} className="hover:bg-fog/30 transition-colors">
+                      <td className="py-3 px-4 font-mono text-ink-2 whitespace-nowrap">
+                        {tx.date.split("T")[0]}
+                      </td>
+                      <td className="py-3 px-4 font-medium text-ink">{tx.relatedLabel}</td>
+                      <td className="py-3 px-4 text-ink-3 font-mono">
+                        {tx.paymentMethod}
+                        {tx.reference ? ` · ${tx.reference}` : ""}
+                      </td>
+                      <td className="py-3 px-4">
+                        <Badge variant={tx.type === "INFLOW" ? "healthy" : "critical"}>
+                          {tx.type}
+                        </Badge>
+                      </td>
+                      <td
+                        className={cn(
+                          "py-3 px-4 text-right font-mono font-semibold num whitespace-nowrap",
+                          tx.type === "INFLOW" ? "text-moss" : "text-ember-ink"
+                        )}
+                      >
+                        {tx.type === "INFLOW" ? "+" : "-"}
+                        {formatMoney(tx.baseAmount, baseCurrency)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
       </section>
 
       {/* Explanatory Footer Container */}

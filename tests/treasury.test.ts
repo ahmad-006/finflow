@@ -16,6 +16,7 @@ import {
   computeClientLatencies,
   getDayForecastDetails,
   getCachedDayForecastDetails,
+  getCompanyTransactions,
 } from "@/modules/treasury/service";
 import {
   updateTreasurySettingsAction,
@@ -868,5 +869,13 @@ describe("Domain 6: Treasury Ledger & 30-Day Forward Forecast Engine", () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain("You must be signed in to perform this action.");
     });
+
+    it("should return tenant-scoped posted transactions from getCompanyTransactions", async () => {
+      const txB = await getCompanyTransactions(companyBId, 50);
+      expect(txB).toHaveLength(0);
+
+      const txA = await getCompanyTransactions(companyAId, 50);
+      expect(Array.isArray(txA)).toBe(true);
+    }, 15000);
   });
 });

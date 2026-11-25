@@ -12,6 +12,7 @@ import {
 import {
   getCompanySettings,
   updateCompanySettings,
+  getCompanyAuditLogs,
   updateUserProfile,
   changePassword,
   getUserProfile,
@@ -386,6 +387,29 @@ describe("Settings Module: Validation, Service & Server Actions", () => {
 
       expect(result.success).toBe(true);
       expect(result.data?.fullName).toBe("Action Updated Name");
+    }, 30000);
+
+    it("persists optional company billing profile & remittance details and returns audit logs", async () => {
+      const companyId = createdCompanyIds[0];
+      const user = await db.user.findFirst({ where: { companyId } });
+      const updated = await updateCompanySettings(companyId, user!.id, {
+        name: "Billing Profile Corp",
+        liquidReserve: 120000,
+        safetyBuffer: 25000,
+        billingEmail: "billing@profilecorp.test",
+        phone: "+92 51 555 0199",
+        address: "14 Blue Area, Islamabad",
+        taxId: "NTN-9988776-1",
+        remittanceInstructions: "Wire to Example Bank PK00EXAMPLE1234",
+      });
+
+      expect(updated.billingEmail).toBe("billing@profilecorp.test");
+      expect(updated.taxId).toBe("NTN-9988776-1");
+      expect(updated.remittanceInstructions).toContain("Example Bank");
+
+      const logs = await getCompanyAuditLogs(companyId, 20);
+      expect(logs.length).toBeGreaterThan(0);
+      expect(logs[0].entityType).toBe("WORKSPACE");
     }, 30000);
   });
 });

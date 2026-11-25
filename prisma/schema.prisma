@@ -16,13 +16,18 @@ generator client {
 // ==========================================
 
 model Company {
-  id            String   @id @default(uuid())
-  name          String
-  baseCurrency  String   @default("PKR")
-  liquidReserve Decimal  @default(0.0) @db.Decimal(14, 2) // Opening cash balance
-  safetyBuffer  Decimal  @default(0.0) @db.Decimal(14, 2) // Red-alert cash threshold
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                     String   @id @default(uuid())
+  name                   String
+  baseCurrency           String   @default("PKR")
+  liquidReserve          Decimal  @default(0.0) @db.Decimal(14, 2) // Opening cash balance
+  safetyBuffer           Decimal  @default(0.0) @db.Decimal(14, 2) // Red-alert cash threshold
+  billingEmail           String?
+  phone                  String?
+  address                String?
+  taxId                  String?
+  remittanceInstructions String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   users        User[]
   clients      Client[]

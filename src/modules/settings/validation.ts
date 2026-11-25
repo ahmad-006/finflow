@@ -1,6 +1,15 @@
 import { z } from "zod";
 import { passwordSchema } from "@/modules/auth/validation";
 
+const optionalTrimmed = (max: number, label: string) =>
+  z
+    .string()
+    .trim()
+    .max(max, `${label} cannot exceed ${max} characters.`)
+    .optional()
+    .nullable()
+    .transform((v) => (v && v.length > 0 ? v : null));
+
 export const updateCompanySettingsSchema = z.object({
   name: z
     .string()
@@ -13,6 +22,18 @@ export const updateCompanySettingsSchema = z.object({
   safetyBuffer: z.coerce
     .number()
     .min(0, "Safety buffer cannot be negative."),
+  billingEmail: z
+    .union([
+      z.string().trim().email("Please enter a valid billing email address."),
+      z.literal(""),
+      z.null(),
+    ])
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : null)),
+  phone: optionalTrimmed(40, "Phone number"),
+  address: optionalTrimmed(300, "Business address"),
+  taxId: optionalTrimmed(60, "Tax ID"),
+  remittanceInstructions: optionalTrimmed(1000, "Remittance instructions"),
 });
 
 export const updateUserProfileSchema = z.object({

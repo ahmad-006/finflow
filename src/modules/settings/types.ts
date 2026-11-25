@@ -2,6 +2,11 @@ export interface CompanySettingsInput {
   name: string;
   liquidReserve: number;
   safetyBuffer: number;
+  billingEmail?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  taxId?: string | null;
+  remittanceInstructions?: string | null;
 }
 
 export interface UserProfileInput {
@@ -30,8 +35,26 @@ export interface CompanySettingsRecord {
   baseCurrency: string;
   liquidReserve: number;
   safetyBuffer: number;
+  billingEmail: string | null;
+  phone: string | null;
+  address: string | null;
+  taxId: string | null;
+  remittanceInstructions: string | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface AuditLogRecord {
+  id: string;
+  companyId: string;
+  userId: string | null;
+  actorName: string | null;
+  actorEmail: string | null;
+  entityType: string;
+  entityId: string;
+  action: string;
+  details: string | null;
+  createdAt: Date;
 }
 
 export interface UserProfileRecord {

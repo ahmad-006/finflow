@@ -45,12 +45,17 @@ export interface InvoiceDirectoryViewProps {
   kpis: InvoiceKPIs;
   baseCurrency?: string;
   companyName?: string;
+  companyEmail?: string | null;
+  companyPhone?: string | null;
+  companyAddress?: string | null;
+  wireRemittanceNotes?: string | null;
   role?: string;
   clients?: ClientOption[];
   initialExchangeRates?: Record<InvoiceCurrency, number>;
   totalCount?: number;
   currentPage?: number;
   totalPages?: number;
+  serverStatusCounts?: Record<"ALL" | InvoiceStatus, number>;
   initialStatus?: InvoiceStatus | "ALL";
   initialCurrency?: InvoiceCurrency | "ALL";
   initialSearch?: string;
@@ -63,12 +68,17 @@ export function InvoiceDirectoryView({
   kpis,
   baseCurrency = "PKR",
   companyName = "FinFlow Commercial Services",
+  companyEmail = null,
+  companyPhone = null,
+  companyAddress = null,
+  wireRemittanceNotes = null,
   role = "MEMBER",
   clients = [],
   initialExchangeRates,
   totalCount,
   currentPage = 1,
   totalPages = 1,
+  serverStatusCounts,
   initialStatus = "ALL",
   initialCurrency = "ALL",
   initialSearch = "",
@@ -152,6 +162,9 @@ export function InvoiceDirectoryView({
   }, [initialInvoices, statusFilter, currencyFilter, search]);
 
   const statusCounts = React.useMemo(() => {
+    if (serverStatusCounts) {
+      return serverStatusCounts;
+    }
     const counts: Record<string, number> = {
       ALL: initialInvoices.length,
       DRAFT: 0,
@@ -166,7 +179,7 @@ export function InvoiceDirectoryView({
       }
     }
     return counts;
-  }, [initialInvoices]);
+  }, [initialInvoices, serverStatusCounts]);
 
   const formatDate = (date: Date | string) => {
     return new Intl.DateTimeFormat("en-US", {
@@ -184,6 +197,10 @@ export function InvoiceDirectoryView({
       downloadInvoicePDF(inv, {
         companyName,
         baseCurrency,
+        companyEmail: companyEmail || undefined,
+        companyPhone: companyPhone || undefined,
+        companyAddress: companyAddress || undefined,
+        wireRemittanceNotes: wireRemittanceNotes || undefined,
       });
     } catch (err) {
       console.error("Quick PDF download failed:", err);

@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "bun:test";
+import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
+import { GET as runCronMaintenanceRoute } from "@/app/api/cron/ledger-maintenance/route";
 import {
   calculateLineItem,
   calculateInvoiceTotals,
@@ -22,6 +24,7 @@ import {
   getInvoiceById,
   getInvoiceByViewToken,
   getInvoiceKPIs,
+  runScheduledLedgerMaintenance,
 } from "@/modules/invoices/service";
 
 describe("Domain 3: Invoicing Engine & Spot Multi-Currency Service", () => {
@@ -349,7 +352,7 @@ describe("Domain 3: Invoicing Engine & Spot Multi-Currency Service", () => {
       expect(finalPayment.paidAmount).toBe(1000);
     }, 25000);
 
-    it("should support paginated getInvoices queries accurately", async () => {
+    it("should support paginated getInvoices queries with global statusCounts", async () => {
       const page1 = await getInvoices(companyAId, { page: 1, limit: 1 });
       const page2 = await getInvoices(companyAId, { page: 2, limit: 1 });
       expect(page1.total).toBeGreaterThanOrEqual(2);
@@ -357,7 +360,56 @@ describe("Domain 3: Invoicing Engine & Spot Multi-Currency Service", () => {
       expect(page1.invoices).toHaveLength(1);
       expect(page2.invoices).toHaveLength(1);
       expect(page1.invoices[0].id).not.toBe(page2.invoices[0].id);
+      expect(page2.statusCounts.ALL).toBe(page1.total);
+      expect(page2.statusCounts.PAID).toBeGreaterThanOrEqual(2);
     }, 15000);
+
+    it("should promote past-due SENT invoices to OVERDUE via runScheduledLedgerMaintenance", async () => {
+      const pastDueInv = await createInvoice(companyAId, {
+        clientId: clientAId,
+        currency: "PKR",
+        issueDate: new Date("2025-01-01"),
+        dueDate: new Date("2025-02-01"),
+        taxRate: 0,
+        items: [{ description: "Aged Retainer", quantity: 1, unitPrice: 500 }],
+      });
+      await db.invoice.update({
+        where: { id: pastDueInv.id },
+        data: { status: "SENT" },
+      });
+
+      const res = await runScheduledLedgerMaintenance(companyAId);
+      expect(res.updatedOverdueCount).toBeGreaterThanOrEqual(1);
+      expect(res.affectedCompanyIds).toContain(companyAId);
+
+      const refreshed = await getInvoiceById(companyAId, pastDueInv.id);
+      expect(refreshed?.status).toBe("OVERDUE");
+    }, 20000);
+
+    it("should reject unauthorized or unconfigured cron maintenance requests fail-closed", async () => {
+      const prevSecret = process.env.CRON_SECRET;
+      try {
+        delete process.env.CRON_SECRET;
+        const missingRes = await runCronMaintenanceRoute(
+          new NextRequest("https://finflow.test/api/cron/ledger-maintenance")
+        );
+        expect(missingRes.status).toBe(503);
+
+        process.env.CRON_SECRET = "test-cron-secret-value";
+        const wrongRes = await runCronMaintenanceRoute(
+          new NextRequest("https://finflow.test/api/cron/ledger-maintenance", {
+            headers: { authorization: "Bearer wrong-secret" },
+          })
+        );
+        expect(wrongRes.status).toBe(401);
+      } finally {
+        if (prevSecret === undefined) {
+          delete process.env.CRON_SECRET;
+        } else {
+          process.env.CRON_SECRET = prevSecret;
+        }
+      }
+    });
 
     it("should prevent cross-tenant access when fetching invoice by ID", async () => {
       const foreign = await getInvoiceById(companyBId, createdInvoiceId);

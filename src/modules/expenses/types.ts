@@ -104,3 +104,26 @@ export interface ExpenseActionResult<T = ExpenseRecord> {
   error?: string;
   errors?: Record<string, string[]>;
 }
+
+export interface BulkExpenseRowInput {
+  rowNumber?: number;
+  title: string;
+  category?: string;
+  amount: number | string;
+  dueDate: string;
+  recurrence?: string;
+  notes?: string;
+}
+
+export interface BulkExpenseRowFeedback {
+  rowNumber: number;
+  title?: string;
+  message: string;
+}
+
+export interface BulkImportExpensesResult {
+  createdCount: number;
+  failedCount: number;
+  createdExpenses: ExpenseRecord[];
+  errors: BulkExpenseRowFeedback[];
+}

@@ -161,17 +161,28 @@ export const getSession = cache(async (): Promise<SessionPayload | null> => {
   }
 });
 
+export interface CurrentUserCompany {
+  id: string;
+  name: string;
+  baseCurrency: string;
+  billingEmail?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  taxId?: string | null;
+  remittanceInstructions?: string | null;
+}
+
 /**
  * Deduplicated user & company lookup (React.cache).
  * Within a single request render tree, queries Neon DB only once.
  */
 export const getCurrentUser = cache(
-  async (): Promise<(SafeUser & { company: { id: string; name: string; baseCurrency: string } }) | null> => {
+  async (): Promise<(SafeUser & { company: CurrentUserCompany }) | null> => {
     try {
       const session = await getSession();
       if (!session) return null;
       return (await getUserWithCompany(session.userId)) as (SafeUser & {
-        company: { id: string; name: string; baseCurrency: string };
+        company: CurrentUserCompany;
       }) | null;
     } catch {
       return null;

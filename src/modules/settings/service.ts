@@ -7,6 +7,7 @@ import { sendWorkspaceInvitationEmail } from "@/lib/mail";
 import type {
   CompanySettingsInput,
   CompanySettingsRecord,
+  AuditLogRecord,
   UserProfileInput,
   UserProfileRecord,
   InviteMemberInput,
@@ -41,6 +42,11 @@ export async function getCompanySettings(companyId: string): Promise<CompanySett
     baseCurrency: company.baseCurrency,
     liquidReserve: Number(company.liquidReserve),
     safetyBuffer: Number(company.safetyBuffer),
+    billingEmail: company.billingEmail ?? null,
+    phone: company.phone ?? null,
+    address: company.address ?? null,
+    taxId: company.taxId ?? null,
+    remittanceInstructions: company.remittanceInstructions ?? null,
     createdAt: company.createdAt,
     updatedAt: company.updatedAt,
   };
@@ -65,13 +71,22 @@ export async function updateCompanySettings(
   }
 
   return await db.$transaction(async (tx) => {
+    const updateData: Prisma.CompanyUpdateInput = {
+      name: validated.name,
+      liquidReserve: new Prisma.Decimal(validated.liquidReserve),
+      safetyBuffer: new Prisma.Decimal(validated.safetyBuffer),
+    };
+    if (data.billingEmail !== undefined) updateData.billingEmail = validated.billingEmail;
+    if (data.phone !== undefined) updateData.phone = validated.phone;
+    if (data.address !== undefined) updateData.address = validated.address;
+    if (data.taxId !== undefined) updateData.taxId = validated.taxId;
+    if (data.remittanceInstructions !== undefined) {
+      updateData.remittanceInstructions = validated.remittanceInstructions;
+    }
+
     const updated = await tx.company.update({
       where: { id: companyId },
-      data: {
-        name: validated.name,
-        liquidReserve: new Prisma.Decimal(validated.liquidReserve),
-        safetyBuffer: new Prisma.Decimal(validated.safetyBuffer),
-      },
+      data: updateData,
     });
 
     await tx.auditLog.create({
@@ -102,6 +117,11 @@ export async function updateCompanySettings(
       baseCurrency: updated.baseCurrency,
       liquidReserve: Number(updated.liquidReserve),
       safetyBuffer: Number(updated.safetyBuffer),
+      billingEmail: updated.billingEmail ?? null,
+      phone: updated.phone ?? null,
+      address: updated.address ?? null,
+      taxId: updated.taxId ?? null,
+      remittanceInstructions: updated.remittanceInstructions ?? null,
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt,
     };
@@ -416,4 +436,47 @@ export async function getCompanyMembersAndInvitesService(
     members,
     invitations,
   };
+}
+
+/**
+ * Retrieves recent workspace audit log entries enriched with actor names.
+ */
+export async function getCompanyAuditLogs(
+  companyId: string,
+  limit: number = 50
+): Promise<AuditLogRecord[]> {
+  if (!companyId) {
+    throw new Error("Company ID is required.");
+  }
+
+  const take = Math.min(200, Math.max(1, limit));
+  const [logs, users] = await Promise.all([
+    db.auditLog.findMany({
+      where: { companyId },
+      orderBy: { timestamp: "desc" },
+      take,
+    }),
+    db.user.findMany({
+      where: { companyId },
+      select: { id: true, fullName: true, email: true },
+    }),
+  ]);
+
+  const userMap = new Map(users.map((u) => [u.id, u]));
+
+  return logs.map((log) => {
+    const actor = log.userId ? userMap.get(log.userId) : undefined;
+    return {
+      id: log.id,
+      companyId: log.companyId,
+      userId: log.userId,
+      actorName: actor?.fullName ?? null,
+      actorEmail: actor?.email ?? null,
+      entityType: log.entityType,
+      entityId: log.entityId,
+      action: log.action,
+      details: log.details,
+      createdAt: log.timestamp,
+    };
+  });
 }

@@ -53,6 +53,10 @@ async function InvoiceDirectoryDataLoader({
   const currentUser = await getCurrentUser();
   const companyName = currentUser?.company?.name || "FinFlow Commercial Services";
   const baseCurrency = (currentUser?.company?.baseCurrency || "PKR") as InvoiceCurrency;
+  const companyEmail = currentUser?.company?.billingEmail || null;
+  const companyPhone = currentUser?.company?.phone || null;
+  const companyAddress = currentUser?.company?.address || null;
+  const wireRemittanceNotes = currentUser?.company?.remittanceInstructions || null;
   const role = currentUser?.role || session.role || "MEMBER";
 
   const [invoicesData, kpis, clients, liveRates] = await Promise.all([
@@ -81,12 +85,17 @@ async function InvoiceDirectoryDataLoader({
       kpis={kpis}
       baseCurrency={baseCurrency}
       companyName={companyName}
+      companyEmail={companyEmail}
+      companyPhone={companyPhone}
+      companyAddress={companyAddress}
+      wireRemittanceNotes={wireRemittanceNotes}
       role={role}
       clients={clientOptions}
       initialExchangeRates={liveRates}
       totalCount={invoicesData.total}
       currentPage={invoicesData.page}
       totalPages={invoicesData.totalPages}
+      serverStatusCounts={invoicesData.statusCounts}
       initialStatus={status}
       initialCurrency={currency}
       initialSearch={search}

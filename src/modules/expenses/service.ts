@@ -11,11 +11,15 @@ import type {
   MarkExpensePaidInput,
   ExpenseFilters,
   ExpenseKPIs,
+  BulkExpenseRowInput,
+  BulkExpenseRowFeedback,
+  BulkImportExpensesResult,
 } from "./types";
 import {
   createExpenseSchema,
   updateExpenseSchema,
   markExpensePaidSchema,
+  bulkExpenseRowSchema,
 } from "./validation";
 
 type PrismaExpense = Prisma.ExpenseGetPayload<Record<string, never>>;
@@ -596,4 +600,114 @@ export async function getCachedExpenseKPIs(companyId: string): Promise<ExpenseKP
       revalidate: 3600,
     }
   )();
+}
+
+/**
+ * Bulk imports up to 500 scheduled/recurring expense rows atomically with audit logging.
+ */
+export async function bulkImportExpenses(
+  companyId: string,
+  rows: BulkExpenseRowInput[],
+  userId?: string
+): Promise<BulkImportExpensesResult> {
+  if (!companyId) {
+    throw new Error("Tenant companyId is required.");
+  }
+  if (!Array.isArray(rows) || rows.length === 0) {
+    throw new Error("At least one expense row is required for import.");
+  }
+  if (rows.length > 500) {
+    throw new Error("Maximum 500 expense rows allowed per import.");
+  }
+
+  const errors: BulkExpenseRowFeedback[] = [];
+  const validRows: Array<{
+    title: string;
+    category: ExpenseCategory;
+    amount: number;
+    dueDate: Date;
+    recurrence: ExpenseRecurrence;
+    notes: string | null;
+  }> = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const raw = rows[i];
+    const rowNumber = raw.rowNumber ?? i + 1;
+    const parsed = bulkExpenseRowSchema.safeParse({
+      title: raw.title,
+      category: raw.category,
+      amount: raw.amount,
+      dueDate: raw.dueDate,
+      recurrence: raw.recurrence,
+      notes: raw.notes,
+    });
+
+    if (!parsed.success) {
+      errors.push({
+        rowNumber,
+        title: raw.title,
+        message: parsed.error.issues.map((iss) => iss.message).join("; "),
+      });
+      continue;
+    }
+
+    validRows.push({
+      title: parsed.data.title,
+      category: parsed.data.category,
+      amount: parsed.data.amount,
+      dueDate: parsed.data.dueDate,
+      recurrence: parsed.data.recurrence,
+      notes: parsed.data.notes ? parsed.data.notes : null,
+    });
+  }
+
+  let createdExpenses: ExpenseRecord[] = [];
+  if (validRows.length > 0) {
+    createdExpenses = await db.$transaction(
+      async (tx) => {
+        const created: ExpenseRecord[] = [];
+        for (const item of validRows) {
+          const row = await tx.expense.create({
+            data: {
+              companyId,
+              title: item.title,
+              category: item.category,
+              amount: new Prisma.Decimal(item.amount),
+              dueDate: item.dueDate,
+              recurrence: item.recurrence,
+              isPaid: false,
+              paidAt: null,
+              notes: item.notes,
+            },
+          });
+          created.push(sanitizeExpense(row));
+        }
+
+        await tx.auditLog.create({
+          data: {
+            companyId,
+            userId: userId || null,
+            entityType: "EXPENSE",
+            entityId: created[0]?.id || companyId,
+            action: "CREATE",
+            details: JSON.stringify({
+              source: "CSV_BULK_IMPORT",
+              createdCount: created.length,
+              failedCount: errors.length,
+            }),
+          },
+        });
+
+        return created;
+      },
+      { maxWait: 15000, timeout: 45000 }
+    );
+  }
+
+  return {
+    createdCount: createdExpenses.length,
+    failedCount: errors.length,
+    createdExpenses,
+    errors,
+  };
 }

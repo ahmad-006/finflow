@@ -162,6 +162,23 @@ export async function updateCompanySettingsAction(
         rawData.safetyBuffer !== undefined && rawData.safetyBuffer !== ""
           ? Number(rawData.safetyBuffer)
           : 0,
+      ...(rawData.billingEmail !== undefined && {
+        billingEmail: rawData.billingEmail ? String(rawData.billingEmail).trim() : null,
+      }),
+      ...(rawData.phone !== undefined && {
+        phone: rawData.phone ? String(rawData.phone).trim() : null,
+      }),
+      ...(rawData.address !== undefined && {
+        address: rawData.address ? String(rawData.address).trim() : null,
+      }),
+      ...(rawData.taxId !== undefined && {
+        taxId: rawData.taxId ? String(rawData.taxId).trim() : null,
+      }),
+      ...(rawData.remittanceInstructions !== undefined && {
+        remittanceInstructions: rawData.remittanceInstructions
+          ? String(rawData.remittanceInstructions).trim()
+          : null,
+      }),
     };
 
     const validated = updateCompanySettingsSchema.parse(input);
@@ -170,6 +187,7 @@ export async function updateCompanySettingsAction(
     invalidateCompanyTags(session.companyId);
     try {
       revalidatePath("/settings");
+      revalidatePath("/invoices");
     } catch {
       // Revalidation outside active request context
     }

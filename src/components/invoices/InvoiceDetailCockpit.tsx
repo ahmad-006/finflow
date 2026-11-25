@@ -38,6 +38,10 @@ interface InvoiceDetailCockpitProps {
   invoice: InvoiceWithItemsAndClient;
   companyName: string;
   baseCurrency?: string;
+  companyEmail?: string | null;
+  companyPhone?: string | null;
+  companyAddress?: string | null;
+  wireRemittanceNotes?: string | null;
   role?: string;
 }
 
@@ -45,6 +49,10 @@ export function InvoiceDetailCockpit({
   invoice,
   companyName,
   baseCurrency = "PKR",
+  companyEmail = null,
+  companyPhone = null,
+  companyAddress = null,
+  wireRemittanceNotes = null,
   role = "MEMBER",
 }: InvoiceDetailCockpitProps) {
   const canMutate = canMutateLedger(role);
@@ -85,6 +93,10 @@ export function InvoiceDetailCockpit({
       downloadInvoicePDF(invoice, {
         companyName,
         baseCurrency,
+        companyEmail: companyEmail || undefined,
+        companyPhone: companyPhone || undefined,
+        companyAddress: companyAddress || undefined,
+        wireRemittanceNotes: wireRemittanceNotes || undefined,
       });
     } catch (err) {
       console.error("PDF download failed:", err);

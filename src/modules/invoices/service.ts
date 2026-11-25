@@ -553,11 +553,21 @@ export async function cancelInvoice(
   return sanitizeInvoice(updated);
 }
 
+export interface InvoiceStatusCounts {
+  ALL: number;
+  DRAFT: number;
+  SENT: number;
+  PAID: number;
+  OVERDUE: number;
+  CANCELLED: number;
+}
+
 export interface GetInvoicesResult {
   invoices: InvoiceWithItemsAndClient[];
   total: number;
   page: number;
   totalPages: number;
+  statusCounts: InvoiceStatusCounts;
 }
 
 /**
@@ -571,44 +581,45 @@ export async function getInvoices(
   const limit = Math.min(100, Math.max(1, filters?.limit || 20));
   const skip = (page - 1) * limit;
 
-  const where: Prisma.InvoiceWhereInput = {
+  const baseWhere: Prisma.InvoiceWhereInput = {
     companyId,
   };
 
-  if (filters?.status && filters.status !== "ALL") {
-    where.status = filters.status;
-  }
-
   if (filters?.clientId) {
-    where.clientId = filters.clientId;
+    baseWhere.clientId = filters.clientId;
   }
 
   if (filters?.currency && filters.currency !== "ALL") {
-    where.currency = filters.currency;
+    baseWhere.currency = filters.currency;
   }
 
   if (filters?.startDate || filters?.endDate) {
-    where.issueDate = {};
+    baseWhere.issueDate = {};
     if (filters.startDate) {
-      where.issueDate.gte = new Date(filters.startDate);
+      baseWhere.issueDate.gte = new Date(filters.startDate);
     }
     if (filters.endDate) {
-      where.issueDate.lte = new Date(filters.endDate);
+      baseWhere.issueDate.lte = new Date(filters.endDate);
     }
   }
 
   if (filters?.search && filters.search.trim() !== "") {
     const term = filters.search.trim();
-    where.OR = [
+    baseWhere.OR = [
       { invoiceNumber: { contains: term, mode: "insensitive" } },
       { client: { clientName: { contains: term, mode: "insensitive" } } },
     ];
   }
 
+  const where: Prisma.InvoiceWhereInput = { ...baseWhere };
+  if (filters?.status && filters.status !== "ALL") {
+    where.status = filters.status;
+  }
+
   const orderByField = filters?.sortBy || "issueDate";
   const orderDirection = filters?.sortOrder || "desc";
 
-  const [rawInvoices, total] = await Promise.all([
+  const [rawInvoices, total, groupedCounts] = await Promise.all([
     db.invoice.findMany({
       where,
       include: {
@@ -629,13 +640,35 @@ export async function getInvoices(
       take: limit,
     }),
     db.invoice.count({ where }),
+    db.invoice.groupBy({
+      by: ["status"],
+      where: baseWhere,
+      _count: { _all: true },
+    }),
   ]);
+
+  const statusCounts: InvoiceStatusCounts = {
+    ALL: 0,
+    DRAFT: 0,
+    SENT: 0,
+    PAID: 0,
+    OVERDUE: 0,
+    CANCELLED: 0,
+  };
+  for (const row of groupedCounts) {
+    const cnt = row._count._all;
+    statusCounts.ALL += cnt;
+    if (row.status in statusCounts) {
+      statusCounts[row.status as Exclude<keyof InvoiceStatusCounts, "ALL">] = cnt;
+    }
+  }
 
   return {
     invoices: rawInvoices.map(sanitizeInvoice),
     total,
     page,
     totalPages: Math.ceil(total / limit) || 1,
+    statusCounts,
   };
 }
 
@@ -676,6 +709,11 @@ export interface PublicInvoiceGuestView {
     id: string;
     name: string;
     baseCurrency: string;
+    billingEmail: string | null;
+    phone: string | null;
+    address: string | null;
+    taxId: string | null;
+    remittanceInstructions: string | null;
   };
 }
 
@@ -691,6 +729,11 @@ export async function getInvoiceByViewToken(viewToken: string): Promise<PublicIn
           id: true,
           name: true,
           baseCurrency: true,
+          billingEmail: true,
+          phone: true,
+          address: true,
+          taxId: true,
+          remittanceInstructions: true,
         },
       },
       client: {
@@ -796,7 +839,7 @@ export function getCachedInvoices(
   filters?: InvoiceFilters
 ): Promise<GetInvoicesResult> {
   const key = [
-    "invoices-list",
+    "invoices-list-v2",
     companyId,
     filters?.status || "ALL",
     filters?.clientId || "",
@@ -1278,5 +1321,55 @@ export async function bulkImportInvoices(
     failedCount: errors.length,
     createdInvoices,
     errors,
+  };
+}
+
+export interface ScheduledMaintenanceResult {
+  updatedOverdueCount: number;
+  affectedCompanyIds: string[];
+  executedAt: string;
+}
+
+/**
+ * Transitions past-due SENT invoices to OVERDUE in a single multi-tenant sweep.
+ * Optionally scopes to a single companyId for isolated execution or tests.
+ */
+export async function runScheduledLedgerMaintenance(
+  companyId?: string
+): Promise<ScheduledMaintenanceResult> {
+  const now = new Date();
+  const where: Prisma.InvoiceWhereInput = {
+    status: "SENT",
+    dueDate: { lt: now },
+    ...(companyId ? { companyId } : {}),
+  };
+
+  const candidates = await db.invoice.findMany({
+    where,
+    select: { id: true, companyId: true },
+  });
+
+  if (candidates.length === 0) {
+    return {
+      updatedOverdueCount: 0,
+      affectedCompanyIds: [],
+      executedAt: now.toISOString(),
+    };
+  }
+
+  const updateRes = await db.invoice.updateMany({
+    where: {
+      id: { in: candidates.map((c) => c.id) },
+      status: "SENT",
+    },
+    data: { status: "OVERDUE" },
+  });
+
+  const affectedCompanyIds = Array.from(new Set(candidates.map((c) => c.companyId)));
+
+  return {
+    updatedOverdueCount: updateRes.count,
+    affectedCompanyIds,
+    executedAt: now.toISOString(),
   };
 }

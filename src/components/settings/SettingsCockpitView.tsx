@@ -16,6 +16,7 @@ import {
 } from "@/modules/settings/actions";
 import type {
   CompanySettingsRecord,
+  AuditLogRecord,
   UserProfileRecord,
   ActionState,
   MemberRecord,
@@ -40,6 +41,7 @@ import {
   Loader2,
   Copy,
   Check,
+  FileText,
 } from "lucide-react";
 
 interface SettingsCockpitViewProps {
@@ -47,6 +49,7 @@ interface SettingsCockpitViewProps {
   initialProfile: UserProfileRecord;
   initialMembers?: MemberRecord[];
   initialInvitations?: InvitationRecord[];
+  initialAuditLogs?: AuditLogRecord[];
 }
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -59,15 +62,17 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   CAD: "CA$",
 };
 
-type SettingsTab = "company" | "team" | "profile" | "security";
+type SettingsTab = "company" | "team" | "audit" | "profile" | "security";
 
 export function SettingsCockpitView({
   initialCompany,
   initialProfile,
   initialMembers,
   initialInvitations,
+  initialAuditLogs = [],
 }: SettingsCockpitViewProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>("company");
+  const [auditFilter, setAuditFilter] = useState<string>("ALL");
 
   // Password visibility states for security tab
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -259,6 +264,36 @@ export function SettingsCockpitView({
                 </span>
               </div>
             </button>
+
+            {(initialProfile.role === "OWNER" || initialProfile.role === "ADMIN") && (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "audit"}
+                aria-controls="panel-audit"
+                id="tab-audit"
+                onClick={() => setActiveTab("audit")}
+                className={`flex items-center gap-3 px-4 py-3 rounded-[12px] text-left transition-all min-h-[44px] shrink-0 lg:w-full ${
+                  activeTab === "audit"
+                    ? "bg-white text-ink font-semibold shadow-none border border-line/60"
+                    : "text-ink-2 hover:text-ink hover:bg-white/60 font-medium"
+                }`}
+              >
+                <div
+                  className={`w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0 ${
+                    activeTab === "audit" ? "bg-ink text-white" : "bg-fog text-ink-2"
+                  }`}
+                >
+                  <FileText className="w-4 h-4 stroke-[1.8]" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[14px] leading-tight">Audit log</span>
+                  <span className="text-[12px] text-ink-3 font-normal hidden lg:inline">
+                    Ledger and security trail
+                  </span>
+                </div>
+              </button>
+            )}
 
             <button
               type="button"
@@ -497,6 +532,90 @@ export function SettingsCockpitView({
                         The redline threshold. Projected balance dipping below this number triggers deficit warnings.
                       </p>
                     )}
+                  </div>
+                </div>
+
+                {/* Section 3: Billing Header & Wire Remittance Defaults */}
+                <div className="flex flex-col gap-5 pt-6 border-t border-line">
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-[15px] font-semibold uppercase tracking-wider text-ink-3">
+                      Invoice letterhead and remittance
+                    </h3>
+                    <p className="text-[13px] text-ink-2">
+                      Printed on commercial invoices, downloadable PDFs, and the customer `/pay` link.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="billingEmail" optional>Billing email</Label>
+                      <Input
+                        id="billingEmail"
+                        name="billingEmail"
+                        type="email"
+                        placeholder="billing@company.com"
+                        defaultValue={currentCompany.billingEmail || ""}
+                        isInvalid={Boolean(companyState?.errors?.billingEmail)}
+                        className="min-h-[44px]"
+                      />
+                      {companyState?.errors?.billingEmail && (
+                        <p className="mt-1.5 text-[13px] text-ember-ink">
+                          {companyState.errors.billingEmail[0]}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="phone" optional>Company phone</Label>
+                      <Input
+                        id="phone"
+                        name="phone"
+                        type="text"
+                        placeholder="+92 51 844 2100"
+                        defaultValue={currentCompany.phone || ""}
+                        className="min-h-[44px]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="taxId" optional>Tax ID / NTN</Label>
+                      <Input
+                        id="taxId"
+                        name="taxId"
+                        type="text"
+                        placeholder="e.g. NTN-4829104-7"
+                        defaultValue={currentCompany.taxId || ""}
+                        className="min-h-[44px]"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="address" optional>Registered business address</Label>
+                      <Input
+                        id="address"
+                        name="address"
+                        type="text"
+                        placeholder="Suite, street, city, postal code"
+                        defaultValue={currentCompany.address || ""}
+                        className="min-h-[44px]"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="remittanceInstructions" optional>
+                      Default bank and wire remittance instructions
+                    </Label>
+                    <textarea
+                      id="remittanceInstructions"
+                      name="remittanceInstructions"
+                      rows={3}
+                      placeholder="Bank name, account title, IBAN, and SWIFT routing instructions for client remittances..."
+                      defaultValue={currentCompany.remittanceInstructions || ""}
+                      className="w-full p-3 text-sm rounded-[14px] border border-line bg-fog text-ink placeholder:text-ink-3 focus:bg-white focus:outline-none focus:border-ink transition-colors resize-none"
+                    />
                   </div>
                 </div>
 
@@ -777,7 +896,88 @@ export function SettingsCockpitView({
             </div>
           )}
 
-          {/* Tab 3: User Profile Settings */}
+          {/* Tab 3: Audit Log */}
+          {activeTab === "audit" && (
+            <div
+              role="tabpanel"
+              id="panel-audit"
+              aria-labelledby="tab-audit"
+              className="rounded-[16px] border border-line bg-white p-6 sm:p-8"
+            >
+              <div className="mb-6 pb-5 border-b border-line flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-semibold text-ink">Workspace audit trail</h2>
+                  <p className="text-[14px] text-ink-2 mt-1">
+                    Immutable activity record covering ledger updates, CSV imports, and workspace changes.
+                  </p>
+                </div>
+                <select
+                  aria-label="Filter audit entity"
+                  value={auditFilter}
+                  onChange={(e) => setAuditFilter(e.target.value)}
+                  className="h-11 px-3.5 rounded-[10px] border border-line bg-white text-xs font-mono text-ink focus:outline-none focus:border-ink"
+                >
+                  <option value="ALL">All entities</option>
+                  <option value="WORKSPACE">Workspace</option>
+                  <option value="CLIENT">Clients</option>
+                  <option value="INVOICE">Invoices</option>
+                  <option value="EXPENSE">Expenses</option>
+                  <option value="INVITATION">Invitations</option>
+                </select>
+              </div>
+
+              {(() => {
+                const visibleLogs =
+                  auditFilter === "ALL"
+                    ? initialAuditLogs
+                    : initialAuditLogs.filter((entry) => entry.entityType === auditFilter);
+
+                if (visibleLogs.length === 0) {
+                  return (
+                    <div className="py-12 text-center border border-dashed border-line rounded-[12px] bg-fog/20">
+                      <p className="text-sm font-medium text-ink">No audit events recorded</p>
+                      <p className="text-xs text-ink-3 mt-1">
+                        Actions taken by team members will appear here chronologically.
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="divide-y divide-line border border-line rounded-[12px] overflow-hidden">
+                    {visibleLogs.map((entry) => (
+                      <div
+                        key={entry.id}
+                        className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 hover:bg-fog/30 transition-colors"
+                      >
+                        <div className="flex flex-col gap-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="px-2 py-0.5 rounded bg-fog border border-line text-[11px] font-mono text-ink">
+                              {entry.entityType}
+                            </span>
+                            <span className="text-xs font-semibold text-ink">
+                              {entry.action}
+                            </span>
+                            <span className="text-xs text-ink-3 font-mono truncate">
+                              #{entry.entityId.slice(0, 8)}
+                            </span>
+                          </div>
+                          <div className="text-xs text-ink-2">
+                            {entry.actorName || entry.actorEmail || "System"}
+                          </div>
+                        </div>
+                        <span className="text-[11px] font-mono text-ink-3 shrink-0">
+                          {formatInviteDate(entry.createdAt)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* Tab 4: User Profile Settings */}
           {activeTab === "profile" && (
             <div
               role="tabpanel"
