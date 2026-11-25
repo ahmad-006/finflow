@@ -10,6 +10,8 @@ import {
   Calendar,
   HelpCircle,
   Download,
+  ChevronDown,
+  Eye,
 } from "lucide-react";
 import type {
   ForecastSummary,
@@ -32,6 +34,7 @@ import {
   StatementSentence,
 } from "@/lib/sentences";
 import { TreasurySettingsModal } from "./TreasurySettingsModal";
+import { DayInspectorModal } from "./DayInspectorModal";
 import { ExpenseFormDrawer } from "@/components/expenses/ExpenseFormDrawer";
 import { cn } from "@/lib/utils";
 
@@ -66,6 +69,8 @@ export function CashFlowCockpitView({
   // Modals and Drawers
   const [isSettingsOpen, setIsSettingsOpen] = React.useState<boolean>(false);
   const [isExpenseDrawerOpen, setIsExpenseDrawerOpen] = React.useState<boolean>(false);
+  const [inspectedPoint, setInspectedPoint] = React.useState<DailyForecastPoint | null>(null);
+  const [showMethodology, setShowMethodology] = React.useState<boolean>(false);
 
   const summary =
     forecastOverride && forecastOverride.base === initialForecast
@@ -667,14 +672,25 @@ export function CashFlowCockpitView({
                     </div>
                   </div>
 
-                  {/* Card Footer: Details Link button with 44px min height */}
-                  <div className="pt-2 border-t border-line/60">
+                  {/* Card Footer: Quick view & Details triggers with 44px min height */}
+                  <div className="pt-2 border-t border-line/60 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setInspectedPoint(point);
+                      }}
+                      className="w-full min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-line bg-white hover:bg-fog text-xs font-medium text-ink transition-colors cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-ink-3" />
+                      <span>Quick view</span>
+                    </button>
                     <Link
                       href={`/cash-flow/${point.date}?mode=${mode}`}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-full min-h-[44px] flex items-center justify-center gap-1.5 px-4 py-2 rounded-full border border-line bg-fog hover:bg-fog-2 text-xs font-mono font-medium text-ink transition-colors"
+                      className="w-full min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-line bg-fog hover:bg-fog-2 text-xs font-mono font-medium text-ink transition-colors"
                     >
-                      <span>View day details</span>
+                      <span>Day details</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                   </div>
@@ -839,15 +855,29 @@ export function CashFlowCockpitView({
 
                         {/* Details Action */}
                         <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                          <Link
-                            href={`/cash-flow/${point.date}?mode=${mode}`}
-                            className="inline-flex items-center justify-center min-h-[44px] px-3.5 py-1.5 rounded-full text-xs font-mono font-medium text-ink bg-fog/60 hover:bg-fog border border-line/60 transition-colors"
-                            title={`Inspect ${point.displayDate}`}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <span>Details</span>
-                            <ArrowRight className="w-3.5 h-3.5 ml-1" />
-                          </Link>
+                          <div className="inline-flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setInspectedPoint(point);
+                              }}
+                              className="inline-flex items-center justify-center min-h-[44px] px-3 py-1.5 rounded-full text-xs font-medium text-ink bg-white hover:bg-fog border border-line transition-colors cursor-pointer"
+                              title={`Quick view ${point.displayDate}`}
+                            >
+                              <Eye className="w-3.5 h-3.5 mr-1 text-ink-3" />
+                              <span>Quick view</span>
+                            </button>
+                            <Link
+                              href={`/cash-flow/${point.date}?mode=${mode}`}
+                              className="inline-flex items-center justify-center min-h-[44px] px-3 py-1.5 rounded-full text-xs font-mono font-medium text-ink bg-fog/60 hover:bg-fog border border-line/60 transition-colors"
+                              title={`Inspect ${point.displayDate}`}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <span>Details</span>
+                              <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -985,52 +1015,65 @@ export function CashFlowCockpitView({
         })()}
       </section>
 
-      {/* Explanatory Footer Container */}
-      <footer className="rounded-[16px] border border-line bg-fog/40 p-6 sm:p-8 mt-12 mb-6">
-        <div className="flex items-center gap-2 mb-4">
-          <HelpCircle className="w-4 h-4 text-ink-3" />
-          <h2 className="text-base font-semibold text-ink tracking-tight">
-            How this forecast works
-          </h2>
-        </div>
+      {/* Compact Forecast Methodology Disclosure */}
+      <footer className="mt-8 mb-6 border-t border-line pt-5">
+        <button
+          type="button"
+          onClick={() => setShowMethodology((prev) => !prev)}
+          aria-expanded={showMethodology}
+          className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2 rounded-full border border-line bg-fog/50 hover:bg-fog text-xs font-medium text-ink transition-colors cursor-pointer"
+        >
+          <HelpCircle className="w-3.5 h-3.5 text-ink-3 shrink-0" />
+          <span>Forecast methodology</span>
+          <ChevronDown
+            className={cn(
+              "w-3.5 h-3.5 text-ink-3 transition-transform",
+              showMethodology && "rotate-180"
+            )}
+          />
+        </button>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-ink-2 leading-relaxed">
-          <div>
-            <h3 className="font-semibold text-ink mb-1">Dynamic latency adjustment</h3>
-            <p>
-              Inflow dates reflect each client historical settlement timing. If a client pays 12 days
-              after invoice due date on average, receivables shift forward 12 days in the expected
-              trajectory.
-            </p>
+        {showMethodology && (
+          <div className="mt-3 rounded-[12px] border border-line bg-fog/40 p-4 sm:p-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-ink-2 leading-relaxed">
+              <div>
+                <h3 className="font-semibold text-ink mb-0.5">Dynamic latency adjustment</h3>
+                <p>
+                  Expected inflows shift each receivable by its client&apos;s historical payment delay after due date.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-ink mb-0.5">Past-due collection haircut</h3>
+                <p>
+                  Overdue receivables on Day 0 carry a 0.70 collection factor to reflect aged settlement risk.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-ink mb-0.5">Operational liabilities</h3>
+                <p>
+                  Payables and recurring expenses deduct at full nominal value on their scheduled due dates.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-ink mb-0.5">Safety buffer protection</h3>
+                <p>
+                  Deficit alerts mark days where projected cash falls below your safety buffer threshold.
+                </p>
+              </div>
+            </div>
           </div>
-
-          <div>
-            <h3 className="font-semibold text-ink mb-1">Past-due collection haircut</h3>
-            <p>
-              Overdue receivables on Day 0 include a 30 percent haircut (0.70 collection factor).
-              This accounts for collection delays and non-payment risk on aged debt.
-            </p>
-          </div>
-
-          <div>
-            <h3 className="font-semibold text-ink mb-1">Operational liabilities</h3>
-            <p>
-              Accounts payable and recurring expenses are recognized at full nominal value on their
-              exact scheduled dates.
-            </p>
-          </div>
-
-          <div>
-            <h3 className="font-semibold text-ink mb-1">Safety buffer protection</h3>
-            <p>
-              Deficit alerts trigger when projected liquidity falls below your safety buffer
-              threshold, marking risk windows in the curve and waterfall table.
-            </p>
-          </div>
-        </div>
+        )}
       </footer>
 
       {/* Modals and Drawers */}
+      <DayInspectorModal
+        point={inspectedPoint}
+        isOpen={inspectedPoint !== null}
+        onClose={() => setInspectedPoint(null)}
+        mode={mode}
+        baseCurrency={baseCurrency}
+        safetyBuffer={summary.safetyBuffer}
+      />
       {canAdjustReserve && (
         <TreasurySettingsModal
           isOpen={isSettingsOpen}

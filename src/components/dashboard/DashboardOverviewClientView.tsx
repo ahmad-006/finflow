@@ -52,6 +52,109 @@ export interface DashboardOverviewClientViewProps {
   role?: string;
 }
 
+function getSettlementProgress(inv: ActionableInvoice): {
+  isPartial: boolean;
+  settledPct: number;
+} {
+  if (inv.status === "PAID" || inv.remainingNativeAmount === undefined) {
+    return { isPartial: false, settledPct: 0 };
+  }
+  const total = new Decimal(inv.amount);
+  const remaining = new Decimal(inv.remainingNativeAmount);
+  if (!total.gt(0) || !remaining.lt(total)) {
+    return { isPartial: false, settledPct: 0 };
+  }
+  const settled = Decimal.max(0, total.minus(Decimal.max(0, remaining)));
+  const settledPct = Decimal.min(100, settled.div(total).mul(100))
+    .toDecimalPlaces(1, Decimal.ROUND_HALF_UP)
+    .toNumber();
+  return { isPartial: true, settledPct };
+}
+
+interface ActionableInvoiceRowProps {
+  inv: ActionableInvoice;
+  baseCurrency: string;
+  variant: "overdue" | "sent";
+  canPayBilling: boolean;
+  isRecentlySettled: boolean;
+  onMarkPaid: (inv: ActionableInvoice) => void;
+}
+
+function ActionableInvoiceRow({
+  inv,
+  baseCurrency,
+  variant,
+  canPayBilling,
+  isRecentlySettled,
+  onMarkPaid,
+}: ActionableInvoiceRowProps) {
+  const { isPartial, settledPct } = getSettlementProgress(inv);
+  const isPaid = inv.status === "PAID";
+  const badgeVariant = isPaid ? "paid" : variant;
+  const badgeLabel = isPaid ? "Paid" : variant === "overdue" ? "Overdue" : "Sent";
+
+  return (
+    <div
+      className={cn(
+        "p-3.5 sm:px-0 sm:py-3.5 rounded-[12px] sm:rounded-none bg-fog/40 sm:bg-transparent border border-line sm:border-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-4 transition-colors",
+        isRecentlySettled && "bg-moss-tint/40 sm:bg-moss-tint/40 sm:rounded-[12px] sm:px-3 sm:-mx-3"
+      )}
+    >
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2 sm:block">
+          <p className="text-[16px] sm:text-[17px] font-medium text-ink truncate">
+            {inv.client}
+          </p>
+          <span className="sm:hidden">
+            <Badge variant={badgeVariant}>{badgeLabel}</Badge>
+          </span>
+        </div>
+        <p className="text-[13px] sm:text-[14px] text-ink-3 mt-0.5">
+          {inv.number} · {inv.dueText}
+        </p>
+        {isPartial && (
+          <div className="mt-2 flex items-center gap-2 max-w-[220px]">
+            <div
+              className="flex-1 h-[3px] rounded-full bg-line overflow-hidden"
+              role="progressbar"
+              aria-valuenow={settledPct}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={`${settledPct}% settled`}
+            >
+              <div
+                className="h-full bg-moss rounded-full"
+                style={{ width: `${settledPct}%` }}
+              />
+            </div>
+            <span className="text-[11px] font-mono text-moss tabular-nums shrink-0">
+              {settledPct}% settled
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0">
+        <Figure value={inv.amount} currency={baseCurrency} size="row" />
+        {isPaid ? (
+          <Badge variant="paid" className="hidden sm:inline-flex">
+            Paid
+          </Badge>
+        ) : canPayBilling ? (
+          <Button
+            variant="secondary"
+            size="compact"
+            onClick={() => onMarkPaid(inv)}
+            className="min-h-[44px] lg:min-h-[36px]"
+          >
+            Mark paid
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function DashboardOverviewClientView({
   initialForecast,
   initialOnTimeForecast,
@@ -256,10 +359,10 @@ export function DashboardOverviewClientView({
       <h1 className="sr-only">Overview</h1>
 
       {/* Band 1: White band - Hero Figure & Live InkLine Chart */}
-      <section className="bg-white pt-6 pb-8 md:pt-8 md:pb-10">
+      <section className="bg-white pt-5 pb-6 md:pt-6 md:pb-8">
         <div className="mx-auto max-w-[1200px] px-[var(--gutter)]">
           {/* Header row */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-5">
             <div>
               {activeDay === 0 ? (
                 <p className="text-[13px] text-ink-3 font-medium uppercase tracking-[0.06em]">
@@ -366,7 +469,7 @@ export function DashboardOverviewClientView({
           </div>
 
           {/* Graph Subtitle & Legend */}
-          <div className="mt-8 flex flex-wrap items-center justify-between gap-3 text-xs text-ink-3 border-t border-line/60 pt-4">
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-xs text-ink-3 border-t border-line/60 pt-3.5">
             <div className="flex items-center gap-1.5">
               <span className="font-semibold text-ink">30-Day Cash Runway Projection</span>
               <span className="hidden sm:inline">
@@ -428,7 +531,7 @@ export function DashboardOverviewClientView({
                 type="button"
                 onClick={() => setActiveDay((prev) => Math.max(0, prev - 1))}
                 disabled={safeActiveDay === 0}
-                className="min-h-[44px] min-w-[44px] px-3.5 py-2 rounded-lg border border-line bg-white hover:bg-fog disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium text-ink transition-colors cursor-pointer inline-flex items-center justify-center select-none"
+                className="min-h-[44px] min-w-[44px] px-3.5 py-2 rounded-[12px] border border-line bg-white hover:bg-fog disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium text-ink transition-colors cursor-pointer inline-flex items-center justify-center select-none"
                 aria-label="Previous day"
               >
                 ← Prev day
@@ -437,7 +540,7 @@ export function DashboardOverviewClientView({
                 type="button"
                 onClick={() => setActiveDay((prev) => Math.min(30, prev + 1))}
                 disabled={safeActiveDay >= 30}
-                className="min-h-[44px] min-w-[44px] px-3.5 py-2 rounded-lg border border-line bg-white hover:bg-fog disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium text-ink transition-colors cursor-pointer inline-flex items-center justify-center select-none"
+                className="min-h-[44px] min-w-[44px] px-3.5 py-2 rounded-[12px] border border-line bg-white hover:bg-fog disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium text-ink transition-colors cursor-pointer inline-flex items-center justify-center select-none"
                 aria-label="Next day"
               >
                 Next day →
@@ -447,7 +550,7 @@ export function DashboardOverviewClientView({
               <button
                 type="button"
                 onClick={() => setActiveDay(0)}
-                className="min-h-[44px] px-3.5 py-2 rounded-lg border border-line bg-white hover:bg-fog text-xs font-medium text-ink transition-colors cursor-pointer inline-flex items-center justify-center select-none"
+                className="min-h-[44px] px-3.5 py-2 rounded-[12px] border border-line bg-white hover:bg-fog text-xs font-medium text-ink transition-colors cursor-pointer inline-flex items-center justify-center select-none"
               >
                 Reset to today
               </button>
@@ -457,7 +560,7 @@ export function DashboardOverviewClientView({
       </section>
 
       {/* Band 2: Fog band - 4 Supporting Figures directly on band */}
-      <section className="bg-fog py-10 md:py-12">
+      <section className="bg-fog py-7 md:py-9">
         <div className="mx-auto max-w-[1200px] px-[var(--gutter)]">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
             {/* Column 1: Receivables */}
@@ -513,12 +616,12 @@ export function DashboardOverviewClientView({
       </section>
 
       {/* Band 3: White band - Ledger Rows (Needs attention & Next 14 days) */}
-      <section className="bg-white py-12 md:py-16">
+      <section className="bg-white py-8 md:py-10">
         <div className="mx-auto max-w-[1200px] px-[var(--gutter)]">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
             {/* Left Ledger: Needs attention */}
             <div>
-              <div className="flex items-center justify-between pb-4 border-b border-line-strong">
+              <div className="flex items-center justify-between pb-3 border-b border-line-strong">
                 <h2 className="text-[20px] sm:text-[24px] font-semibold text-ink tracking-tight">
                   Needs attention
                 </h2>
@@ -530,10 +633,10 @@ export function DashboardOverviewClientView({
                 </Link>
               </div>
 
-              <div className="divide-y divide-line sm:divide-y">
+              <div className="mt-2.5 sm:mt-0 flex flex-col gap-2 sm:gap-0 sm:divide-y sm:divide-line">
                 {/* Breach Warning Row */}
                 {hasBreach && (
-                  <div className="p-4 sm:p-0 sm:py-5 rounded-[12px] sm:rounded-none bg-ember-tint/40 sm:bg-transparent border border-ember/20 sm:border-0 sm:border-b sm:border-line flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 my-2 sm:my-0">
+                  <div className="p-3.5 sm:px-0 sm:py-3.5 rounded-[12px] sm:rounded-none bg-ember-tint/40 sm:bg-transparent border border-ember/20 sm:border-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-4">
                     <div>
                       <p className="text-[16px] sm:text-[17px] font-medium text-ember-ink">
                         Cash falls below your buffer
@@ -551,50 +654,20 @@ export function DashboardOverviewClientView({
 
                 {/* Overdue Invoice Rows */}
                 {activeOverdue.length === 0 && !hasBreach ? (
-                  <div className="py-8 text-center text-xs text-ink-3">
+                  <div className="py-6 text-center text-xs text-ink-3">
                     No overdue receivables. All collection cycles are current.
                   </div>
                 ) : (
                   activeOverdue.map((inv) => (
-                    <div
+                    <ActionableInvoiceRow
                       key={inv.id}
-                      className={cn(
-                        "p-4 sm:p-0 sm:py-5 rounded-[12px] sm:rounded-none bg-fog/40 sm:bg-transparent border border-line sm:border-0 sm:border-b sm:border-line flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 my-2 sm:my-0 transition-colors",
-                        recentlySettledId === inv.id && "bg-moss-tint/40 sm:bg-moss-tint/40 rounded-[12px] sm:rounded-[14px] sm:px-3 sm:-mx-3"
-                      )}
-                    >
-                      <div className="min-w-0">
-                        <div className="flex items-center justify-between sm:block">
-                          <p className="text-[16px] sm:text-[17px] font-medium text-ink truncate">
-                            {inv.client}
-                          </p>
-                          <span className="sm:hidden">
-                            <Badge variant={inv.status === "PAID" ? "paid" : "overdue"}>
-                              {inv.status === "PAID" ? "Paid" : "Overdue"}
-                            </Badge>
-                          </span>
-                        </div>
-                        <p className="text-[13px] sm:text-[14px] text-ink-3 mt-0.5">
-                          {inv.number} · {inv.dueText}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0 pt-2 sm:pt-0 border-t border-line/60 sm:border-0">
-                        <Figure value={inv.amount} currency={baseCurrency} size="row" />
-                        {inv.status === "PAID" ? (
-                          <Badge variant="paid" className="hidden sm:inline-flex">Paid</Badge>
-                        ) : canPayBilling ? (
-                          <Button
-                            variant="secondary"
-                            size="compact"
-                            onClick={() => handleMarkInvoicePaid(inv)}
-                            className="min-h-[44px] lg:min-h-[36px]"
-                          >
-                            Mark paid
-                          </Button>
-                        ) : null}
-                      </div>
-                    </div>
+                      inv={inv}
+                      baseCurrency={baseCurrency}
+                      variant="overdue"
+                      canPayBilling={canPayBilling}
+                      isRecentlySettled={recentlySettledId === inv.id}
+                      onMarkPaid={handleMarkInvoicePaid}
+                    />
                   ))
                 )}
               </div>
@@ -602,7 +675,7 @@ export function DashboardOverviewClientView({
 
             {/* Right Ledger: Next 14 days */}
             <div>
-              <div className="flex items-center justify-between pb-4 border-b border-line-strong">
+              <div className="flex items-center justify-between pb-3 border-b border-line-strong">
                 <h2 className="text-[20px] sm:text-[24px] font-semibold text-ink tracking-tight">
                   Next 14 days
                 </h2>
@@ -614,65 +687,35 @@ export function DashboardOverviewClientView({
                 </Link>
               </div>
 
-              <div className="divide-y divide-line sm:divide-y">
+              <div className="mt-2.5 sm:mt-0 flex flex-col gap-2 sm:gap-0 sm:divide-y sm:divide-line">
                 {upcomingInvoices.length === 0 && upcomingExpenses.length === 0 ? (
-                  <div className="py-8 text-center text-xs text-ink-3">
+                  <div className="py-6 text-center text-xs text-ink-3">
                     No scheduled inflows or outflows maturing over the next 14 days.
                   </div>
                 ) : (
                   <>
                     {upcomingInvoices.map((inv) => (
-                      <div
+                      <ActionableInvoiceRow
                         key={inv.id}
-                        className={cn(
-                          "p-4 sm:p-0 sm:py-5 rounded-[12px] sm:rounded-none bg-fog/40 sm:bg-transparent border border-line sm:border-0 sm:border-b sm:border-line flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 my-2 sm:my-0 transition-colors",
-                          recentlySettledId === inv.id && "bg-moss-tint/40 sm:bg-moss-tint/40 rounded-[12px] sm:rounded-[14px] sm:px-3 sm:-mx-3"
-                        )}
-                      >
-                        <div className="min-w-0">
-                          <div className="flex items-center justify-between sm:block">
-                            <p className="text-[16px] sm:text-[17px] font-medium text-ink truncate">
-                              {inv.client}
-                            </p>
-                            <span className="sm:hidden">
-                              <Badge variant={inv.status === "PAID" ? "paid" : "sent"}>
-                                {inv.status === "PAID" ? "Paid" : "Sent"}
-                              </Badge>
-                            </span>
-                          </div>
-                          <p className="text-[13px] sm:text-[14px] text-ink-3 mt-0.5">
-                            {inv.number} · {inv.dueText}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0 pt-2 sm:pt-0 border-t border-line/60 sm:border-0">
-                          <Figure value={inv.amount} currency={baseCurrency} size="row" />
-                          {inv.status === "PAID" ? (
-                            <Badge variant="paid" className="hidden sm:inline-flex">Paid</Badge>
-                          ) : canPayBilling ? (
-                            <Button
-                              variant="secondary"
-                              size="compact"
-                              onClick={() => handleMarkInvoicePaid(inv)}
-                              className="min-h-[44px] lg:min-h-[36px]"
-                            >
-                              Mark paid
-                            </Button>
-                          ) : null}
-                        </div>
-                      </div>
+                        inv={inv}
+                        baseCurrency={baseCurrency}
+                        variant="sent"
+                        canPayBilling={canPayBilling}
+                        isRecentlySettled={recentlySettledId === inv.id}
+                        onMarkPaid={handleMarkInvoicePaid}
+                      />
                     ))}
 
                     {upcomingExpenses.map((exp) => (
                       <div
                         key={exp.id}
                         className={cn(
-                          "p-4 sm:p-0 sm:py-5 rounded-[12px] sm:rounded-none bg-fog/40 sm:bg-transparent border border-line sm:border-0 sm:border-b sm:border-line flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 my-2 sm:my-0 transition-colors",
-                          recentlySettledExpenseId === exp.id && "bg-moss-tint/40 sm:bg-moss-tint/40 rounded-[12px] sm:rounded-[14px] sm:px-3 sm:-mx-3"
+                          "p-3.5 sm:px-0 sm:py-3.5 rounded-[12px] sm:rounded-none bg-fog/40 sm:bg-transparent border border-line sm:border-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-4 transition-colors",
+                          recentlySettledExpenseId === exp.id && "bg-moss-tint/40 sm:bg-moss-tint/40 sm:rounded-[12px] sm:px-3 sm:-mx-3"
                         )}
                       >
                         <div className="min-w-0">
-                          <div className="flex items-center justify-between sm:block">
+                          <div className="flex items-center justify-between gap-2 sm:block">
                             <p className="text-[16px] sm:text-[17px] font-medium text-ink truncate">
                               {exp.title}
                             </p>
@@ -687,7 +730,7 @@ export function DashboardOverviewClientView({
                           </p>
                         </div>
 
-                        <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0 pt-2 sm:pt-0 border-t border-line/60 sm:border-0">
+                        <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0">
                           <Figure value={exp.amount} currency={baseCurrency} size="row" />
                           {exp.isPaid ? (
                             <Badge variant="paid" className="hidden sm:inline-flex">Paid</Badge>

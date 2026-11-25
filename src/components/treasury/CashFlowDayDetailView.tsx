@@ -8,6 +8,8 @@ import {
   ArrowRight,
   AlertTriangle,
   Loader2,
+  HelpCircle,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatMoney } from "@/lib/format";
@@ -27,6 +29,7 @@ export function CashFlowDayDetailView({ day, mode = "expected" }: CashFlowDayDet
   const [settlingInvoiceId, setSettlingInvoiceId] = React.useState<string | null>(null);
   const [settlingExpenseId, setSettlingExpenseId] = React.useState<string | null>(null);
   const [actionError, setActionError] = React.useState<string | null>(null);
+  const [showMethodology, setShowMethodology] = React.useState<boolean>(false);
 
   const isBufferWarning =
     !day.isBreach && day.closingBalance < day.safetyBuffer * 1.25;
@@ -247,7 +250,7 @@ export function CashFlowDayDetailView({ day, mode = "expected" }: CashFlowDayDet
       </div>
 
       {/* Main Content: Dual Inflow and Outflow Ledgers */}
-      <div className="space-y-10 my-8">
+      <div className="space-y-8 my-6">
         {/* Section 1: Inflows */}
         <section aria-labelledby="inflows-heading">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
@@ -588,22 +591,59 @@ export function CashFlowDayDetailView({ day, mode = "expected" }: CashFlowDayDet
         </section>
       </div>
 
-      {/* Educational Explanatory Box */}
-      <div className="mt-12 p-6 rounded-[16px] bg-fog/40 border border-line text-xs">
-        <h3 className="font-serif font-bold text-ink text-sm mb-2">
-          How this day&apos;s cash balance is modeled
-        </h3>
-        <p className="text-ink-2 leading-relaxed mb-3">
-          The opening balance represents liquidity at 00:00 UTC, inherited from the previous day&apos;s closing position.
-          Maturing inflows add cash based on client payment latency history. Scheduled operational outflows are
-          deducted at full face value. If the closing balance drops below your designated safety buffer of{" "}
-          {formatMoney(day.safetyBuffer, day.baseCurrency)}, the system flags a deficit risk alert.
-        </p>
-        <div className="flex items-center gap-4 text-ink-3 font-mono text-[11px]">
-          <span>• Base currency: {day.baseCurrency}</span>
-          <span>• Mode: {mode === "expected" ? "Expected (Latency-adjusted)" : "On-Time (Due dates)"}</span>
-        </div>
-      </div>
+      {/* Compact Forecast Methodology Disclosure */}
+      <footer className="mt-8 mb-4 border-t border-line pt-5">
+        <button
+          type="button"
+          onClick={() => setShowMethodology((prev) => !prev)}
+          aria-expanded={showMethodology}
+          className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2 rounded-full border border-line bg-fog/50 hover:bg-fog text-xs font-medium text-ink transition-colors cursor-pointer"
+        >
+          <HelpCircle className="w-3.5 h-3.5 text-ink-3 shrink-0" />
+          <span>Forecast methodology</span>
+          <ChevronDown
+            className={cn(
+              "w-3.5 h-3.5 text-ink-3 transition-transform",
+              showMethodology && "rotate-180"
+            )}
+          />
+        </button>
+
+        {showMethodology && (
+          <div className="mt-3 rounded-[12px] border border-line bg-fog/40 p-4 sm:p-5 text-xs">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-ink-2 leading-relaxed">
+              <div>
+                <h3 className="font-semibold text-ink mb-0.5">Opening balance continuity</h3>
+                <p>
+                  Opening cash at 00:00 UTC carries forward directly from the prior day&apos;s closing position.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-ink mb-0.5">Receivable timing &amp; haircut</h3>
+                <p>
+                  Expected mode shifts inflows by client payment latency and applies a 0.70 overdue factor.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-ink mb-0.5">Nominal operational outflows</h3>
+                <p>
+                  Scheduled payables and recurring expenses deduct at full face value on their due dates.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-ink mb-0.5">Safety buffer alert</h3>
+                <p>
+                  Closing balances below {formatMoney(day.safetyBuffer, day.baseCurrency)} trigger a deficit risk flag.
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 pt-2.5 border-t border-line/60 flex flex-wrap items-center gap-4 text-ink-3 font-mono text-[11px]">
+              <span>Base currency: {day.baseCurrency}</span>
+              <span>Mode: {mode === "expected" ? "Expected (latency-adjusted)" : "On-time (due dates)"}</span>
+            </div>
+          </div>
+        )}
+      </footer>
     </div>
   );
 }
