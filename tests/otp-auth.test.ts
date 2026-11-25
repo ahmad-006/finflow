@@ -9,7 +9,6 @@ import {
 import {
   registerUser,
   verifySignupOtp,
-  resendSignupOtp,
 } from "@/modules/auth/service";
 
 describe("Domain 9: Production Hardening - OTP Authentication Security", () => {

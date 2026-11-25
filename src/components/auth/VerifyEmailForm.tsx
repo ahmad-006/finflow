@@ -172,7 +172,7 @@ export function VerifyEmailForm({ initialEmail }: VerifyEmailFormProps) {
       router.push("/login");
       router.refresh();
     } catch {
-      window.location.href = "/login";
+      router.push("/login");
     }
   };
 

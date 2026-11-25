@@ -1,6 +1,6 @@
 import * as React from "react";
 import type { InvoiceKPIs } from "@/modules/invoices/types";
-import { formatMoney } from "@/modules/invoices/currency";
+import { formatMoney } from "@/lib/format";
 
 interface InvoiceKPIStripProps {
   kpis: InvoiceKPIs;
@@ -8,7 +8,7 @@ interface InvoiceKPIStripProps {
 }
 
 export function InvoiceKPIStrip({ kpis, baseCurrency = "PKR" }: InvoiceKPIStripProps) {
-  const currencyCode = (baseCurrency as any) || "PKR";
+  const currencyCode = baseCurrency || "PKR";
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 py-4 border-y border-line">

@@ -10,7 +10,6 @@ import { Figure } from "@/components/line/Figure";
 import { Badge } from "@/components/ui/badge";
 import { series, DEMO, formatDemoDate } from "@/lib/demo-forecast";
 import { StatementSentence } from "@/lib/sentences";
-import { cn } from "@/lib/utils";
 
 export default function HomePage() {
   const [activeDay, setActiveDay] = React.useState(17);

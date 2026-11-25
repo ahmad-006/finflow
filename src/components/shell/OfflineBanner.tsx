@@ -3,27 +3,44 @@
 import * as React from "react";
 import { WifiOff, CheckCircle2 } from "lucide-react";
 
+function subscribeNetworkStatus(callback: () => void) {
+  window.addEventListener("online", callback);
+  window.addEventListener("offline", callback);
+  return () => {
+    window.removeEventListener("online", callback);
+    window.removeEventListener("offline", callback);
+  };
+}
+
+function getOfflineSnapshot() {
+  return typeof navigator !== "undefined" ? !navigator.onLine : false;
+}
+
+function getServerOfflineSnapshot() {
+  return false;
+}
+
 export function OfflineBanner() {
-  const [isOffline, setIsOffline] = React.useState<boolean>(false);
+  const isOffline = React.useSyncExternalStore(
+    subscribeNetworkStatus,
+    getOfflineSnapshot,
+    getServerOfflineSnapshot
+  );
   const [showRestored, setShowRestored] = React.useState<boolean>(false);
 
   React.useEffect(() => {
-    // Check initial online status
-    if (typeof window !== "undefined" && typeof navigator !== "undefined") {
-      setIsOffline(!navigator.onLine);
-    }
+    let restoredTimer: ReturnType<typeof setTimeout> | null = null;
 
     function handleOnline() {
-      setIsOffline(false);
       setShowRestored(true);
-      const timer = setTimeout(() => {
+      if (restoredTimer) clearTimeout(restoredTimer);
+      restoredTimer = setTimeout(() => {
         setShowRestored(false);
       }, 4000);
-      return () => clearTimeout(timer);
     }
 
     function handleOffline() {
-      setIsOffline(true);
+      if (restoredTimer) clearTimeout(restoredTimer);
       setShowRestored(false);
     }
 
@@ -31,6 +48,7 @@ export function OfflineBanner() {
     window.addEventListener("offline", handleOffline);
 
     return () => {
+      if (restoredTimer) clearTimeout(restoredTimer);
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };

@@ -1,6 +1,5 @@
 import { describe, it, expect } from "bun:test";
 import fs from "node:fs";
-import { jsPDF } from "jspdf";
 import {
   toInvoiceDocumentModel,
   formatDocumentMoney,
@@ -13,7 +12,6 @@ import {
   getInvoicePDFArrayBuffer,
   downloadInvoicePDF,
   CURRENCY_SYMBOLS,
-  DEFAULT_EXCHANGE_RATES,
 } from "@/modules/documents";
 import type { InvoiceDocumentModel } from "@/modules/documents";
 
@@ -238,7 +236,9 @@ describe("Domain 4: Vector PDF Engine & Invoice Document Model", () => {
       expect(doc).toBeDefined();
 
       // Verify A4 dimensions in mm: 210 x 297 mm
-      const internal = (doc as any).internal;
+      const internal = (doc as unknown as {
+        internal: { pageSize: { getWidth: () => number; getHeight: () => number } };
+      }).internal;
       const pageSize = internal.pageSize;
       expect(Math.round(pageSize.getWidth())).toBe(210);
       expect(Math.round(pageSize.getHeight())).toBe(297);
@@ -246,11 +246,7 @@ describe("Domain 4: Vector PDF Engine & Invoice Document Model", () => {
 
     it("should embed document metadata matching invoice and company contracts", () => {
       const doc = generateInvoicePDF(sampleInvoice);
-      const internal = (doc as any).internal;
-      // jsPDF stores document properties
-      const props = (doc as any).getDocumentProperty
-        ? (doc as any).getDocumentProperty()
-        : null;
+      expect(doc.internal).toBeDefined();
 
       // Ensure doc generates without throwing
       expect(doc.getNumberOfPages()).toBeGreaterThanOrEqual(1);
@@ -355,9 +351,10 @@ describe("Domain 4: Vector PDF Engine & Invoice Document Model", () => {
     it("should trigger client-side download with correct filename via downloadInvoicePDF", () => {
       let writtenFile = "";
       const originalWriteFileSync = fs.writeFileSync;
-      (fs as any).writeFileSync = function (file: string, _data: any) {
-        writtenFile = String(file);
-      };
+      (fs as unknown as { writeFileSync: (file: string, data: unknown) => void }).writeFileSync =
+        function (file: string) {
+          writtenFile = String(file);
+        };
 
       try {
         downloadInvoicePDF(sampleInvoice);

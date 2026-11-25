@@ -1,5 +1,3 @@
-import type { UserRole } from "./types";
-
 export const ROLES = {
   OWNER: "OWNER",
   ADMIN: "ADMIN",

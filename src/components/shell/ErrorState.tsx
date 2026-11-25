@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { WifiOff, Database, AlertCircle, RefreshCw, ArrowLeft } from "lucide-react";
+import { WifiOff, AlertCircle, RefreshCw, ArrowLeft } from "lucide-react";
 import { isDatabaseOrNetworkError, formatUserError, categorizeError } from "@/lib/errors";
 
 export interface ErrorStateProps {

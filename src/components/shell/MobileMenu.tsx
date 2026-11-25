@@ -85,8 +85,8 @@ export function MobileMenu({
         } else {
           await logoutAction();
         }
-      } catch (err) {
-        window.location.href = "/logout";
+      } catch {
+        window.location.assign("/logout");
       }
     });
   };

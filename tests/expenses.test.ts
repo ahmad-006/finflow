@@ -1,9 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "bun:test";
 import { db } from "@/lib/db";
 import {
-  EXPENSE_CATEGORIES,
-  EXPENSE_RECURRENCES,
-  EXPENSE_STATUSES,
   createExpenseSchema,
   updateExpenseSchema,
   markExpensePaidSchema,
@@ -19,7 +16,6 @@ import {
   markExpenseAsPaid,
   getExpenseKPIs,
 } from "@/modules/expenses";
-import type { ExpenseCategory, ExpenseRecurrence } from "@/modules/expenses";
 
 describe("Domain 5: Expense Management & Scheduled Outflows", () => {
   const cleanupCompanyIds: string[] = [];

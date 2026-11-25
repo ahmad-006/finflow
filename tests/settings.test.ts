@@ -2,8 +2,6 @@ import { describe, it, expect, beforeAll, afterAll } from "bun:test";
 import { db } from "@/lib/db";
 import { hashPassword } from "@/modules/auth/password";
 import {
-  createSessionToken,
-  setSessionCookie,
   clearSessionCookie,
 } from "@/modules/auth/session";
 import {

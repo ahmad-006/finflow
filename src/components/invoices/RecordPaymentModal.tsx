@@ -3,7 +3,7 @@
 import * as React from "react";
 import Decimal from "decimal.js";
 import { AlertCircle } from "lucide-react";
-import { formatMoney } from "@/modules/invoices/currency";
+import { formatMoney } from "@/lib/format";
 import type { InvoiceCurrency } from "@/modules/invoices/types";
 import { formatUserError } from "@/lib/errors";
 import { recordPaymentAction } from "@/modules/invoices/actions";
@@ -56,6 +56,13 @@ function RecordPaymentModalContent({
     const parsedAmount = parseFloat(paymentAmount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       setErrorBanner("Payment amount must be greater than zero.");
+      return;
+    }
+
+    if (new Decimal(parsedAmount).gt(new Decimal(remaining))) {
+      setErrorBanner(
+        `Payment cannot exceed the remaining balance of ${formatMoney(remaining, currency)}.`
+      );
       return;
     }
 

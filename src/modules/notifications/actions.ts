@@ -7,6 +7,7 @@ import {
   getSessionTokenFromCookies,
   verifySessionToken,
 } from "@/modules/auth/session";
+import { assertCanMutateLedger } from "@/modules/auth/rbac";
 import type { SessionPayload } from "@/modules/auth/types";
 import { sendInvoicePaymentReminder } from "./service";
 import { sendReminderSchema } from "./validation";
@@ -35,7 +36,16 @@ function extractData(input: unknown): Record<string, unknown> {
 /**
  * Verifies session cookie and extracts authenticated user's company tenancy.
  */
-async function requireAuthSession(): Promise<SessionPayload> {
+async function requireAuthSession(
+  sessionOverride?: SessionPayload
+): Promise<SessionPayload> {
+  if (sessionOverride) {
+    if (!sessionOverride.companyId) {
+      throw new Error("Session expired or invalid: Please sign in again.");
+    }
+    return sessionOverride;
+  }
+
   const token = await getSessionTokenFromCookies();
   if (!token) {
     throw new Error("Unauthorized: Please sign in to send payment reminders.");
@@ -74,6 +84,7 @@ function invalidateTenantTags(companyId: string, invoiceId?: string) {
     `kpis-${companyId}`,
   ];
   if (invoiceId) {
+    tags.push(`invoice-${companyId}-${invoiceId}`);
     tags.push(`invoice-${invoiceId}`);
   }
 
@@ -96,14 +107,17 @@ function invalidateTenantTags(companyId: string, invoiceId?: string) {
  */
 export async function sendInvoiceReminderAction(
   prevStateOrData?: unknown,
-  formDataOrUndefined?: FormData
+  formDataOrUndefined?: FormData,
+  sessionOverride?: SessionPayload
 ): Promise<SendReminderActionResult> {
   try {
-    const session = await requireAuthSession();
+    const session = await requireAuthSession(sessionOverride);
+    assertCanMutateLedger(session.role);
 
-    const rawData = formDataOrUndefined
-      ? extractData(formDataOrUndefined)
-      : extractData(prevStateOrData);
+    const rawData =
+      typeof FormData !== "undefined" && formDataOrUndefined instanceof FormData
+        ? extractData(formDataOrUndefined)
+        : extractData(prevStateOrData);
 
     const validated = sendReminderSchema.parse({
       invoiceId: String(rawData.invoiceId || "").trim(),

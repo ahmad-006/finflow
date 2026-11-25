@@ -43,9 +43,9 @@ export function UserMenu({
         } else {
           await logoutAction();
         }
-      } catch (err) {
+      } catch {
         // Fallback hard redirect to /logout in case of unexpected action failure
-        window.location.href = "/logout";
+        window.location.assign("/logout");
       }
     });
   };

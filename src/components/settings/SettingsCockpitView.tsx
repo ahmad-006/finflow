@@ -75,7 +75,7 @@ export function SettingsCockpitView({
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Team states
-  const [members, setMembers] = useState<MemberRecord[]>(() => {
+  const members = React.useMemo<MemberRecord[]>(() => {
     if (initialMembers && initialMembers.length > 0) {
       return initialMembers;
     }
@@ -91,11 +91,9 @@ export function SettingsCockpitView({
         createdAt: initialProfile.createdAt,
       },
     ];
-  });
+  }, [initialMembers, initialProfile]);
 
-  const [invitations, setInvitations] = useState<InvitationRecord[]>(
-    initialInvitations || []
-  );
+  const [revokedInvitationIds, setRevokedInvitationIds] = useState<string[]>([]);
   const [isRevokingId, setIsRevokingId] = useState<string | null>(null);
   const [revokeError, setRevokeError] = useState<string | null>(null);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
@@ -135,29 +133,15 @@ export function SettingsCockpitView({
     { success: false } as ActionState<InvitationRecord>
   );
 
-  // Sync members/invitations if props change
-  React.useEffect(() => {
-    if (initialMembers && initialMembers.length > 0) {
-      setMembers(initialMembers);
-    }
-  }, [initialMembers]);
-
-  React.useEffect(() => {
-    if (initialInvitations) {
-      setInvitations(initialInvitations);
-    }
-  }, [initialInvitations]);
-
-  // Sync new invitation when invite action succeeds
-  React.useEffect(() => {
-    if (inviteState?.success && inviteState?.data) {
-      const newInv = inviteState.data;
-      setInvitations((prev) => {
-        if (prev.some((inv) => inv.id === newInv.id)) return prev;
-        return [newInv, ...prev];
-      });
-    }
-  }, [inviteState]);
+  const invitations = React.useMemo(() => {
+    const base = initialInvitations || [];
+    const newInvite = inviteState?.success ? inviteState.data : undefined;
+    const combined =
+      newInvite && !base.some((inv) => inv.id === newInvite.id)
+        ? [newInvite, ...base]
+        : base;
+    return combined.filter((inv) => !revokedInvitationIds.includes(inv.id));
+  }, [initialInvitations, inviteState, revokedInvitationIds]);
 
   const handleRevokeInvitation = async (invitationId: string) => {
     setIsRevokingId(invitationId);
@@ -165,7 +149,7 @@ export function SettingsCockpitView({
     try {
       const res = await revokeInvitationAction(invitationId);
       if (res.success) {
-        setInvitations((prev) => prev.filter((inv) => inv.id !== invitationId));
+        setRevokedInvitationIds((prev) => [...prev, invitationId]);
       } else {
         setRevokeError(res.error || "Failed to revoke invitation.");
       }

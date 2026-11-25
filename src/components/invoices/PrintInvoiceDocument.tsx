@@ -2,10 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Decimal from "decimal.js";
 import { ArrowLeft, Printer, Download, Loader2, CheckCircle2 } from "lucide-react";
 import type { InvoiceWithItemsAndClient } from "@/modules/invoices/types";
-import { formatMoney } from "@/modules/invoices/currency";
-import { downloadInvoicePDF, formatDualCurrencyEquivalent, DEFAULT_EXCHANGE_RATES } from "@/modules/documents";
+import { formatMoney } from "@/lib/format";
+import { downloadInvoicePDF, DEFAULT_EXCHANGE_RATES } from "@/modules/documents";
 import { InvoiceStatusBadge } from "./InvoiceStatusBadge";
 
 export interface PrintInvoiceDocumentProps {
@@ -25,20 +26,22 @@ export function PrintInvoiceDocument({
 }: PrintInvoiceDocumentProps) {
   const [isDownloading, setIsDownloading] = React.useState(false);
 
-  const remainingBalance = Math.max(0, invoice.totalAmount - invoice.paidAmount);
+  const remainingBalance = Decimal.max(
+    0,
+    new Decimal(invoice.totalAmount).minus(invoice.paidAmount)
+  )
+    .toDecimalPlaces(2, Decimal.ROUND_HALF_UP)
+    .toNumber();
   const isForeign = invoice.currency !== baseCurrency;
   const fxRate = invoice.exchangeRate || DEFAULT_EXCHANGE_RATES[invoice.currency] || 1.0;
   const baseTotal =
     invoice.baseTotalAmount ??
-    (invoice.currency === baseCurrency ? invoice.totalAmount : invoice.totalAmount * fxRate);
-
-  const dualCurrencyString = formatDualCurrencyEquivalent(
-    invoice.totalAmount,
-    invoice.currency,
-    baseTotal,
-    baseCurrency,
-    fxRate
-  );
+    (invoice.currency === baseCurrency
+      ? invoice.totalAmount
+      : new Decimal(invoice.totalAmount)
+          .times(fxRate)
+          .toDecimalPlaces(2, Decimal.ROUND_HALF_UP)
+          .toNumber());
 
   const formatDate = (date: Date | string) => {
     return new Intl.DateTimeFormat("en-US", {
@@ -321,7 +324,7 @@ export function PrintInvoiceDocument({
                   BASE EQUIVALENT ({baseCurrency})
                 </span>
                 <span className="font-mono font-bold text-ink text-[11px]">
-                  {formatMoney(invoice.totalAmount, invoice.currency, { showCode: true })} = {formatMoney(baseTotal, baseCurrency as any, { showCode: true })}
+                  {formatMoney(invoice.totalAmount, invoice.currency)} = {formatMoney(baseTotal, baseCurrency)}
                 </span>
                 <span className="text-[9px] text-ink/50 font-mono">
                   Spot FX Rate: 1 {invoice.currency} = {fxRate} {baseCurrency}

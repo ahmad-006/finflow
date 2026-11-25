@@ -36,7 +36,7 @@ export function AcceptInvitationForm({
   const token = initialToken || searchParams.get("token") || "";
 
   const [invitation, setInvitation] = React.useState<InvitationData | null>(initialInvitation || null);
-  const [isLoadingInvite, setIsLoadingInvite] = React.useState(!initialInvitation);
+  const [isLoadingInvite, setIsLoadingInvite] = React.useState(Boolean(!initialInvitation && token));
   const [currentUserEmail] = React.useState<string | null>(initialUserEmail || null);
   const [fullName, setFullName] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -46,7 +46,6 @@ export function AcceptInvitationForm({
 
   React.useEffect(() => {
     if (initialInvitation || !token) {
-      setIsLoadingInvite(false);
       return;
     }
 

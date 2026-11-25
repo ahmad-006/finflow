@@ -9,7 +9,6 @@ import {
   forgotPasswordAction,
   resetPasswordAction,
 } from "@/modules/auth/actions";
-import { setSessionCookie, clearSessionCookie } from "@/modules/auth/session";
 
 describe("Domain 1: Auth Server Actions (verifyEmailAction, resendOtpAction, etc.)", () => {
   const createdCompanyIds: string[] = [];

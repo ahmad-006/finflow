@@ -9,6 +9,7 @@ import { Band } from "@/components/shell/Band";
 import { StatusBadge } from "@/components/data/StatusBadge";
 import { Money } from "@/components/data/Money";
 import { ClientStatementSkeleton } from "@/components/clients/ClientStatementSkeleton";
+import { EditClientButton } from "@/components/clients/EditClientButton";
 import { cn } from "@/lib/utils";
 
 interface ClientPageProps {
@@ -103,13 +104,16 @@ async function ClientStatementDataLoader({
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           {canCreateInvoice && (
-            <Link
-              href={`/invoices/new?clientId=${client.id}`}
-              className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-5 rounded-full text-xs font-medium bg-ink text-white hover:bg-ink-hover transition-colors"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>New Invoice</span>
-            </Link>
+            <>
+              <EditClientButton client={client} />
+              <Link
+                href={`/invoices/new?clientId=${client.id}`}
+                className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-5 rounded-full text-xs font-medium bg-ink text-white hover:bg-ink-hover transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>New Invoice</span>
+              </Link>
+            </>
           )}
           <Link
             href="/clients"

@@ -9,12 +9,15 @@ import {
   FileText,
   Calendar,
   ArrowRight,
+  ChevronLeft,
+  ChevronRight,
   Filter,
   Download,
   Loader2,
   CheckCircle2,
   Bell,
   Check,
+  Pencil,
   Upload,
 } from "lucide-react";
 import type {
@@ -23,7 +26,8 @@ import type {
   InvoiceStatus,
   InvoiceCurrency,
 } from "@/modules/invoices/types";
-import { formatMoney, SUPPORTED_CURRENCIES } from "@/modules/invoices/currency";
+import { SUPPORTED_CURRENCIES } from "@/modules/invoices/currency";
+import { formatMoney } from "@/lib/format";
 import { canManageBilling, canMutateLedger } from "@/modules/auth/rbac";
 import { InvoiceStatusBadge } from "./InvoiceStatusBadge";
 import { InvoiceKPIStrip } from "./InvoiceKPIStrip";
@@ -44,7 +48,15 @@ export interface InvoiceDirectoryViewProps {
   role?: string;
   clients?: ClientOption[];
   initialExchangeRates?: Record<InvoiceCurrency, number>;
+  totalCount?: number;
+  currentPage?: number;
+  totalPages?: number;
+  initialStatus?: InvoiceStatus | "ALL";
+  initialCurrency?: InvoiceCurrency | "ALL";
+  initialSearch?: string;
 }
+
+const PAGE_LIMIT = 20;
 
 export function InvoiceDirectoryView({
   initialInvoices,
@@ -54,10 +66,18 @@ export function InvoiceDirectoryView({
   role = "MEMBER",
   clients = [],
   initialExchangeRates,
+  totalCount,
+  currentPage = 1,
+  totalPages = 1,
+  initialStatus = "ALL",
+  initialCurrency = "ALL",
+  initialSearch = "",
 }: InvoiceDirectoryViewProps) {
   const canMutate = canMutateLedger(role);
   const canPayBilling = canManageBilling(role);
   const router = useRouter();
+  const [, startFilterTransition] = React.useTransition();
+  const searchDebounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [downloadingId, setDownloadingId] = React.useState<string | null>(null);
   const [sendingReminderId, setSendingReminderId] = React.useState<string | null>(null);
   const [reminderSuccessId, setReminderSuccessId] = React.useState<string | null>(null);
@@ -65,9 +85,46 @@ export function InvoiceDirectoryView({
   const [paymentInvoice, setPaymentInvoice] = React.useState<InvoiceWithItemsAndClient | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = React.useState(false);
-  const [search, setSearch] = React.useState("");
-  const [statusFilter, setStatusFilter] = React.useState<InvoiceStatus | "ALL">("ALL");
-  const [currencyFilter, setCurrencyFilter] = React.useState<InvoiceCurrency | "ALL">("ALL");
+  const [search, setSearch] = React.useState(initialSearch);
+  const [statusFilter, setStatusFilter] = React.useState<InvoiceStatus | "ALL">(initialStatus);
+  const [currencyFilter, setCurrencyFilter] = React.useState<InvoiceCurrency | "ALL">(initialCurrency);
+
+  const resolvedTotal = totalCount ?? initialInvoices.length;
+  const resolvedTotalPages = Math.max(1, totalPages);
+  const hasServerQuery =
+    resolvedTotalPages > 1 ||
+    resolvedTotal > initialInvoices.length ||
+    initialStatus !== "ALL" ||
+    initialCurrency !== "ALL" ||
+    initialSearch !== "";
+
+  const pushFilterRoute = React.useCallback(
+    (next: {
+      page?: number;
+      status?: InvoiceStatus | "ALL";
+      currency?: InvoiceCurrency | "ALL";
+      search?: string;
+    }) => {
+      const params = new URLSearchParams();
+      if (next.page && next.page > 1) params.set("page", String(next.page));
+      if (next.status && next.status !== "ALL") params.set("status", next.status);
+      if (next.currency && next.currency !== "ALL") params.set("currency", next.currency);
+      if (next.search && next.search.trim()) params.set("search", next.search.trim());
+      const qs = params.toString();
+      startFilterTransition(() => {
+        router.push(qs ? `/invoices?${qs}` : "/invoices");
+      });
+    },
+    [router]
+  );
+
+  React.useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, []);
 
   // Client-side instant filtering
   const filteredInvoices = React.useMemo(() => {
@@ -252,7 +309,17 @@ export function InvoiceDirectoryView({
               <button
                 key={status}
                 type="button"
-                onClick={() => setStatusFilter(status)}
+                onClick={() => {
+                  setStatusFilter(status);
+                  if (hasServerQuery) {
+                    pushFilterRoute({
+                      page: 1,
+                      status,
+                      currency: currencyFilter,
+                      search,
+                    });
+                  }
+                }}
                 className={`inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] rounded-full text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
                   isActive
                     ? "bg-ink text-white"
@@ -279,7 +346,21 @@ export function InvoiceDirectoryView({
               type="text"
               placeholder="Search invoice or client..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                const nextSearch = e.target.value;
+                setSearch(nextSearch);
+                if (hasServerQuery) {
+                  if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+                  searchDebounceRef.current = setTimeout(() => {
+                    pushFilterRoute({
+                      page: 1,
+                      status: statusFilter,
+                      currency: currencyFilter,
+                      search: nextSearch,
+                    });
+                  }, 300);
+                }
+              }}
               className="w-full pl-10 pr-4 h-11 text-xs sm:text-sm rounded-[10px] border border-line bg-white text-ink placeholder:text-ink/40 focus:outline-none focus:border-ink/50 transition-colors"
             />
           </div>
@@ -288,7 +369,18 @@ export function InvoiceDirectoryView({
             <select
               aria-label="Filter by currency"
               value={currencyFilter}
-              onChange={(e) => setCurrencyFilter(e.target.value as InvoiceCurrency | "ALL")}
+              onChange={(e) => {
+                const nextCurrency = e.target.value as InvoiceCurrency | "ALL";
+                setCurrencyFilter(nextCurrency);
+                if (hasServerQuery) {
+                  pushFilterRoute({
+                    page: 1,
+                    status: statusFilter,
+                    currency: nextCurrency,
+                    search,
+                  });
+                }
+              }}
               className="appearance-none w-full sm:w-auto pl-3.5 pr-9 h-11 text-xs font-mono rounded-[10px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50 cursor-pointer"
             >
               <option value="ALL">All Currencies</option>
@@ -320,6 +412,9 @@ export function InvoiceDirectoryView({
                 setSearch("");
                 setStatusFilter("ALL");
                 setCurrencyFilter("ALL");
+                if (hasServerQuery) {
+                  pushFilterRoute({ page: 1, status: "ALL", currency: "ALL", search: "" });
+                }
               }}
               className="min-h-[44px] px-5 py-2 text-xs rounded-full border border-line bg-white text-ink hover:bg-fog transition-colors font-medium inline-flex items-center justify-center"
             >
@@ -372,7 +467,7 @@ export function InvoiceDirectoryView({
                     inv.status !== "CANCELLED" &&
                     new Date(inv.dueDate).getTime() < new Date().getTime();
                   const canPay = canPayBilling && inv.status !== "PAID" && inv.status !== "CANCELLED";
-                  const canRemind = inv.status === "SENT" || inv.status === "OVERDUE";
+                  const canRemind = canMutate && (inv.status === "SENT" || inv.status === "OVERDUE");
 
                   return (
                     <tr
@@ -420,7 +515,7 @@ export function InvoiceDirectoryView({
                           </span>
                           {isForeign && (
                             <span className="text-[10px] font-mono text-ink/50">
-                              ≈ {formatMoney(inv.baseTotalAmount, baseCurrency as InvoiceCurrency)}
+                              ≈ {formatMoney(inv.baseTotalAmount, baseCurrency)}
                             </span>
                           )}
                         </div>
@@ -480,11 +575,20 @@ export function InvoiceDirectoryView({
                             )}
                           </button>
                           <Link
-                            href={`/invoices/${inv.id}`}
+                            href={inv.status === "DRAFT" && canMutate ? `/invoices/${inv.id}/edit` : `/invoices/${inv.id}`}
                             className="min-h-[44px] inline-flex items-center gap-1 text-xs font-medium text-ink/70 hover:text-ink px-3.5 py-2 rounded-full border border-line hover:bg-fog transition-colors"
                           >
-                            <span>Manage</span>
-                            <ArrowRight className="w-3 h-3" />
+                            {inv.status === "DRAFT" && canMutate ? (
+                              <>
+                                <Pencil className="w-3 h-3" />
+                                <span>Edit</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>Manage</span>
+                                <ArrowRight className="w-3 h-3" />
+                              </>
+                            )}
                           </Link>
                         </div>
                       </td>
@@ -504,7 +608,7 @@ export function InvoiceDirectoryView({
                 inv.status !== "CANCELLED" &&
                 new Date(inv.dueDate).getTime() < new Date().getTime();
               const canPay = canPayBilling && inv.status !== "PAID" && inv.status !== "CANCELLED";
-              const canRemind = inv.status === "SENT" || inv.status === "OVERDUE";
+              const canRemind = canMutate && (inv.status === "SENT" || inv.status === "OVERDUE");
 
               return (
                 <div
@@ -536,7 +640,7 @@ export function InvoiceDirectoryView({
                       </div>
                       {isForeign && (
                         <div className="text-[10px] font-mono text-ink/50">
-                          ≈ {formatMoney(inv.baseTotalAmount, baseCurrency as InvoiceCurrency)}
+                          ≈ {formatMoney(inv.baseTotalAmount, baseCurrency)}
                         </div>
                       )}
                     </div>
@@ -601,11 +705,20 @@ export function InvoiceDirectoryView({
                     </button>
 
                     <Link
-                      href={`/invoices/${inv.id}`}
+                      href={inv.status === "DRAFT" && canMutate ? `/invoices/${inv.id}/edit` : `/invoices/${inv.id}`}
                       className="min-h-[44px] inline-flex items-center justify-center gap-1 text-xs font-medium text-ink bg-fog hover:bg-fog-2 px-3.5 py-2 rounded-full border border-line transition-colors"
                     >
-                      <span>Manage</span>
-                      <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+                      {inv.status === "DRAFT" && canMutate ? (
+                        <>
+                          <Pencil className="w-3.5 h-3.5 shrink-0" />
+                          <span>Edit</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Manage</span>
+                          <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+                        </>
+                      )}
                     </Link>
                   </div>
                 </div>
@@ -615,14 +728,63 @@ export function InvoiceDirectoryView({
         </div>
       )}
 
-      {/* Footer Meta Summary */}
-      <div className="flex items-center justify-between text-xs text-ink/50 px-1">
+      {/* Footer Meta Summary & Pagination */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-ink/60 px-1">
         <span>
-          Showing {filteredInvoices.length} of {initialInvoices.length} invoices
+          {resolvedTotal === 0
+            ? "Showing 0 invoices"
+            : resolvedTotalPages > 1
+            ? `Showing ${(currentPage - 1) * PAGE_LIMIT + 1}–${
+                (currentPage - 1) * PAGE_LIMIT + filteredInvoices.length
+              } of ${resolvedTotal} invoices`
+            : `Showing ${filteredInvoices.length} of ${resolvedTotal} invoices`}
         </span>
-        <span className="font-mono text-[11px]">
-          Base Currency: {baseCurrency}
-        </span>
+
+        <div className="flex items-center justify-between sm:justify-end gap-3">
+          {resolvedTotalPages > 1 && (
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                disabled={currentPage <= 1}
+                onClick={() =>
+                  pushFilterRoute({
+                    page: Math.max(1, currentPage - 1),
+                    status: statusFilter,
+                    currency: currencyFilter,
+                    search,
+                  })
+                }
+                className="min-h-[44px] inline-flex items-center gap-1 px-3.5 py-2 rounded-full border border-line bg-white text-ink hover:bg-fog transition-colors disabled:opacity-40 disabled:pointer-events-none"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span>Previous</span>
+              </button>
+              <span className="font-mono text-[11px] px-2 text-ink/70">
+                Page {currentPage} of {resolvedTotalPages}
+              </span>
+              <button
+                type="button"
+                disabled={currentPage >= resolvedTotalPages}
+                onClick={() =>
+                  pushFilterRoute({
+                    page: Math.min(resolvedTotalPages, currentPage + 1),
+                    status: statusFilter,
+                    currency: currencyFilter,
+                    search,
+                  })
+                }
+                className="min-h-[44px] inline-flex items-center gap-1 px-3.5 py-2 rounded-full border border-line bg-white text-ink hover:bg-fog transition-colors disabled:opacity-40 disabled:pointer-events-none"
+              >
+                <span>Next</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          <span className="font-mono text-[11px] text-ink/50">
+            Base Currency: {baseCurrency}
+          </span>
+        </div>
       </div>
 
       {/* Create Invoice Modal */}

@@ -83,8 +83,8 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
 
   // Case A: Authenticated user with UNVERIFIED email (emailVerified = false)
   if (session && !session.emailVerified) {
-    // Only allow /verify-email, /api/auth/*, and static assets
-    if (isVerifyEmailRoute || isApiAuthRoute) {
+    // Allow /verify-email, /api/auth/*, public /pay portal, and /invite flows
+    if (isVerifyEmailRoute || isApiAuthRoute || isPublicUtilityRoute || isInviteRoute) {
       return NextResponse.next({
         request: {
           headers: requestHeaders,
@@ -98,8 +98,8 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
 
   // Case B1: Authenticated user with VERIFIED email but INCOMPLETE onboarding (onboardingCompleted = false)
   if (session && session.emailVerified && !session.onboardingCompleted) {
-    // Allow /onboarding, /api/auth/*, and static assets
-    if (isOnboardingRoute || isApiAuthRoute) {
+    // Allow /onboarding, /api/auth/*, public /pay portal, and /invite flows
+    if (isOnboardingRoute || isApiAuthRoute || isPublicUtilityRoute || isInviteRoute) {
       return NextResponse.next({
         request: {
           headers: requestHeaders,

@@ -18,7 +18,7 @@ import {
   markExpensePaidSchema,
 } from "./validation";
 
-type PrismaExpense = Prisma.ExpenseGetPayload<{}>;
+type PrismaExpense = Prisma.ExpenseGetPayload<Record<string, never>>;
 
 /**
  * Dynamically resolves expense status:

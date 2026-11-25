@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "bun:test";
 import { db } from "@/lib/db";
-import Decimal from "decimal.js";
 import {
   calculateLineItem,
   calculateInvoiceTotals,
@@ -8,12 +7,10 @@ import {
   roundFx,
   formatMoney,
   convertAmount,
-  DEFAULT_EXCHANGE_RATES,
 } from "@/modules/invoices/currency";
 import {
   createInvoiceSchema,
   invoiceItemSchema,
-  recordPaymentSchema,
 } from "@/modules/invoices/validation";
 import {
   createInvoice,
@@ -21,7 +18,6 @@ import {
   generateInvoiceNumber,
   markInvoiceSent,
   recordInvoicePayment,
-  cancelInvoice,
   getInvoices,
   getInvoiceById,
   getInvoiceByViewToken,
@@ -318,6 +314,49 @@ describe("Domain 3: Invoicing Engine & Spot Multi-Currency Service", () => {
       expect(kpis.totalOutstanding).toBe(0);
       expect(kpis.totalOverdue).toBe(0);
       expect(kpis.totalPaidThisMonth).toBe(765600);
+    }, 15000);
+
+    it("should reject payment amounts exceeding remaining unpaid balance", async () => {
+      const partialInv = await createInvoice(companyAId, {
+        clientId: clientAId,
+        currency: "PKR",
+        issueDate: new Date("2026-11-18"),
+        dueDate: new Date("2026-12-18"),
+        taxRate: 0,
+        items: [{ description: "Milestone Delivery", quantity: 1, unitPrice: 1000 }],
+      });
+      await markInvoiceSent(companyAId, partialInv.id);
+
+      const firstPayment = await recordInvoicePayment(companyAId, {
+        invoiceId: partialInv.id,
+        paidAmount: 400,
+      });
+      expect(firstPayment.paidAmount).toBe(400);
+      expect(firstPayment.status).toBe("SENT");
+
+      await expect(
+        recordInvoicePayment(companyAId, {
+          invoiceId: partialInv.id,
+          paidAmount: 600.01,
+        })
+      ).rejects.toThrow("Payment amount exceeds remaining balance (600.00 PKR).");
+
+      const finalPayment = await recordInvoicePayment(companyAId, {
+        invoiceId: partialInv.id,
+        paidAmount: 600,
+      });
+      expect(finalPayment.status).toBe("PAID");
+      expect(finalPayment.paidAmount).toBe(1000);
+    }, 25000);
+
+    it("should support paginated getInvoices queries accurately", async () => {
+      const page1 = await getInvoices(companyAId, { page: 1, limit: 1 });
+      const page2 = await getInvoices(companyAId, { page: 2, limit: 1 });
+      expect(page1.total).toBeGreaterThanOrEqual(2);
+      expect(page1.totalPages).toBe(page1.total);
+      expect(page1.invoices).toHaveLength(1);
+      expect(page2.invoices).toHaveLength(1);
+      expect(page1.invoices[0].id).not.toBe(page2.invoices[0].id);
     }, 15000);
 
     it("should prevent cross-tenant access when fetching invoice by ID", async () => {

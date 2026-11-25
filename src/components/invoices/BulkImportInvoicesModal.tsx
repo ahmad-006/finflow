@@ -22,9 +22,9 @@ import { bulkImportInvoicesAction } from "@/modules/invoices/actions";
 import {
   calculateInvoiceTotals,
   DEFAULT_EXCHANGE_RATES,
-  formatMoney,
   SUPPORTED_CURRENCIES,
 } from "@/modules/invoices/currency";
+import { formatMoney } from "@/lib/format";
 import type {
   BulkImportInvoicesResult,
   BulkInvoiceRowInput,

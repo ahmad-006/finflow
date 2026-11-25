@@ -3,12 +3,14 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Decimal from "decimal.js";
 import {
   ArrowLeft,
   Printer,
   Copy,
   Check,
   Send,
+  Pencil,
   CreditCard,
   Ban,
   Clock,
@@ -18,8 +20,8 @@ import {
   Loader2,
   Bell,
 } from "lucide-react";
-import type { InvoiceCurrency, InvoiceWithItemsAndClient } from "@/modules/invoices/types";
-import { formatMoney } from "@/modules/invoices/currency";
+import type { InvoiceWithItemsAndClient } from "@/modules/invoices/types";
+import { formatMoney } from "@/lib/format";
 import { canManageBilling, canMutateLedger } from "@/modules/auth/rbac";
 import { InvoiceStatusBadge } from "./InvoiceStatusBadge";
 import { RecordPaymentModal } from "./RecordPaymentModal";
@@ -58,7 +60,12 @@ export function InvoiceDetailCockpit({
   const [reminderSuccess, setReminderSuccess] = React.useState(false);
   const [actionError, setActionError] = React.useState<string | null>(null);
 
-  const remainingBalance = Math.max(0, invoice.totalAmount - invoice.paidAmount);
+  const remainingBalance = Decimal.max(
+    0,
+    new Decimal(invoice.totalAmount).minus(invoice.paidAmount)
+  )
+    .toDecimalPlaces(2, Decimal.ROUND_HALF_UP)
+    .toNumber();
   const isForeign = invoice.currency !== baseCurrency;
 
   const formatDate = (date: Date | string) => {
@@ -231,21 +238,30 @@ export function InvoiceDetailCockpit({
             <span>Print View</span>
           </Link>
 
-          {/* Mark Sent (if DRAFT) */}
+          {/* Edit & Issue (if DRAFT) */}
           {canMutate && invoice.status === "DRAFT" && (
-            <button
-              type="button"
-              disabled={isPending}
-              onClick={handleMarkSent}
-              className="min-h-[44px] inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-ink text-white text-xs font-medium hover:bg-ink-hover transition-colors disabled:opacity-50"
-            >
-              <Send className="w-3.5 h-3.5" />
-              <span>{isPending ? "Issuing..." : "Issue & Send"}</span>
-            </button>
+            <>
+              <Link
+                href={`/invoices/${invoice.id}/edit`}
+                className="min-h-[44px] inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-line bg-white text-xs font-medium text-ink hover:bg-fog transition-colors"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                <span>Edit Draft</span>
+              </Link>
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={handleMarkSent}
+                className="min-h-[44px] inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-ink text-white text-xs font-medium hover:bg-ink-hover transition-colors disabled:opacity-50"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>{isPending ? "Issuing..." : "Issue & Send"}</span>
+              </button>
+            </>
           )}
 
-          {/* Send Reminder (if SENT or OVERDUE) */}
-          {(invoice.status === "SENT" || invoice.status === "OVERDUE") && (
+          {/* Send Reminder (if SENT or OVERDUE and user can mutate ledger) */}
+          {canMutate && (invoice.status === "SENT" || invoice.status === "OVERDUE") && (
             <button
               type="button"
               disabled={isSendingReminder}
@@ -505,7 +521,7 @@ export function InvoiceDetailCockpit({
                   1 {invoice.currency} = {invoice.exchangeRate} {baseCurrency}
                 </span>
                 <span className="text-[10px] text-ink/50 mt-0.5">
-                  Base Total: {formatMoney(invoice.baseTotalAmount, baseCurrency as InvoiceCurrency)}
+                  Base Total: {formatMoney(invoice.baseTotalAmount, baseCurrency)}
                 </span>
               </div>
             )}

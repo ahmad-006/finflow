@@ -1,6 +1,7 @@
 import { describe, it, expect, afterAll } from "bun:test";
 import { db } from "@/lib/db";
 import { sendInvoicePaymentReminder } from "@/modules/notifications/service";
+import { sendInvoiceReminderAction } from "@/modules/notifications/actions";
 import { registerUser } from "@/modules/auth/service";
 
 describe("Domain 9: Production Hardening - Real-Time Reminders & State Sync (tests/notifications.test.ts)", () => {
@@ -196,5 +197,27 @@ describe("Domain 9: Production Hardening - Real-Time Reminders & State Sync (tes
         sendInvoicePaymentReminder(companyAId, "00000000-0000-0000-0000-000000000000", userAId)
       ).rejects.toThrow("Invoice not found or access denied.");
     }, 15000);
+  });
+
+  // =========================================================================
+  // 4. Role-Based Access Control on Reminder Action
+  // =========================================================================
+  describe("RBAC Enforcement on Reminder Server Action", () => {
+    it("should deny VIEWER role from triggering sendInvoiceReminderAction", async () => {
+      const viewerSession = {
+        userId: "usr-viewer-notif",
+        companyId: companyAId,
+        email: "viewer@test.pk",
+        fullName: "Read Only Viewer",
+        role: "VIEWER",
+        emailVerified: true,
+        onboardingCompleted: true,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 86400000,
+      };
+      const res = await sendInvoiceReminderAction(sentInvoiceId, undefined, viewerSession);
+      expect(res.success).toBe(false);
+      expect(res.error).toContain("Forbidden");
+    });
   });
 });

@@ -8,6 +8,7 @@ import {
   Search,
   ChevronRight,
   Trash2,
+  Pencil,
   ArrowUpDown,
   LayoutGrid,
   List,
@@ -16,7 +17,7 @@ import {
   CheckCircle2,
   X,
 } from "lucide-react";
-import type { ClientWithMetrics, ARAgingBuckets, ClientRiskStatus } from "@/modules/clients/types";
+import type { ClientRecord, ClientWithMetrics, ARAgingBuckets, ClientRiskStatus } from "@/modules/clients/types";
 import { deleteClientAction } from "@/modules/clients/actions";
 import { canMutateLedger } from "@/modules/auth/rbac";
 import { formatUserError } from "@/lib/errors";
@@ -49,15 +50,16 @@ export function ClientDirectoryView({
   const canMutate = canMutateLedger(role);
 
   const [addedClients, setAddedClients] = React.useState<ClientWithMetrics[]>([]);
+  const [editedClients, setEditedClients] = React.useState<Record<string, ClientRecord>>({});
   const [deletedIds, setDeletedIds] = React.useState<string[]>([]);
 
   const clients = React.useMemo(() => {
     const serverIds = new Set(initialClients.map((c) => c.id));
     const pendingAdditions = addedClients.filter((c) => !serverIds.has(c.id));
-    return [...pendingAdditions, ...initialClients].filter(
-      (c) => !deletedIds.includes(c.id)
-    );
-  }, [initialClients, addedClients, deletedIds]);
+    return [...pendingAdditions, ...initialClients]
+      .filter((c) => !deletedIds.includes(c.id))
+      .map((c) => (editedClients[c.id] ? { ...c, ...editedClients[c.id] } : c));
+  }, [initialClients, addedClients, editedClients, deletedIds]);
 
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedRisk, setSelectedRisk] = React.useState<"ALL" | ClientRiskStatus>("ALL");
@@ -65,6 +67,7 @@ export function ClientDirectoryView({
   const [sortOrder, setSortOrder] = React.useState<"asc" | "desc">("desc");
   const [viewMode, setViewMode] = React.useState<"grid" | "table">("grid");
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [clientToEdit, setClientToEdit] = React.useState<ClientWithMetrics | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = React.useState(false);
   const [clientToDelete, setClientToDelete] = React.useState<ClientWithMetrics | null>(null);
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
@@ -521,18 +524,32 @@ export function ClientDirectoryView({
                     </Link>
 
                     {canMutate && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDeleteError(null);
-                          setClientToDelete(client);
-                        }}
-                        className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-ink-3 hover:text-ember-ink hover:bg-ember-tint border border-line transition-colors"
-                        title="Remove Client"
-                        aria-label={`Remove ${client.clientName}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setClientToEdit(client);
+                            setIsModalOpen(true);
+                          }}
+                          className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-ink-3 hover:text-ink hover:bg-fog border border-line transition-colors"
+                          title="Edit Client"
+                          aria-label={`Edit ${client.clientName}`}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDeleteError(null);
+                            setClientToDelete(client);
+                          }}
+                          className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-ink-3 hover:text-ember-ink hover:bg-ember-tint border border-line transition-colors"
+                          title="Remove Client"
+                          aria-label={`Remove ${client.clientName}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -667,18 +684,32 @@ export function ClientDirectoryView({
                             </Link>
 
                             {canMutate && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setDeleteError(null);
-                                  setClientToDelete(client);
-                                }}
-                                className="p-1.5 rounded-full text-ink-3 hover:text-ember-ink hover:bg-ember-tint transition-colors"
-                                title="Remove Client"
-                                aria-label={`Remove ${client.clientName}`}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setClientToEdit(client);
+                                    setIsModalOpen(true);
+                                  }}
+                                  className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-1.5 rounded-full text-ink-3 hover:text-ink hover:bg-fog transition-colors"
+                                  title="Edit Client"
+                                  aria-label={`Edit ${client.clientName}`}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setDeleteError(null);
+                                    setClientToDelete(client);
+                                  }}
+                                  className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-1.5 rounded-full text-ink-3 hover:text-ember-ink hover:bg-ember-tint transition-colors"
+                                  title="Remove Client"
+                                  aria-label={`Remove ${client.clientName}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </>
                             )}
                           </div>
                         </td>
@@ -740,33 +771,49 @@ export function ClientDirectoryView({
         </div>
       )}
 
-      {/* Create Client Modal */}
+      {/* Create / Edit Client Modal */}
       {canMutate && (
         <CreateClientModal
           isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onSuccess={(newClient) => {
-            setAddedClients((prev) => [
-              {
-                ...newClient,
-                metrics: {
-                  totalBilled: 0,
-                  totalPaid: 0,
-                  outstandingBalance: 0,
-                  overdueAmount: 0,
-                  avgPaymentDelayDays: 0,
-                  settledInvoicesCount: 0,
-                  openInvoicesCount: 0,
-                  overdueInvoicesCount: 0,
-                  riskStatus: "HEALTHY",
+          clientToEdit={clientToEdit}
+          onClose={() => {
+            setIsModalOpen(false);
+            setClientToEdit(null);
+          }}
+          onSuccess={(savedClient) => {
+            if (clientToEdit) {
+              setEditedClients((prev) => ({
+                ...prev,
+                [savedClient.id]: savedClient,
+              }));
+              setBanner({
+                text: `Updated client "${savedClient.clientName}".`,
+                isError: false,
+              });
+            } else {
+              setAddedClients((prev) => [
+                {
+                  ...savedClient,
+                  metrics: {
+                    totalBilled: 0,
+                    totalPaid: 0,
+                    outstandingBalance: 0,
+                    overdueAmount: 0,
+                    avgPaymentDelayDays: 0,
+                    settledInvoicesCount: 0,
+                    openInvoicesCount: 0,
+                    overdueInvoicesCount: 0,
+                    riskStatus: "HEALTHY",
+                  },
                 },
-              },
-              ...prev,
-            ]);
-            setBanner({
-              text: `Added client "${newClient.clientName}".`,
-              isError: false,
-            });
+                ...prev,
+              ]);
+              setBanner({
+                text: `Added client "${savedClient.clientName}".`,
+                isError: false,
+              });
+            }
+            setClientToEdit(null);
             router.refresh();
           }}
         />

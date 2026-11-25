@@ -2,7 +2,6 @@ import { describe, it, expect, beforeAll, afterAll } from "bun:test";
 import { db } from "@/lib/db";
 import {
   createClientSchema,
-  updateClientSchema,
   clientFilterSchema,
 } from "@/modules/clients/validation";
 import {
@@ -10,7 +9,6 @@ import {
   createClient,
   updateClient,
   softDeleteClient,
-  getClientById,
   getClients,
   getARAgingBuckets,
 } from "@/modules/clients/service";

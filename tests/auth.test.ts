@@ -146,7 +146,7 @@ describe("Domain 1: Multi-Tenant Identity & Auth Service", () => {
       };
 
       // Create token with 0s expiration using signSession
-      const token = await signSession(expiredPayload);
+      await signSession(expiredPayload);
       // Wait or test malformed
       expect(await verifySessionToken("")).toBeNull();
     });

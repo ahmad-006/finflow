@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
+import Decimal from "decimal.js";
 import { Download, Printer, Loader2, CheckCircle2, ShieldCheck } from "lucide-react";
 import type { InvoiceWithItemsAndClient } from "@/modules/invoices/types";
-import { formatMoney } from "@/modules/invoices/currency";
+import { formatMoney } from "@/lib/format";
 import { InvoiceStatusBadge } from "./InvoiceStatusBadge";
 import { downloadInvoicePDF } from "@/modules/documents";
 import { Band } from "@/components/shell/Band";
@@ -21,7 +22,12 @@ export function GuestPayView({ invoice, company }: GuestPayViewProps) {
   const [isDownloading, setIsDownloading] = React.useState(false);
   const [downloadError, setDownloadError] = React.useState<string | null>(null);
 
-  const remainingBalance = Math.max(0, invoice.totalAmount - invoice.paidAmount);
+  const remainingBalance = Decimal.max(
+    0,
+    new Decimal(invoice.totalAmount).minus(invoice.paidAmount)
+  )
+    .toDecimalPlaces(2, Decimal.ROUND_HALF_UP)
+    .toNumber();
   const isForeign = invoice.currency !== (company.baseCurrency || "PKR");
 
   const formatDate = (date: Date | string) => {
@@ -253,7 +259,7 @@ export function GuestPayView({ invoice, company }: GuestPayViewProps) {
                   1 {invoice.currency} = {invoice.exchangeRate} {company.baseCurrency || "PKR"}
                 </span>
                 <span className="text-[10px] text-ink/50 mt-0.5">
-                  Base Total: {formatMoney(invoice.baseTotalAmount, (company.baseCurrency || "PKR") as any)}
+                  Base Total: {formatMoney(invoice.baseTotalAmount, company.baseCurrency || "PKR")}
                 </span>
               </div>
             )}

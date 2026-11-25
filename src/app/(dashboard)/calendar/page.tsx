@@ -4,7 +4,6 @@ import { getSession } from "@/modules/auth";
 import { getCachedMonthCalendar } from "@/modules/calendar";
 import { CalendarCockpitView } from "@/components/calendar/CalendarCockpitView";
 import { CalendarSkeleton } from "@/components/calendar/CalendarSkeleton";
-import { Band } from "@/components/shell/Band";
 
 export const metadata = {
   title: "Financial Calendar & Due Dates | FinFlow",

@@ -155,6 +155,32 @@ describe("Domain 1: Proxy Route Interception & Email Verification Guard", () => 
       expect(res.status).toBe(307);
       expect(res.headers.get("location")).toBe(`${baseUrl}/verify-email`);
     });
+
+    it("should still allow public /pay/[token] and /invite links when session is unverified or un-onboarded", async () => {
+      const unverifiedCookie = await createTestCookie(false, false);
+      const incompleteOnboardingCookie = await createTestCookie(true, false);
+
+      const payUnverified = await proxy(
+        new NextRequest(new URL("/pay/inv-token-abc", baseUrl), {
+          headers: { cookie: unverifiedCookie },
+        })
+      );
+      expect(payUnverified.status).toBe(200);
+
+      const payUnonboarded = await proxy(
+        new NextRequest(new URL("/pay/inv-token-abc", baseUrl), {
+          headers: { cookie: incompleteOnboardingCookie },
+        })
+      );
+      expect(payUnonboarded.status).toBe(200);
+
+      const inviteUnverified = await proxy(
+        new NextRequest(new URL("/invite?token=abc", baseUrl), {
+          headers: { cookie: unverifiedCookie },
+        })
+      );
+      expect(inviteUnverified.status).toBe(200);
+    });
   });
 
   describe("Authenticated User with Verified Email (emailVerified: true)", () => {

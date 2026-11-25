@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import Decimal from "decimal.js";
 import { hashPassword, verifyPassword } from "./password";
-import { createSessionToken, signSession, SESSION_MAX_AGE_SECONDS } from "./session";
+import { createSessionToken, SESSION_MAX_AGE_SECONDS } from "./session";
 import { generateNumericOtp, hashToken, verifyTokenHash } from "@/lib/tokens";
 import { sendSignupOtpEmail, sendPasswordResetEmail } from "@/lib/mail";
 import type { RegisterInput, LoginInput, SessionPayload, SafeUser, SafeCompany, AuthSessionData } from "./types";

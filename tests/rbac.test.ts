@@ -559,7 +559,6 @@ describe("Role-Based Access Control (RBAC) & Team Invitation Suite", () => {
   // =========================================================================
   describe("Invitation Lifecycle and Tenancy Assignment", () => {
     let createdInviteId = "";
-    let createdInviteToken = "";
 
     it("creates invitation with unique token, valid expiry, and assigned role", async () => {
       const ownerSession = makeSession("OWNER", ownerUserId);
@@ -577,7 +576,6 @@ describe("Role-Based Access Control (RBAC) & Team Invitation Suite", () => {
       expect(res.data?.token).toBeString();
 
       createdInviteId = res.data!.id;
-      createdInviteToken = res.data!.token;
 
       // Verify DB record
       const inviteRecord = await db.invitation.findUnique({

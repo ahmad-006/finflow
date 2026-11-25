@@ -1,3 +1,4 @@
+import Decimal from "decimal.js";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import type {
@@ -5,7 +6,6 @@ import type {
   PDFGeneratorOptions,
   GeneratedDocument,
 } from "./types";
-import type { InvoiceCurrency } from "@/modules/invoices/types";
 
 // Claude Inkline v3 monochromatic design tokens (RGB tuples for jsPDF)
 const COLOR_INK = [13, 27, 42] as const; // #0D1B2A (primary ink)
@@ -13,7 +13,6 @@ const COLOR_INK_SECONDARY = [59, 70, 84] as const; // #3B4654 (secondary text)
 const COLOR_INK_MUTED = [95, 107, 122] as const; // #5F6B7A (tertiary text & labels)
 const COLOR_HAIRLINE = [229, 231, 235] as const; // #E5E7EB (crisp hairlines)
 const COLOR_TABLE_HEADER = [249, 250, 251] as const; // #F9FAFB (table header background)
-const COLOR_FOG = [245, 246, 247] as const; // #F5F6F7 (subtle background fill)
 const COLOR_MOSS = [30, 122, 85] as const; // #1E7A55 (paid status green)
 const COLOR_EMBER = [196, 46, 22] as const; // #C42E16 (overdue / warning red)
 
@@ -144,22 +143,39 @@ export function getInvoicePDFFilename(
   return `${cleanNumber}.pdf`;
 }
 
+type RawInvoiceItemInput = {
+  id?: string;
+  description?: string;
+  quantity?: number | string;
+  unitPrice?: number | string;
+  lineTotal?: number | string;
+};
+
+type RawInvoiceInput = Partial<Omit<InvoiceDocumentModel, "items" | "client" | "company">> & {
+  items?: RawInvoiceItemInput[];
+  client?: Partial<InvoiceDocumentModel["client"]>;
+  company?: Partial<NonNullable<InvoiceDocumentModel["company"]>>;
+};
+
 /**
  * Normalizes input invoice data and options into a fully formed InvoiceDocumentModel.
  */
 export function toInvoiceDocumentModel(
-  invoice: InvoiceDocumentModel | any,
+  invoice: InvoiceDocumentModel | RawInvoiceInput,
   options?: PDFGeneratorOptions
 ): InvoiceDocumentModel {
   const baseCurrency = options?.baseCurrency || invoice.baseCurrency || invoice.company?.baseCurrency || "PKR";
+  const resolvedCurrency = String(invoice.currency || baseCurrency || "PKR");
   const exchangeRate =
-    invoice.exchangeRate ?? options?.baseCurrency
-      ? invoice.exchangeRate ?? DEFAULT_EXCHANGE_RATES[invoice.currency] ?? 1.0
-      : DEFAULT_EXCHANGE_RATES[invoice.currency] ?? 1.0;
+    invoice.exchangeRate ??
+    (resolvedCurrency === baseCurrency ? 1.0 : DEFAULT_EXCHANGE_RATES[resolvedCurrency] ?? 1.0);
 
+  const totalNum = new Decimal(Number(invoice.totalAmount) || 0);
   const calculatedBaseTotal =
     invoice.baseTotalAmount ??
-    (invoice.currency === baseCurrency ? invoice.totalAmount : invoice.totalAmount * exchangeRate);
+    (resolvedCurrency === baseCurrency
+      ? totalNum.toNumber()
+      : totalNum.times(exchangeRate).toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toNumber());
 
   const resolvedCompanyName =
     options?.companyName ||
@@ -174,14 +190,14 @@ export function toInvoiceDocumentModel(
     companyId: invoice.companyId,
     invoiceNumber: invoice.invoiceNumber || "INV-DRAFT",
     viewToken: invoice.viewToken || invoice.id || "portal",
-    currency: invoice.currency || "PKR",
+    currency: resolvedCurrency,
     exchangeRate,
     issueDate: invoice.issueDate || new Date(),
     dueDate: invoice.dueDate || new Date(),
     subtotal: Number(invoice.subtotal) || 0,
     taxRate: Number(invoice.taxRate) || 0,
     taxAmount: Number(invoice.taxAmount) || 0,
-    totalAmount: Number(invoice.totalAmount) || 0,
+    totalAmount: totalNum.toNumber(),
     baseTotalAmount: Number(calculatedBaseTotal) || 0,
     paidAmount: Number(invoice.paidAmount) || 0,
     status: invoice.status || "DRAFT",
@@ -195,13 +211,21 @@ export function toInvoiceDocumentModel(
       address: invoice.client?.address ?? null,
     },
     items: Array.isArray(invoice.items)
-      ? invoice.items.map((item: any) => ({
-          id: item.id,
-          description: item.description || "Service / Goods Delivery",
-          quantity: Number(item.quantity) || 1,
-          unitPrice: Number(item.unitPrice) || 0,
-          lineTotal: Number(item.lineTotal) || Number(item.quantity || 1) * Number(item.unitPrice || 0),
-        }))
+      ? invoice.items.map((item) => {
+          const qty = new Decimal(Number(item.quantity) || 1);
+          const price = new Decimal(Number(item.unitPrice) || 0);
+          const lineTotal =
+            item.lineTotal !== undefined && Number(item.lineTotal) > 0
+              ? Number(item.lineTotal)
+              : qty.times(price).toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toNumber();
+          return {
+            id: item.id,
+            description: item.description || "Service / Goods Delivery",
+            quantity: qty.toNumber(),
+            unitPrice: price.toNumber(),
+            lineTotal,
+          };
+        })
       : [],
     company: {
       name: resolvedCompanyName,
@@ -257,11 +281,9 @@ export function generateInvoicePDF(
 
   // Geometry
   const pageWidth = 210;
-  const pageHeight = 297;
   const margin = 20;
   const leftX = margin;
   const rightX = pageWidth - margin; // 190mm
-  const usableWidth = rightX - leftX; // 170mm
 
   // PDF Document Metadata
   doc.setProperties({
@@ -441,7 +463,8 @@ export function generateInvoicePDF(
   });
 
   // Position after line items table
-  let finalY = ((doc as any).lastAutoTable?.finalY ?? tableStartY + 40) + 7;
+  const docWithAutoTable = doc as unknown as { lastAutoTable?: { finalY?: number } };
+  let finalY = (docWithAutoTable.lastAutoTable?.finalY ?? tableStartY + 40) + 7;
 
   // If table ran very long, break cleanly to next page for totals
   if (finalY > 215) {
@@ -523,7 +546,12 @@ export function generateInvoicePDF(
     );
 
     tY += 4.5;
-    const remainingBalance = Math.max(0, invoice.totalAmount - invoice.paidAmount);
+    const remainingBalance = Decimal.max(
+      0,
+      new Decimal(invoice.totalAmount).minus(invoice.paidAmount)
+    )
+      .toDecimalPlaces(2, Decimal.ROUND_HALF_UP)
+      .toNumber();
     const balColor: readonly [number, number, number] =
       remainingBalance > 0 && rawStatus === "OVERDUE" ? COLOR_EMBER : COLOR_INK;
     doc.setFont("helvetica", "bold");
@@ -547,7 +575,12 @@ export function generateInvoicePDF(
   if (isForeignCurrency) {
     const baseTotalAmount =
       invoice.baseTotalAmount ??
-      (invoice.currency === baseCurrency ? invoice.totalAmount : invoice.totalAmount * fxRate);
+      (invoice.currency === baseCurrency
+        ? invoice.totalAmount
+        : new Decimal(invoice.totalAmount)
+            .times(fxRate)
+            .toDecimalPlaces(2, Decimal.ROUND_HALF_UP)
+            .toNumber());
 
     const formattedSource = new Intl.NumberFormat("en-US", {
       minimumFractionDigits: 2,
@@ -602,7 +635,7 @@ export function generateInvoicePDF(
     options?.wireRemittanceNotes ||
     invoice.wireRemittanceNotes ||
     invoice.notes ||
-    "Payment is requested in full by the due date specified. Wire transfer: Standard Chartered Bank, A/C # 01-2345678-01, IBAN: PK36SCBL0000001234567801. Please cite invoice number with wire transfer remittance.";
+    "Payment is requested in full by the due date specified. Please cite the invoice number when submitting remittance.";
   const remittanceText = sanitizeTextForPDF(rawRemittanceText);
 
   doc.setFont("helvetica", "normal");

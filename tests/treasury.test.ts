@@ -24,7 +24,6 @@ import {
 import type {
   UnpaidInvoiceDTO,
   UnpaidExpenseDTO,
-  DailyForecastPoint,
 } from "@/modules/treasury/types";
 
 describe("Domain 6: Treasury Ledger & 30-Day Forward Forecast Engine", () => {
@@ -32,7 +31,6 @@ describe("Domain 6: Treasury Ledger & 30-Day Forward Forecast Engine", () => {
   let companyAId: string;
   let companyBId: string;
   let clientAId: string;
-  let clientBId: string;
 
   beforeAll(async () => {
     // Warm up serverless Neon connection
@@ -80,7 +78,7 @@ describe("Domain 6: Treasury Ledger & 30-Day Forward Forecast Engine", () => {
     companyBId = compB.id;
     cleanupCompanyIds.push(compB.id);
 
-    const clientB = await db.client.create({
+    await db.client.create({
       data: {
         companyId: companyBId,
         clientName: "Pacific Coast Retailers",
@@ -88,7 +86,6 @@ describe("Domain 6: Treasury Ledger & 30-Day Forward Forecast Engine", () => {
         paymentTermsDays: 15,
       },
     });
-    clientBId = clientB.id;
   }, 35000);
 
   afterAll(async () => {

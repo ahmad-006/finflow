@@ -6,9 +6,7 @@ import { ZodError } from "zod";
 import { formatUserError } from "@/lib/errors";
 import {
   registerUser,
-  registerUserAndCompany,
   loginUser,
-  getUserWithCompany,
   verifySignupOtp,
   resendSignupOtp,
   requestPasswordReset,
@@ -27,7 +25,7 @@ import {
   createSessionToken,
   SESSION_MAX_AGE_SECONDS,
 } from "./session";
-import type { RegisterInput, LoginInput, AuthActionResult, SessionPayload, SafeUser } from "./types";
+import type { RegisterInput, LoginInput, AuthActionResult, SessionPayload } from "./types";
 import {
   verifyEmailSchema,
   resendOtpSchema,

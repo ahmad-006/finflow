@@ -453,16 +453,25 @@ export async function recordInvoicePayment(
       throw new Error("Cannot record payment on a cancelled invoice.");
     }
 
-    const currentPaid = Number(existing.paidAmount) || 0;
-    const newPaid = currentPaid + validated.paidAmount;
-    const total = Number(existing.totalAmount);
-    const isFullyPaid = newPaid >= total;
+    const currentPaidDec = toDecimal(existing.paidAmount || 0);
+    const totalDec = roundMoney(toDecimal(existing.totalAmount));
+    const remainingDec = roundMoney(totalDec.minus(currentPaidDec));
+    const paymentDec = roundMoney(toDecimal(validated.paidAmount));
+
+    if (paymentDec.gt(remainingDec)) {
+      throw new Error(
+        `Payment amount exceeds remaining balance (${remainingDec.toFixed(2)} ${existing.currency}).`
+      );
+    }
+
+    const newPaidDec = roundMoney(currentPaidDec.plus(paymentDec));
+    const isFullyPaid = newPaidDec.gte(totalDec);
     const paymentDate = validated.paidAt ? new Date(validated.paidAt) : new Date();
 
     const updated = await tx.invoice.update({
       where: { id: existing.id },
       data: {
-        paidAmount: new Prisma.Decimal(newPaid),
+        paidAmount: new Prisma.Decimal(newPaidDec.toNumber()),
         status: isFullyPaid ? "PAID" : existing.status === "DRAFT" ? "SENT" : existing.status,
         paidAt: isFullyPaid ? paymentDate : existing.paidAt,
       },

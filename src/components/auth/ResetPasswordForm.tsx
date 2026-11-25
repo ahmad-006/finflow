@@ -16,8 +16,8 @@ export function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [email, setEmail] = React.useState(searchParams.get("email") || "");
-  const [code, setCode] = React.useState(searchParams.get("code") || "");
+  const [email, setEmail] = React.useState(() => searchParams.get("email") || "");
+  const [code, setCode] = React.useState(() => searchParams.get("code") || "");
   const [password, setPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
@@ -25,14 +25,6 @@ export function ResetPasswordForm() {
 
   const [error, setError] = React.useState<string | null>(null);
   const [isPending, setIsPending] = React.useState(false);
-
-  // Keep state synced if URL params change
-  React.useEffect(() => {
-    const paramEmail = searchParams.get("email");
-    const paramCode = searchParams.get("code");
-    if (paramEmail && !email) setEmail(paramEmail);
-    if (paramCode && !code) setCode(paramCode);
-  }, [searchParams, email, code]);
 
   // Live password checklist
   const hasMinLength = password.length >= 8;

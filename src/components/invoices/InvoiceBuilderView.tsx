@@ -22,13 +22,13 @@ import type { ClientRecord } from "@/modules/clients/types";
 import {
   calculateInvoiceTotals,
   calculateLineItem,
-  formatMoney,
   SUPPORTED_CURRENCIES,
   DEFAULT_EXCHANGE_RATES,
   CURRENCY_SYMBOLS,
 } from "@/modules/invoices/currency";
+import { formatMoney } from "@/lib/format";
 import { formatUserError } from "@/lib/errors";
-import { createInvoiceAction } from "@/modules/invoices/actions";
+import { createInvoiceAction, updateInvoiceAction } from "@/modules/invoices/actions";
 import { getLiveExchangeRatesAction } from "@/modules/invoices/rates";
 import { CreateClientModal } from "@/components/clients/CreateClientModal";
 import { cn } from "@/lib/utils";
@@ -46,6 +46,7 @@ export interface InvoiceBuilderViewProps {
   initialExchangeRates?: Record<InvoiceCurrency, number>;
   mode?: "page" | "modal";
   initialClientId?: string;
+  invoiceToEdit?: InvoiceWithItemsAndClient;
   onCancel?: () => void;
   onSuccess?: (invoice: InvoiceWithItemsAndClient) => void;
   formId?: string;
@@ -87,11 +88,13 @@ export function InvoiceBuilderView({
   initialExchangeRates,
   mode = "page",
   initialClientId,
+  invoiceToEdit,
   onCancel,
   onSuccess,
   formId,
   onPendingChange,
 }: InvoiceBuilderViewProps) {
+  const isEditing = Boolean(invoiceToEdit);
   const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
 
@@ -116,40 +119,64 @@ export function InvoiceBuilderView({
 
   // Initial client selection
   const defaultClientId = React.useMemo(() => {
+    if (invoiceToEdit?.clientId) {
+      return invoiceToEdit.clientId;
+    }
     if (initialClientId && clients.some((c) => c.id === initialClientId)) {
       return initialClientId;
     }
     return clients[0]?.id || "";
-  }, [clients, initialClientId]);
+  }, [clients, initialClientId, invoiceToEdit]);
+
+  const initialCurrency = invoiceToEdit
+    ? normalizeCurrency(invoiceToEdit.currency)
+    : normalizedBaseCurrency;
 
   const [clientId, setClientId] = React.useState<string>(defaultClientId);
-  const [currency, setCurrency] = React.useState<InvoiceCurrency>(normalizedBaseCurrency);
+  const [currency, setCurrency] = React.useState<InvoiceCurrency>(initialCurrency);
   const [exchangeRate, setExchangeRate] = React.useState<string>(() =>
-    String(rates[normalizedBaseCurrency] ?? 1.0)
+    invoiceToEdit ? String(invoiceToEdit.exchangeRate) : String(rates[initialCurrency] ?? 1.0)
   );
 
   const [issueDate, setIssueDate] = React.useState<string>(() =>
-    new Date().toISOString().split("T")[0]
+    invoiceToEdit
+      ? new Date(invoiceToEdit.issueDate).toISOString().split("T")[0]
+      : new Date().toISOString().split("T")[0]
   );
-  const [hasManuallyEditedDueDate, setHasManuallyEditedDueDate] = React.useState(false);
+  const [hasManuallyEditedDueDate, setHasManuallyEditedDueDate] = React.useState(
+    Boolean(invoiceToEdit)
+  );
   const [dueDate, setDueDate] = React.useState<string>(() =>
-    calculateDefaultDueDate(
-      defaultClientId,
-      new Date().toISOString().split("T")[0],
-      clients
-    )
+    invoiceToEdit
+      ? new Date(invoiceToEdit.dueDate).toISOString().split("T")[0]
+      : calculateDefaultDueDate(
+          defaultClientId,
+          new Date().toISOString().split("T")[0],
+          clients
+        )
   );
-  const [taxRate, setTaxRate] = React.useState<string>("0");
-  const [notes, setNotes] = React.useState<string>("");
+  const [taxRate, setTaxRate] = React.useState<string>(() =>
+    invoiceToEdit ? String(invoiceToEdit.taxRate) : "0"
+  );
+  const [notes, setNotes] = React.useState<string>(() => invoiceToEdit?.notes || "");
 
-  const [items, setItems] = React.useState<FormLineItem[]>([
-    {
-      id: "item-1",
-      description: "",
-      quantity: "1",
-      unitPrice: "0",
-    },
-  ]);
+  const [items, setItems] = React.useState<FormLineItem[]>(() =>
+    invoiceToEdit && invoiceToEdit.items.length > 0
+      ? invoiceToEdit.items.map((it, idx) => ({
+          id: it.id || `item-${idx + 1}`,
+          description: it.description,
+          quantity: String(it.quantity),
+          unitPrice: String(it.unitPrice),
+        }))
+      : [
+          {
+            id: "item-1",
+            description: "",
+            quantity: "1",
+            unitPrice: "0",
+          },
+        ]
+  );
 
   const [errorBanner, setErrorBanner] = React.useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string[]>>({});
@@ -314,10 +341,14 @@ export function InvoiceBuilderView({
       };
 
       try {
-        const res = await createInvoiceAction(payload);
+        const res = invoiceToEdit
+          ? await updateInvoiceAction({ id: invoiceToEdit.id, ...payload })
+          : await createInvoiceAction(payload);
 
         if (!res.success) {
-          setErrorBanner(res.error || "Failed to generate invoice.");
+          setErrorBanner(
+            res.error || (isEditing ? "Failed to update draft invoice." : "Failed to generate invoice.")
+          );
           if (res.errors) {
             setFieldErrors(res.errors);
           }
@@ -326,13 +357,18 @@ export function InvoiceBuilderView({
             onSuccess(res.data);
           } else {
             router.push(`/invoices/${res.data.id}`);
+            if (isEditing) {
+              router.refresh();
+            }
           }
         }
       } catch (actionErr) {
         setErrorBanner(
           formatUserError(
             actionErr,
-            "Unable to generate invoice. Please check your connection."
+            isEditing
+              ? "Unable to update draft invoice. Please check your connection."
+              : "Unable to generate invoice. Please check your connection."
           )
         );
       }
@@ -357,17 +393,21 @@ export function InvoiceBuilderView({
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-line">
             <div className="flex flex-col gap-1">
               <Link
-                href="/invoices"
+                href={isEditing && invoiceToEdit ? `/invoices/${invoiceToEdit.id}` : "/invoices"}
                 className="inline-flex items-center gap-1.5 min-h-[44px] text-xs text-ink/60 hover:text-ink transition-colors"
               >
                 <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
-                <span>Back to Invoices</span>
+                <span>{isEditing ? "Back to Invoice" : "Back to Invoices"}</span>
               </Link>
               <h1 className="text-2xl sm:text-3xl font-serif tracking-tight text-ink">
-                Create Commercial Invoice
+                {isEditing && invoiceToEdit
+                  ? `Edit Draft ${invoiceToEdit.invoiceNumber}`
+                  : "Create Commercial Invoice"}
               </h1>
               <p className="text-xs sm:text-sm text-ink/70">
-                Generate an immutable billing statement with frozen spot foreign exchange rates and GAAP-compliant sequential numbering.
+                {isEditing
+                  ? "Update client, line items, currency, spot rate, or due date before issuing this draft."
+                  : "Generate an immutable billing statement with frozen spot foreign exchange rates and GAAP-compliant sequential numbering."}
               </p>
             </div>
 
@@ -383,7 +423,7 @@ export function InvoiceBuilderView({
                 </button>
               ) : (
                 <Link
-                  href="/invoices"
+                  href={isEditing && invoiceToEdit ? `/invoices/${invoiceToEdit.id}` : "/invoices"}
                   className="min-h-[44px] px-5 py-2 rounded-full border border-line text-xs font-medium text-ink/70 hover:bg-fog transition-colors inline-flex items-center justify-center"
                 >
                   Discard
@@ -394,7 +434,13 @@ export function InvoiceBuilderView({
                 disabled={isPending}
                 className="min-h-[44px] px-6 py-2 rounded-full bg-ink text-white text-xs font-medium hover:bg-ink-hover transition-colors disabled:opacity-50 inline-flex items-center justify-center"
               >
-                {isPending ? "Generating Invoice..." : "Create & Issue Invoice"}
+                {isPending
+                  ? isEditing
+                    ? "Saving Draft..."
+                    : "Generating Invoice..."
+                  : isEditing
+                  ? "Save Draft Changes"
+                  : "Create & Issue Invoice"}
               </button>
             </div>
           </div>

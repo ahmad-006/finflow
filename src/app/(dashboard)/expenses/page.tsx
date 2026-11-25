@@ -5,7 +5,7 @@ import { getCachedExpenses, getCachedExpenseKPIs } from "@/modules/expenses/serv
 import { ExpenseDirectoryView } from "@/components/expenses/ExpenseDirectoryView";
 import { ExpenseDirectorySkeleton } from "@/components/expenses/ExpenseDirectorySkeleton";
 import { Band } from "@/components/shell/Band";
-import type { ExpenseRecord, ExpenseKPIs } from "@/modules/expenses/types";
+import type { ExpenseRecord } from "@/modules/expenses/types";
 
 export const metadata = {
   title: "Expenses & Scheduled Outflows | FinFlow",

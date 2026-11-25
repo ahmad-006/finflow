@@ -1,5 +1,4 @@
 import { describe, it, expect } from "bun:test";
-import Decimal from "decimal.js";
 import {
   calculateLineItem,
   calculateInvoiceTotals,
@@ -7,7 +6,6 @@ import {
   roundFx,
   formatMoney,
   convertAmount,
-  DEFAULT_EXCHANGE_RATES,
 } from "@/modules/invoices/currency";
 import {
   createInvoiceSchema,

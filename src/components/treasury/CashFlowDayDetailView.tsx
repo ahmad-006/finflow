@@ -4,17 +4,9 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Calendar,
   ArrowLeft,
   ArrowRight,
-  CheckCircle2,
   AlertTriangle,
-  Building2,
-  CreditCard,
-  FileText,
-  Clock,
-  RotateCcw,
-  Receipt,
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -599,10 +591,10 @@ export function CashFlowDayDetailView({ day, mode = "expected" }: CashFlowDayDet
       {/* Educational Explanatory Box */}
       <div className="mt-12 p-6 rounded-[16px] bg-fog/40 border border-line text-xs">
         <h3 className="font-serif font-bold text-ink text-sm mb-2">
-          How this day's cash balance is modeled
+          How this day&apos;s cash balance is modeled
         </h3>
         <p className="text-ink-2 leading-relaxed mb-3">
-          The opening balance represents liquidity at 00:00 UTC, inherited from the previous day's closing position.
+          The opening balance represents liquidity at 00:00 UTC, inherited from the previous day&apos;s closing position.
           Maturing inflows add cash based on client payment latency history. Scheduled operational outflows are
           deducted at full face value. If the closing balance drops below your designated safety buffer of{" "}
           {formatMoney(day.safetyBuffer, day.baseCurrency)}, the system flags a deficit risk alert.

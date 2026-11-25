@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { createClientAction } from "@/modules/clients/actions";
+import { createClientAction, updateClientAction } from "@/modules/clients/actions";
 import { formatUserError } from "@/lib/errors";
 import type { ClientRecord } from "@/modules/clients/types";
 import { Modal } from "@/components/ui/Modal";
@@ -13,29 +13,42 @@ import { Button } from "@/components/ui/button";
 interface CreateClientModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (newClient: ClientRecord) => void;
+  onSuccess?: (client: ClientRecord) => void;
+  clientToEdit?: ClientRecord | null;
 }
 
-const CREATE_CLIENT_FORM_ID = "create-client-modal-form";
+const CLIENT_MODAL_FORM_ID = "client-modal-form";
+const STANDARD_TERMS = [7, 15, 30, 45, 60, 90];
 
 function CreateClientModalContent({
   onClose,
   onSuccess,
+  clientToEdit,
 }: {
   onClose: () => void;
-  onSuccess?: (newClient: ClientRecord) => void;
+  onSuccess?: (client: ClientRecord) => void;
+  clientToEdit?: ClientRecord | null;
 }) {
+  const isEditing = Boolean(clientToEdit);
   const [isPending, startTransition] = React.useTransition();
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string[]>>({});
 
-  const [formData, setFormData] = React.useState({
-    clientName: "",
-    email: "",
-    phone: "",
-    address: "",
-    paymentTermsDays: "30",
-  });
+  const [formData, setFormData] = React.useState(() => ({
+    clientName: clientToEdit?.clientName || "",
+    email: clientToEdit?.email || "",
+    phone: clientToEdit?.phone || "",
+    address: clientToEdit?.address || "",
+    paymentTermsDays: String(clientToEdit?.paymentTermsDays ?? 30),
+  }));
+
+  const termOptions = React.useMemo(() => {
+    const terms = new Set(STANDARD_TERMS);
+    if (clientToEdit?.paymentTermsDays && clientToEdit.paymentTermsDays > 0) {
+      terms.add(clientToEdit.paymentTermsDays);
+    }
+    return Array.from(terms).sort((a, b) => a - b);
+  }, [clientToEdit]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,10 +57,18 @@ function CreateClientModalContent({
 
     startTransition(async () => {
       try {
-        const result = await createClientAction(formData);
+        const result =
+          isEditing && clientToEdit
+            ? await updateClientAction({
+                id: clientToEdit.id,
+                ...formData,
+              })
+            : await createClientAction(formData);
 
         if (!result.success) {
-          setErrorMessage(result.error || "Failed to create client.");
+          setErrorMessage(
+            result.error || (isEditing ? "Failed to update client." : "Failed to create client.")
+          );
           if (result.errors) {
             setFieldErrors(result.errors);
           }
@@ -60,7 +81,12 @@ function CreateClientModalContent({
         onClose();
       } catch (err) {
         setErrorMessage(
-          formatUserError(err, "Unable to create client. Please check your connection.")
+          formatUserError(
+            err,
+            isEditing
+              ? "Unable to update client. Please check your connection."
+              : "Unable to create client. Please check your connection."
+          )
         );
       }
     });
@@ -72,8 +98,12 @@ function CreateClientModalContent({
       onClose={onClose}
       size="md"
       eyebrow="Accounts Receivable"
-      title="Add New Client"
-      description="Create a client account to issue multi-currency invoices and track payment latency."
+      title={isEditing ? "Edit Client Profile" : "Add New Client"}
+      description={
+        isEditing
+          ? "Update billing contact details and default payment terms."
+          : "Create a client account to issue multi-currency invoices and track payment latency."
+      }
       preventClose={isPending}
       footer={
         <>
@@ -89,13 +119,13 @@ function CreateClientModalContent({
           </Button>
           <Button
             type="submit"
-            form={CREATE_CLIENT_FORM_ID}
+            form={CLIENT_MODAL_FORM_ID}
             variant="primary"
             size="default"
             isLoading={isPending}
             className="min-h-[44px] h-11 px-6 rounded-full text-sm"
           >
-            Save Client
+            {isEditing ? "Save Changes" : "Save Client"}
           </Button>
         </>
       }
@@ -107,7 +137,7 @@ function CreateClientModalContent({
           </div>
         )}
 
-        <form id={CREATE_CLIENT_FORM_ID} onSubmit={handleSubmit} className="flex flex-col gap-3.5">
+        <form id={CLIENT_MODAL_FORM_ID} onSubmit={handleSubmit} className="flex flex-col gap-3.5">
           <div>
             <Label htmlFor="clientName">Client Name</Label>
             <Input
@@ -166,12 +196,11 @@ function CreateClientModalContent({
                   setFormData((prev) => ({ ...prev, paymentTermsDays: e.target.value }))
                 }
               >
-                <option value="7">Net 7 (7 days)</option>
-                <option value="15">Net 15 (15 days)</option>
-                <option value="30">Net 30 (Standard 30 days)</option>
-                <option value="45">Net 45 (45 days)</option>
-                <option value="60">Net 60 (60 days)</option>
-                <option value="90">Net 90 (90 days)</option>
+                {termOptions.map((days) => (
+                  <option key={days} value={String(days)}>
+                    Net {days} ({days === 30 ? "Standard 30 days" : `${days} days`})
+                  </option>
+                ))}
               </Select>
             </div>
           </div>
@@ -197,7 +226,15 @@ export function CreateClientModal({
   isOpen,
   onClose,
   onSuccess,
+  clientToEdit,
 }: CreateClientModalProps) {
   if (!isOpen) return null;
-  return <CreateClientModalContent onClose={onClose} onSuccess={onSuccess} />;
+  return (
+    <CreateClientModalContent
+      key={clientToEdit?.id || "new-client"}
+      onClose={onClose}
+      onSuccess={onSuccess}
+      clientToEdit={clientToEdit}
+    />
+  );
 }
