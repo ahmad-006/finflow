@@ -1,9 +1,14 @@
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { unstable_cache } from "next/cache";
-import { calculateInvoiceTotals, toDecimal, roundMoney } from "./currency";
+import {
+  calculateInvoiceTotals,
+  toDecimal,
+  roundMoney,
+  DEFAULT_EXCHANGE_RATES,
+} from "./currency";
+import { getLiveExchangeRates } from "./rates";
 import type {
-  InvoiceRecord,
   InvoiceWithItemsAndClient,
   InvoiceItemRecord,
   InvoiceStatus,
@@ -13,8 +18,17 @@ import type {
   RecordPaymentInput,
   InvoiceFilters,
   InvoiceKPIs,
+  BulkInvoiceRowInput,
+  BulkInvoiceRowFeedback,
+  BulkImportInvoicesOptions,
+  BulkImportInvoicesResult,
 } from "./types";
-import { createInvoiceSchema, updateInvoiceSchema, recordPaymentSchema } from "./validation";
+import {
+  createInvoiceSchema,
+  updateInvoiceSchema,
+  recordPaymentSchema,
+  bulkInvoiceRowSchema,
+} from "./validation";
 
 type PrismaInvoiceWithRelations = Prisma.InvoiceGetPayload<{
   include: {
@@ -152,25 +166,34 @@ export async function createInvoice(
 ): Promise<InvoiceWithItemsAndClient> {
   const validated = createInvoiceSchema.parse(input);
 
-  // Verify client exists and belongs to the company
-  const client = await db.client.findFirst({
-    where: {
-      id: validated.clientId,
-      companyId,
-      deletedAt: null,
-    },
-  });
+  // Verify client exists and belongs to the company, and fetch company baseCurrency
+  const [client, company] = await Promise.all([
+    db.client.findFirst({
+      where: {
+        id: validated.clientId,
+        companyId,
+        deletedAt: null,
+      },
+    }),
+    db.company.findUnique({
+      where: { id: companyId },
+      select: { baseCurrency: true },
+    }),
+  ]);
 
   if (!client) {
     throw new Error("Client not found or does not belong to your organization.");
   }
+
+  const baseCurrency = ((company?.baseCurrency || "PKR").toUpperCase()) as InvoiceCurrency;
 
   // Calculate totals and base currency conversion
   const calc = calculateInvoiceTotals(
     validated.items,
     validated.taxRate,
     validated.currency,
-    validated.exchangeRate
+    validated.exchangeRate,
+    baseCurrency
   );
 
   return await db.$transaction(
@@ -244,6 +267,9 @@ export async function updateInvoice(
     include: {
       items: true,
       client: true,
+      company: {
+        select: { baseCurrency: true },
+      },
     },
   });
 
@@ -254,6 +280,8 @@ export async function updateInvoice(
   if (existing.status === "PAID" || existing.status === "CANCELLED") {
     throw new Error(`Cannot modify an invoice with status ${existing.status}.`);
   }
+
+  const baseCurrency = ((existing.company?.baseCurrency || "PKR").toUpperCase()) as InvoiceCurrency;
 
   return await db.$transaction(async (tx) => {
     // If line items or financial parameters are being updated
@@ -268,7 +296,13 @@ export async function updateInvoice(
       const taxRate = validated.taxRate !== undefined ? validated.taxRate : Number(existing.taxRate);
       const exchangeRate = validated.exchangeRate !== undefined ? validated.exchangeRate : Number(existing.exchangeRate);
 
-      const calc = calculateInvoiceTotals(itemsToCalculate, taxRate, currency, exchangeRate);
+      const calc = calculateInvoiceTotals(
+        itemsToCalculate,
+        taxRate,
+        currency,
+        exchangeRate,
+        baseCurrency
+      );
 
       // Recreate items if provided
       if (validated.items) {
@@ -798,4 +832,442 @@ export function getCachedInvoiceKPIs(companyId: string): Promise<InvoiceKPIs> {
       revalidate: 3600,
     }
   )();
+}
+
+/**
+ * Bulk imports up to 500 invoice line-item rows (grouped by invoiceGroup or standalone)
+ * in a single atomic transaction with sequential numbering and audit logging.
+ */
+export async function bulkImportInvoices(
+  companyId: string,
+  rows: BulkInvoiceRowInput[],
+  options?: BulkImportInvoicesOptions,
+  userId?: string
+): Promise<BulkImportInvoicesResult> {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    throw new Error("At least one invoice row is required for import.");
+  }
+  if (rows.length > 500) {
+    throw new Error("Maximum 500 invoice rows allowed per import.");
+  }
+
+  const company = await db.company.findUnique({
+    where: { id: companyId },
+    select: { id: true, baseCurrency: true },
+  });
+  if (!company) {
+    throw new Error("Company not found.");
+  }
+
+  const baseCurrency = ((company.baseCurrency || "PKR").toUpperCase()) as InvoiceCurrency;
+  const liveRates = await getLiveExchangeRates(baseCurrency);
+
+  const activeClients = await db.client.findMany({
+    where: {
+      companyId,
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      clientName: true,
+      email: true,
+      paymentTermsDays: true,
+    },
+  });
+
+  const clientsByEmail = new Map<string, (typeof activeClients)[number]>();
+  for (const c of activeClients) {
+    clientsByEmail.set(c.email.trim().toLowerCase(), c);
+  }
+
+  interface RowEntry {
+    rowNumber: number;
+    raw: BulkInvoiceRowInput;
+  }
+
+  interface GroupBucket {
+    groupKey: string;
+    invoiceGroup?: string;
+    entries: RowEntry[];
+  }
+
+  const buckets: GroupBucket[] = [];
+  const groupBucketMap = new Map<string, GroupBucket>();
+
+  for (let i = 0; i < rows.length; i++) {
+    const raw = rows[i];
+    const rowNumber = raw.rowNumber ?? i + 2;
+    const rawGroup = typeof raw.invoiceGroup === "string" ? raw.invoiceGroup.trim() : "";
+
+    if (rawGroup !== "") {
+      const groupKey = `group:${rawGroup.toLowerCase()}`;
+      let bucket = groupBucketMap.get(groupKey);
+      if (!bucket) {
+        bucket = {
+          groupKey,
+          invoiceGroup: rawGroup,
+          entries: [],
+        };
+        groupBucketMap.set(groupKey, bucket);
+        buckets.push(bucket);
+      }
+      bucket.entries.push({ rowNumber, raw });
+    } else {
+      buckets.push({
+        groupKey: `single:${i}`,
+        entries: [{ rowNumber, raw }],
+      });
+    }
+  }
+
+  const errors: BulkInvoiceRowFeedback[] = [];
+  const pendingNewClients = new Map<string, { clientName: string; email: string }>();
+  const autoCreateEnabled = options?.autoCreateMissingClients === true;
+
+  interface PreparedInvoice {
+    clientEmail: string;
+    existingClientId?: string;
+    currency: InvoiceCurrency;
+    issueDate: Date;
+    dueDate: Date;
+    status: InvoiceStatus;
+    notes: string | null;
+    calc: ReturnType<typeof calculateInvoiceTotals>;
+    items: Array<{ description: string; quantity: number; unitPrice: number }>;
+  }
+
+  const preparedInvoices: PreparedInvoice[] = [];
+
+  for (const bucket of buckets) {
+    const parsedEntries: Array<{
+      rowNumber: number;
+      rawStatusPresent: boolean;
+      data: ReturnType<typeof bulkInvoiceRowSchema.parse>;
+    }> = [];
+    let bucketHasValidationError = false;
+
+    for (const entry of bucket.entries) {
+      const parsed = bulkInvoiceRowSchema.safeParse(entry.raw);
+      if (!parsed.success) {
+        bucketHasValidationError = true;
+        errors.push({
+          rowNumber: entry.rowNumber,
+          invoiceGroup: bucket.invoiceGroup,
+          clientEmail: typeof entry.raw.clientEmail === "string" ? entry.raw.clientEmail : undefined,
+          message: parsed.error.issues[0]?.message || "Invalid invoice row.",
+        });
+      } else {
+        const rawStatus = typeof entry.raw.status === "string" ? entry.raw.status.trim() : "";
+        parsedEntries.push({
+          rowNumber: entry.rowNumber,
+          rawStatusPresent: rawStatus.length > 0,
+          data: parsed.data,
+        });
+      }
+    }
+
+    if (bucketHasValidationError || parsedEntries.length === 0) {
+      continue;
+    }
+
+    const firstEmail = parsedEntries[0].data.clientEmail.toLowerCase();
+    const mixedEmailEntry = parsedEntries.find(
+      (e) => e.data.clientEmail.toLowerCase() !== firstEmail
+    );
+    if (mixedEmailEntry) {
+      errors.push({
+        rowNumber: mixedEmailEntry.rowNumber,
+        invoiceGroup: bucket.invoiceGroup,
+        clientEmail: mixedEmailEntry.data.clientEmail,
+        message: `Invoice group "${bucket.invoiceGroup}" has mixed client emails (${firstEmail} vs ${mixedEmailEntry.data.clientEmail}).`,
+      });
+      continue;
+    }
+
+    const firstRowNumber = parsedEntries[0].rowNumber;
+    const validClientName = parsedEntries
+      .map((e) => (e.data.clientName ? e.data.clientName.trim() : ""))
+      .find((name) => name.length >= 2);
+
+    const existingClient = clientsByEmail.get(firstEmail);
+    let paymentTermsDays = 30;
+
+    if (existingClient) {
+      paymentTermsDays = existingClient.paymentTermsDays;
+    } else if (autoCreateEnabled) {
+      if (!pendingNewClients.has(firstEmail)) {
+        if (!validClientName) {
+          errors.push({
+            rowNumber: firstRowNumber,
+            invoiceGroup: bucket.invoiceGroup,
+            clientEmail: firstEmail,
+            message: `Client "${firstEmail}" not found and requires a clientName (at least 2 characters) to auto-create.`,
+          });
+          continue;
+        }
+        pendingNewClients.set(firstEmail, {
+          clientName: validClientName,
+          email: firstEmail,
+        });
+      }
+    } else {
+      errors.push({
+        rowNumber: firstRowNumber,
+        invoiceGroup: bucket.invoiceGroup,
+        clientEmail: firstEmail,
+        message: `Client with email "${firstEmail}" not found.`,
+      });
+      continue;
+    }
+
+    const currency =
+      (parsedEntries.find((e) => e.data.currency !== undefined)?.data.currency as
+        | InvoiceCurrency
+        | undefined) ?? baseCurrency;
+
+    const customExchangeRate = parsedEntries.find(
+      (e) => e.data.exchangeRate !== undefined
+    )?.data.exchangeRate;
+
+    const issueDate = new Date(parsedEntries[0].data.issueDate);
+    const explicitDueDate = parsedEntries.find((e) => e.data.dueDate !== undefined)?.data.dueDate;
+    const dueDate = explicitDueDate
+      ? new Date(explicitDueDate)
+      : new Date(issueDate.getTime() + paymentTermsDays * 86400000);
+
+    const issueDay = new Date(issueDate).setHours(0, 0, 0, 0);
+    const dueDay = new Date(dueDate).setHours(0, 0, 0, 0);
+    if (dueDay < issueDay) {
+      errors.push({
+        rowNumber: firstRowNumber,
+        invoiceGroup: bucket.invoiceGroup,
+        clientEmail: firstEmail,
+        message: "Due date cannot be earlier than issue date.",
+      });
+      continue;
+    }
+
+    const taxRate = parsedEntries[0].data.taxRate;
+    const explicitStatusEntry = parsedEntries.find((e) => e.rawStatusPresent);
+    let resolvedStatus: InvoiceStatus = explicitStatusEntry
+      ? explicitStatusEntry.data.status
+      : parsedEntries[0].data.status;
+
+    if (resolvedStatus === "SENT" && dueDate.getTime() < Date.now()) {
+      resolvedStatus = "OVERDUE";
+    }
+
+    const notes =
+      parsedEntries
+        .map((e) => (e.data.notes ? e.data.notes.trim() : ""))
+        .find((n) => n.length > 0) || null;
+
+    const resolvedRate =
+      currency === baseCurrency
+        ? 1.0
+        : (customExchangeRate ??
+          liveRates[currency] ??
+          DEFAULT_EXCHANGE_RATES[currency] ??
+          1.0);
+
+    const items = parsedEntries.map((e) => ({
+      description: e.data.description.trim(),
+      quantity: e.data.quantity,
+      unitPrice: e.data.unitPrice,
+    }));
+
+    const calc = calculateInvoiceTotals(items, taxRate, currency, resolvedRate, baseCurrency);
+
+    preparedInvoices.push({
+      clientEmail: firstEmail,
+      existingClientId: existingClient?.id,
+      currency,
+      issueDate,
+      dueDate,
+      status: resolvedStatus,
+      notes,
+      calc,
+      items,
+    });
+  }
+
+  let createdInvoices: InvoiceWithItemsAndClient[] = [];
+  let autoCreatedClientsCount = 0;
+
+  if (preparedInvoices.length > 0) {
+    const txResult = await db.$transaction(
+      async (tx) => {
+        const autoCreatedIdByEmail = new Map<string, string>();
+        const referencedEmails = new Set(preparedInvoices.map((p) => p.clientEmail));
+        const clientsToCreate = Array.from(pendingNewClients.values()).filter((c) =>
+          referencedEmails.has(c.email)
+        );
+
+        if (clientsToCreate.length > 0) {
+          const insertedClients = await tx.client.createManyAndReturn({
+            data: clientsToCreate.map((c) => ({
+              companyId,
+              clientName: c.clientName,
+              email: c.email,
+              paymentTermsDays: 30,
+              riskStatus: "HEALTHY",
+            })),
+            select: {
+              id: true,
+              email: true,
+            },
+          });
+          for (const createdClient of insertedClients) {
+            autoCreatedIdByEmail.set(createdClient.email.toLowerCase(), createdClient.id);
+          }
+        }
+
+        // Query latest invoice number ONCE per distinct calendar year
+        const distinctYears = Array.from(
+          new Set(
+            preparedInvoices.map((inv) => {
+              const y = inv.issueDate.getFullYear();
+              return isNaN(y) ? new Date().getFullYear() : y;
+            })
+          )
+        );
+
+        const yearSequenceMap = new Map<number, number>();
+        for (const year of distinctYears) {
+          const prefix = `INV-${year}-`;
+          const latest = await tx.invoice.findFirst({
+            where: {
+              companyId,
+              invoiceNumber: { startsWith: prefix },
+            },
+            orderBy: { invoiceNumber: "desc" },
+            select: { invoiceNumber: true },
+          });
+
+          let lastSeq = 0;
+          if (latest?.invoiceNumber) {
+            const parts = latest.invoiceNumber.split("-");
+            const parsedSeq = parseInt(parts[parts.length - 1], 10);
+            if (!isNaN(parsedSeq)) {
+              lastSeq = parsedSeq;
+            }
+          }
+          yearSequenceMap.set(year, lastSeq);
+        }
+
+        const createdIds: string[] = [];
+        const invoiceRowsToInsert: Prisma.InvoiceCreateManyInput[] = [];
+        const itemRowsToInsert: Prisma.InvoiceItemCreateManyInput[] = [];
+
+        for (const prep of preparedInvoices) {
+          const clientId = prep.existingClientId ?? autoCreatedIdByEmail.get(prep.clientEmail);
+          if (!clientId) {
+            throw new Error(`Failed to resolve client for "${prep.clientEmail}".`);
+          }
+
+          const rawYear = prep.issueDate.getFullYear();
+          const year = isNaN(rawYear) ? new Date().getFullYear() : rawYear;
+          const nextSeq = (yearSequenceMap.get(year) ?? 0) + 1;
+          yearSequenceMap.set(year, nextSeq);
+          const invoiceNumber = `INV-${year}-${String(nextSeq).padStart(4, "0")}`;
+
+          const invoiceId = crypto.randomUUID();
+          createdIds.push(invoiceId);
+
+          invoiceRowsToInsert.push({
+            id: invoiceId,
+            companyId,
+            clientId,
+            invoiceNumber,
+            viewToken: crypto.randomUUID(),
+            currency: prep.currency,
+            exchangeRate: new Prisma.Decimal(prep.calc.exchangeRate),
+            issueDate: prep.issueDate,
+            dueDate: prep.dueDate,
+            subtotal: new Prisma.Decimal(prep.calc.subtotal),
+            taxRate: new Prisma.Decimal(prep.calc.taxRate),
+            taxAmount: new Prisma.Decimal(prep.calc.taxAmount),
+            totalAmount: new Prisma.Decimal(prep.calc.totalAmount),
+            baseTotalAmount: new Prisma.Decimal(prep.calc.baseTotalAmount),
+            paidAmount: new Prisma.Decimal(0),
+            status: prep.status,
+            notes: prep.notes,
+          });
+
+          prep.calc.lineItems.forEach((calcItem, idx) => {
+            itemRowsToInsert.push({
+              id: crypto.randomUUID(),
+              companyId,
+              invoiceId,
+              description: prep.items[idx].description,
+              quantity: new Prisma.Decimal(calcItem.quantity),
+              unitPrice: new Prisma.Decimal(calcItem.unitPrice),
+              lineTotal: new Prisma.Decimal(calcItem.lineTotal),
+            });
+          });
+        }
+
+        await tx.invoice.createMany({ data: invoiceRowsToInsert });
+        await tx.invoiceItem.createMany({ data: itemRowsToInsert });
+
+        const insertedInvoices = await tx.invoice.findMany({
+          where: {
+            id: { in: createdIds },
+            companyId,
+          },
+          include: {
+            client: {
+              select: {
+                id: true,
+                clientName: true,
+                email: true,
+                paymentTermsDays: true,
+                phone: true,
+                address: true,
+              },
+            },
+            items: true,
+          },
+        });
+
+        const byId = new Map(insertedInvoices.map((inv) => [inv.id, sanitizeInvoice(inv)]));
+        const ordered = createdIds
+          .map((id) => byId.get(id))
+          .filter((inv): inv is InvoiceWithItemsAndClient => Boolean(inv));
+
+        await tx.auditLog.create({
+          data: {
+            companyId,
+            userId: userId || null,
+            entityType: "INVOICE",
+            entityId: ordered[0]?.id || companyId,
+            action: "CREATE",
+            details: JSON.stringify({
+              source: "CSV_BULK_IMPORT",
+              createdCount: ordered.length,
+              autoCreatedClientsCount: autoCreatedIdByEmail.size,
+              failedCount: errors.length,
+            }),
+          },
+        });
+
+        return {
+          createdInvoices: ordered,
+          autoCreatedClientsCount: autoCreatedIdByEmail.size,
+        };
+      },
+      { maxWait: 15000, timeout: 45000 }
+    );
+
+    createdInvoices = txResult.createdInvoices;
+    autoCreatedClientsCount = txResult.autoCreatedClientsCount;
+  }
+
+  return {
+    createdCount: createdInvoices.length,
+    autoCreatedClientsCount,
+    failedCount: errors.length,
+    createdInvoices,
+    errors,
+  };
 }

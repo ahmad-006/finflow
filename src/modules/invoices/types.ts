@@ -115,3 +115,39 @@ export interface InvoiceActionResult<T = unknown> {
   errors?: Record<string, string[]>;
   data?: T;
 }
+
+export interface BulkInvoiceRowInput {
+  rowNumber?: number;
+  invoiceGroup?: string;
+  clientEmail: string;
+  clientName?: string;
+  currency?: string;
+  exchangeRate?: number | string;
+  issueDate: string;
+  dueDate?: string;
+  taxRate?: number | string;
+  status?: string;
+  description: string;
+  quantity?: number | string;
+  unitPrice: number | string;
+  notes?: string;
+}
+
+export interface BulkInvoiceRowFeedback {
+  rowNumber: number;
+  invoiceGroup?: string;
+  clientEmail?: string;
+  message: string;
+}
+
+export interface BulkImportInvoicesOptions {
+  autoCreateMissingClients?: boolean;
+}
+
+export interface BulkImportInvoicesResult {
+  createdCount: number;
+  autoCreatedClientsCount: number;
+  failedCount: number;
+  createdInvoices: InvoiceWithItemsAndClient[];
+  errors: BulkInvoiceRowFeedback[];
+}

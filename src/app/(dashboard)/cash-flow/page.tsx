@@ -1,6 +1,6 @@
 import * as React from "react";
 import { redirect } from "next/navigation";
-import { getSession } from "@/modules/auth";
+import { getSession, getCurrentUser } from "@/modules/auth";
 import { getCached30DayForecast } from "@/modules/treasury";
 import { CashFlowCockpitView } from "@/components/treasury/CashFlowCockpitView";
 import { CashFlowSkeleton } from "@/components/treasury/CashFlowSkeleton";
@@ -19,9 +19,13 @@ async function CashFlowDataLoader() {
     redirect("/login");
   }
 
-  const forecast = await getCached30DayForecast(session.companyId);
+  const [currentUser, forecast] = await Promise.all([
+    getCurrentUser(),
+    getCached30DayForecast(session.companyId),
+  ]);
+  const role = currentUser?.role || session.role || "MEMBER";
 
-  return <CashFlowCockpitView initialForecast={forecast} />;
+  return <CashFlowCockpitView initialForecast={forecast} role={role} />;
 }
 
 export default function CashFlowPage() {

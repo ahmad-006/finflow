@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Plus,
   Search,
@@ -10,12 +11,19 @@ import {
   ArrowUpDown,
   LayoutGrid,
   List,
+  Upload,
+  AlertCircle,
+  CheckCircle2,
+  X,
 } from "lucide-react";
 import type { ClientWithMetrics, ARAgingBuckets, ClientRiskStatus } from "@/modules/clients/types";
 import { deleteClientAction } from "@/modules/clients/actions";
+import { canMutateLedger } from "@/modules/auth/rbac";
 import { formatUserError } from "@/lib/errors";
 import { ARAgingBar } from "./ARAgingBar";
 import { CreateClientModal } from "./CreateClientModal";
+import { BulkImportClientsModal } from "./BulkImportClientsModal";
+import { ConfirmModal } from "@/components/ui/Modal";
 import { StatusBadge } from "@/components/data/StatusBadge";
 import { Money } from "@/components/data/Money";
 import { Button } from "@/components/ui/button";
@@ -26,6 +34,7 @@ export interface ClientDirectoryViewProps {
   initialClients: ClientWithMetrics[];
   aging: ARAgingBuckets;
   currency?: string;
+  role?: string;
 }
 
 type SortField = "name" | "latency" | "outstanding" | "createdAt";
@@ -34,20 +43,33 @@ export function ClientDirectoryView({
   initialClients,
   aging,
   currency = "PKR",
+  role = "MEMBER",
 }: ClientDirectoryViewProps) {
-  const [clients, setClients] = React.useState<ClientWithMetrics[]>(initialClients);
+  const router = useRouter();
+  const canMutate = canMutateLedger(role);
+
+  const [addedClients, setAddedClients] = React.useState<ClientWithMetrics[]>([]);
+  const [deletedIds, setDeletedIds] = React.useState<string[]>([]);
+
+  const clients = React.useMemo(() => {
+    const serverIds = new Set(initialClients.map((c) => c.id));
+    const pendingAdditions = addedClients.filter((c) => !serverIds.has(c.id));
+    return [...pendingAdditions, ...initialClients].filter(
+      (c) => !deletedIds.includes(c.id)
+    );
+  }, [initialClients, addedClients, deletedIds]);
+
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedRisk, setSelectedRisk] = React.useState<"ALL" | ClientRiskStatus>("ALL");
   const [sortBy, setSortBy] = React.useState<SortField>("createdAt");
   const [sortOrder, setSortOrder] = React.useState<"asc" | "desc">("desc");
   const [viewMode, setViewMode] = React.useState<"grid" | "table">("grid");
   const [isModalOpen, setIsModalOpen] = React.useState(false);
-  const [deletePendingId, setDeletePendingId] = React.useState<string | null>(null);
-
-  // Sync state if initialClients change via server revalidation
-  React.useEffect(() => {
-    setClients(initialClients);
-  }, [initialClients]);
+  const [isImportModalOpen, setIsImportModalOpen] = React.useState(false);
+  const [clientToDelete, setClientToDelete] = React.useState<ClientWithMetrics | null>(null);
+  const [deleteError, setDeleteError] = React.useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [banner, setBanner] = React.useState<{ text: string; isError?: boolean } | null>(null);
 
   // Risk counts
   const counts = React.useMemo(() => {
@@ -82,12 +104,10 @@ export function ClientDirectoryView({
   const filteredClients = React.useMemo(() => {
     return clients
       .filter((client) => {
-        // Risk Filter
         if (selectedRisk !== "ALL" && client.metrics.riskStatus !== selectedRisk) {
           return false;
         }
 
-        // Search Filter
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase().trim();
           const matchName = client.clientName.toLowerCase().includes(q);
@@ -122,24 +142,30 @@ export function ClientDirectoryView({
     }
   }
 
-  async function handleDelete(id: string, name: string) {
-    if (!confirm(`Are you sure you want to remove ${name}? Historical invoices will remain intact.`)) {
-      return;
-    }
+  async function handleConfirmDelete() {
+    if (!clientToDelete) return;
+    setDeleteError(null);
+    setIsDeleting(true);
 
     try {
-      setDeletePendingId(id);
-      const result = await deleteClientAction(id);
-      setDeletePendingId(null);
-
-      if (result.success) {
-        setClients((prev) => prev.filter((c) => c.id !== id));
+      const result = await deleteClientAction(clientToDelete.id);
+      if (!result.success) {
+        setDeleteError(result.error || "Failed to delete client.");
       } else {
-        alert(result.error || "Failed to delete client.");
+        setDeletedIds((prev) => [...prev, clientToDelete.id]);
+        setBanner({
+          text: `Removed ${clientToDelete.clientName} from active directory.`,
+          isError: false,
+        });
+        setClientToDelete(null);
+        router.refresh();
       }
     } catch (err) {
-      setDeletePendingId(null);
-      alert(formatUserError(err, "Unable to delete client. Please check your connection."));
+      setDeleteError(
+        formatUserError(err, "Unable to delete client. Please check your connection.")
+      );
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -159,20 +185,63 @@ export function ClientDirectoryView({
           </p>
         </div>
 
-        <Button
-          variant="primary"
-          size="default"
-          onClick={() => setIsModalOpen(true)}
-          className="min-h-[44px] px-5 rounded-full self-start sm:self-auto shrink-0 w-full sm:w-auto inline-flex items-center justify-center"
-        >
-          <Plus className="h-4 w-4 mr-1.5 shrink-0" />
-          <span>Add Client</span>
-        </Button>
+        {canMutate && (
+          <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto shrink-0 w-full sm:w-auto">
+            <Button
+              type="button"
+              variant="secondary"
+              size="default"
+              onClick={() => setIsImportModalOpen(true)}
+              className="min-h-[44px] h-11 px-4 rounded-full border border-line bg-white hover:bg-fog text-sm flex-1 sm:flex-initial"
+            >
+              <Upload className="h-4 w-4 shrink-0" />
+              <span>Import CSV</span>
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="default"
+              onClick={() => setIsModalOpen(true)}
+              className="min-h-[44px] h-11 px-5 rounded-full text-sm flex-1 sm:flex-initial"
+            >
+              <Plus className="h-4 w-4 shrink-0" />
+              <span>Add Client</span>
+            </Button>
+          </div>
+        )}
       </div>
 
-      {/* 2. Client KPI Strip (Total Receivables, Outstanding Invoices, Average Payment Latency, Overdue Exposure) */}
+      {/* Inline Feedback Banner */}
+      {banner && (
+        <div
+          className={cn(
+            "flex items-center justify-between gap-3 px-4 py-3 rounded-[10px] border text-xs",
+            banner.isError
+              ? "border-ember/30 bg-ember-tint text-ember-ink"
+              : "border-moss/30 bg-moss-tint text-moss"
+          )}
+        >
+          <div className="flex items-center gap-2">
+            {banner.isError ? (
+              <AlertCircle className="w-4 h-4 shrink-0" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+            )}
+            <span>{banner.text}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setBanner(null)}
+            aria-label="Dismiss message"
+            className="p-1 rounded-full hover:bg-white/60 transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* 2. Client KPI Strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 py-4 border-y border-line">
-        {/* KPI 1: Total Receivables */}
         <div className="flex flex-col gap-1 p-2 min-w-0">
           <span className="text-xs font-mono uppercase tracking-wider text-ink-3 truncate">
             Total Receivables
@@ -185,7 +254,6 @@ export function ClientDirectoryView({
           </span>
         </div>
 
-        {/* KPI 2: Outstanding Invoices */}
         <div className="flex flex-col gap-1 p-2 min-w-0">
           <div className="flex flex-wrap items-baseline justify-between gap-1">
             <span className="text-xs font-mono uppercase tracking-wider text-ink-3">
@@ -205,7 +273,6 @@ export function ClientDirectoryView({
           </span>
         </div>
 
-        {/* KPI 3: Average Payment Latency */}
         <div className="flex flex-col gap-1 p-2 min-w-0">
           <span className="text-xs font-mono uppercase tracking-wider text-ink-3 truncate">
             Payment Latency
@@ -227,7 +294,6 @@ export function ClientDirectoryView({
           </span>
         </div>
 
-        {/* KPI 4: Overdue Delinquency */}
         <div className="flex flex-col gap-1 p-2 min-w-0">
           <div className="flex flex-wrap items-baseline justify-between gap-1">
             <span className="text-xs font-mono uppercase tracking-wider text-ink-3">
@@ -258,7 +324,6 @@ export function ClientDirectoryView({
 
       {/* 4. Toolbar: Search, Risk Filter Pills & View Mode Toggle */}
       <div className="flex flex-col gap-3">
-        {/* Risk Status Filter Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-2 px-2 sm:mx-0 sm:px-0 shrink-0">
           <button
             type="button"
@@ -313,7 +378,6 @@ export function ClientDirectoryView({
           </button>
         </div>
 
-        {/* Search Input & Desktop View Toggle */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div className="relative flex-1 min-w-0">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-3" />
@@ -325,7 +389,6 @@ export function ClientDirectoryView({
             />
           </div>
 
-          {/* Desktop Grid vs Table View Mode Switcher */}
           <div className="hidden lg:flex items-center gap-1 border border-line rounded-[10px] p-1 bg-fog/50 shrink-0">
             <button
               type="button"
@@ -359,10 +422,9 @@ export function ClientDirectoryView({
         </div>
       </div>
 
-      {/* 5. Client Directory Listing: 3-Column Desktop to 1-Column Mobile Grid */}
+      {/* 5. Client Directory Listing */}
       {filteredClients.length > 0 ? (
         <>
-          {/* Responsive Grid: 1 column on mobile (< 768px), 2 on tablet, 3 columns on desktop */}
           <div
             className={cn(
               "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4",
@@ -377,7 +439,6 @@ export function ClientDirectoryView({
                   key={client.id}
                   className="flex flex-col justify-between p-4 rounded-[10px] border border-line bg-white hover:border-line-strong transition-colors gap-3.5"
                 >
-                  {/* Card Header: Client Name, Email & Risk Status Badge */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex flex-col min-w-0">
                       <Link
@@ -393,7 +454,6 @@ export function ClientDirectoryView({
                     <StatusBadge status={client.metrics.riskStatus} className="shrink-0" />
                   </div>
 
-                  {/* Card Terms & Payment Latency */}
                   <div className="flex items-center justify-between text-xs pt-1 border-t border-line/60">
                     <span className="font-mono bg-fog px-2.5 py-1 rounded-full text-[11px] text-ink-2">
                       Net {client.paymentTermsDays}
@@ -416,7 +476,6 @@ export function ClientDirectoryView({
                     )}
                   </div>
 
-                  {/* Card Balances: Outstanding & Overdue */}
                   <div className="flex items-center justify-between py-2 bg-fog/50 px-3 rounded-[8px] text-xs">
                     <div className="flex flex-col">
                       <span className="text-[10px] uppercase font-mono tracking-wider text-ink-3">
@@ -452,7 +511,6 @@ export function ClientDirectoryView({
                     )}
                   </div>
 
-                  {/* Card Actions with touch targets >= 44px */}
                   <div className="flex items-center gap-2 pt-1 border-t border-line/60">
                     <Link
                       href={`/clients/${client.id}`}
@@ -462,23 +520,26 @@ export function ClientDirectoryView({
                       <ChevronRight className="h-3.5 w-3.5 text-ink-3" />
                     </Link>
 
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(client.id, client.clientName)}
-                      disabled={deletePendingId === client.id}
-                      className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-ink-3 hover:text-ember-ink hover:bg-ember-tint border border-line transition-colors disabled:opacity-50"
-                      title="Remove Client"
-                      aria-label={`Remove ${client.clientName}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {canMutate && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeleteError(null);
+                          setClientToDelete(client);
+                        }}
+                        className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-ink-3 hover:text-ember-ink hover:bg-ember-tint border border-line transition-colors"
+                        title="Remove Client"
+                        aria-label={`Remove ${client.clientName}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               );
             })}
           </div>
 
-          {/* Desktop Table View (Only when Table view mode is active on >= 1024px) */}
           {viewMode === "table" && (
             <div className="hidden lg:block overflow-x-auto border-t border-b border-line bg-white rounded-[10px]">
               <table className="w-full min-w-[800px] text-left text-sm">
@@ -528,7 +589,6 @@ export function ClientDirectoryView({
                         key={client.id}
                         className="group hover:bg-fog/50 transition-colors"
                       >
-                        {/* Client Name & Email */}
                         <td className="py-4 pl-4 pr-4">
                           <Link
                             href={`/clients/${client.id}`}
@@ -541,12 +601,10 @@ export function ClientDirectoryView({
                           </Link>
                         </td>
 
-                        {/* Payment Terms */}
                         <td className="py-4 px-4 whitespace-nowrap text-xs text-ink-2 font-mono">
                           Net {client.paymentTermsDays}
                         </td>
 
-                        {/* Latency */}
                         <td className="py-4 px-4 whitespace-nowrap">
                           {client.metrics.settledInvoicesCount > 0 ? (
                             <div className="flex flex-col">
@@ -571,7 +629,6 @@ export function ClientDirectoryView({
                           )}
                         </td>
 
-                        {/* Outstanding */}
                         <td className="py-4 px-4 whitespace-nowrap text-right font-medium">
                           <Money
                             amount={client.metrics.outstandingBalance}
@@ -579,7 +636,6 @@ export function ClientDirectoryView({
                           />
                         </td>
 
-                        {/* Overdue */}
                         <td className="py-4 px-4 whitespace-nowrap text-right">
                           <span
                             className={cn(
@@ -596,12 +652,10 @@ export function ClientDirectoryView({
                           </span>
                         </td>
 
-                        {/* Risk Badge */}
                         <td className="py-4 px-4 whitespace-nowrap text-center">
                           <StatusBadge status={client.metrics.riskStatus} />
                         </td>
 
-                        {/* Row Actions */}
                         <td className="py-4 pl-4 pr-4 whitespace-nowrap text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             <Link
@@ -612,16 +666,20 @@ export function ClientDirectoryView({
                               <ChevronRight className="h-3 w-3" />
                             </Link>
 
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(client.id, client.clientName)}
-                              disabled={deletePendingId === client.id}
-                              className="p-1.5 rounded-full text-ink-3 hover:text-ember-ink hover:bg-ember-tint transition-colors"
-                              title="Remove Client"
-                              aria-label={`Remove ${client.clientName}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            {canMutate && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDeleteError(null);
+                                  setClientToDelete(client);
+                                }}
+                                className="p-1.5 rounded-full text-ink-3 hover:text-ember-ink hover:bg-ember-tint transition-colors"
+                                title="Remove Client"
+                                aria-label={`Remove ${client.clientName}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -633,7 +691,6 @@ export function ClientDirectoryView({
           )}
         </>
       ) : (
-        /* Empty States */
         <div className="py-16 text-center border-t border-b border-line">
           {searchQuery ? (
             <div className="flex flex-col items-center gap-2">
@@ -656,48 +713,106 @@ export function ClientDirectoryView({
               <p className="text-xs text-ink-3 max-w-sm">
                 Add your clients to issue dynamic invoices, calculate settlement delays, and monitor receivables aging.
               </p>
-              <Button
-                variant="primary"
-                size="compact"
-                onClick={() => setIsModalOpen(true)}
-                className="mt-3 min-h-[44px] px-5 rounded-full inline-flex items-center justify-center"
-              >
-                <Plus className="h-4 w-4 mr-1.5" />
-                Add Your First Client
-              </Button>
+              {canMutate && (
+                <div className="mt-3 flex flex-wrap items-center justify-center gap-2.5">
+                  <Button
+                    variant="secondary"
+                    size="compact"
+                    onClick={() => setIsImportModalOpen(true)}
+                    className="min-h-[44px] px-5 rounded-full border border-line bg-white"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Import CSV
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="compact"
+                    onClick={() => setIsModalOpen(true)}
+                    className="min-h-[44px] px-5 rounded-full inline-flex items-center justify-center"
+                  >
+                    <Plus className="h-4 w-4 mr-1.5" />
+                    Add Your First Client
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>
       )}
 
-      {/* 6. Create Client Modal */}
-      <CreateClientModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSuccess={(newClient) => {
-          // Immediately append new client to local view
-          setClients((prev) => [
-            {
-              ...newClient,
-              metrics: {
-                totalBilled: 0,
-                totalPaid: 0,
-                outstandingBalance: 0,
-                overdueAmount: 0,
-                avgPaymentDelayDays: 0,
-                settledInvoicesCount: 0,
-                openInvoicesCount: 0,
-                overdueInvoicesCount: 0,
-                riskStatus: "HEALTHY",
+      {/* Create Client Modal */}
+      {canMutate && (
+        <CreateClientModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSuccess={(newClient) => {
+            setAddedClients((prev) => [
+              {
+                ...newClient,
+                metrics: {
+                  totalBilled: 0,
+                  totalPaid: 0,
+                  outstandingBalance: 0,
+                  overdueAmount: 0,
+                  avgPaymentDelayDays: 0,
+                  settledInvoicesCount: 0,
+                  openInvoicesCount: 0,
+                  overdueInvoicesCount: 0,
+                  riskStatus: "HEALTHY",
+                },
               },
-            },
-            ...prev,
-          ]);
+              ...prev,
+            ]);
+            setBanner({
+              text: `Added client "${newClient.clientName}".`,
+              isError: false,
+            });
+            router.refresh();
+          }}
+        />
+      )}
+
+      {/* Bulk CSV Import Modal */}
+      {canMutate && (
+        <BulkImportClientsModal
+          isOpen={isImportModalOpen}
+          onClose={() => setIsImportModalOpen(false)}
+          existingClientEmails={clients.map((c) => c.email)}
+          onSuccess={(result) => {
+            if (result.createdCount > 0) {
+              setBanner({
+                text: `Imported ${result.createdCount} ${
+                  result.createdCount === 1 ? "client" : "clients"
+                }${result.skippedCount > 0 ? ` (${result.skippedCount} skipped)` : ""}.`,
+                isError: false,
+              });
+              router.refresh();
+            }
+          }}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(clientToDelete)}
+        onClose={() => {
+          if (!isDeleting) {
+            setClientToDelete(null);
+            setDeleteError(null);
+          }
         }}
+        onConfirm={handleConfirmDelete}
+        variant="danger"
+        eyebrow="Client Directory"
+        title={clientToDelete ? `Remove ${clientToDelete.clientName}?` : "Remove Client"}
+        description="Historical invoices and ledger statements will remain intact, but this client will be archived from your active directory."
+        confirmLabel="Remove Client"
+        cancelLabel="Cancel"
+        isPending={isDeleting}
+        errorMessage={deleteError}
       />
     </div>
   );
 }
 
-// Named alias export for ClientListView
 export const ClientListView = ClientDirectoryView;

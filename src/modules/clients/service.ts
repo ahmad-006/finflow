@@ -1,7 +1,14 @@
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
+import Decimal from "decimal.js";
 import { unstable_cache } from "next/cache";
-import { createClientSchema, updateClientSchema, type ClientFilterSchemaInput } from "./validation";
+import { toDecimal } from "@/modules/invoices/currency";
+import {
+  createClientSchema,
+  updateClientSchema,
+  parsePaymentTerms,
+  type ClientFilterSchemaInput,
+} from "./validation";
 import type {
   ClientRecord,
   ClientWithMetrics,
@@ -11,6 +18,10 @@ import type {
   CreateClientInput,
   UpdateClientInput,
   ClientRiskStatus,
+  BulkClientRowInput,
+  BulkClientRowFeedback,
+  BulkImportClientsOptions,
+  BulkImportClientsResult,
 } from "./types";
 
 interface InvoiceRecordForMetrics {
@@ -18,6 +29,7 @@ interface InvoiceRecordForMetrics {
   status: string;
   dueDate: Date;
   paidAt: Date | null;
+  totalAmount?: Prisma.Decimal | number | string;
   baseTotalAmount: Prisma.Decimal | number | string;
   paidAmount: Prisma.Decimal | number | string;
 }
@@ -60,10 +72,10 @@ function sanitizeClientRecord(client: {
  * and dynamic risk status for a client based on their invoices.
  */
 export function calculateClientMetrics(invoices: InvoiceRecordForMetrics[]): ClientMetrics {
-  let totalBilled = 0;
-  let totalPaid = 0;
-  let outstandingBalance = 0;
-  let overdueAmount = 0;
+  let totalBilled = new Decimal(0);
+  let totalPaid = new Decimal(0);
+  let outstandingBalance = new Decimal(0);
+  let overdueAmount = new Decimal(0);
   let settledInvoicesCount = 0;
   let openInvoicesCount = 0;
   let overdueInvoicesCount = 0;
@@ -74,14 +86,26 @@ export function calculateClientMetrics(invoices: InvoiceRecordForMetrics[]): Cli
   for (const inv of invoices) {
     if (inv.status === "CANCELLED") continue;
 
-    const total = Number(inv.baseTotalAmount) || 0;
-    const paid = Number(inv.paidAmount) || 0;
-    const remaining = Math.max(0, total - paid);
+    const baseTotal = toDecimal(inv.baseTotalAmount);
+    const nativePaid = toDecimal(inv.paidAmount);
+    const nativeTotal =
+      inv.totalAmount !== undefined && inv.totalAmount !== null
+        ? toDecimal(inv.totalAmount)
+        : null;
 
-    totalBilled += total;
-    totalPaid += paid;
+    const basePaid =
+      nativeTotal && nativeTotal.gt(0)
+        ? nativePaid.div(nativeTotal).mul(baseTotal)
+        : nativePaid;
 
-    const isSettled = inv.status === "PAID" || remaining <= 0;
+    const remaining = Decimal.max(new Decimal(0), baseTotal.sub(basePaid));
+
+    totalBilled = totalBilled.plus(baseTotal);
+    totalPaid = totalPaid.plus(basePaid);
+
+    const isSettled =
+      inv.status === "PAID" ||
+      remaining.toDecimalPlaces(2, Decimal.ROUND_HALF_UP).lte(0);
 
     if (isSettled) {
       settledInvoicesCount++;
@@ -95,12 +119,12 @@ export function calculateClientMetrics(invoices: InvoiceRecordForMetrics[]): Cli
     } else {
       // Open / Pending invoice
       openInvoicesCount++;
-      outstandingBalance += remaining;
+      outstandingBalance = outstandingBalance.plus(remaining);
 
       const isOverdue = inv.status === "OVERDUE" || new Date(inv.dueDate).getTime() < now.getTime();
       if (isOverdue) {
         overdueInvoicesCount++;
-        overdueAmount += remaining;
+        overdueAmount = overdueAmount.plus(remaining);
       }
     }
   }
@@ -108,22 +132,24 @@ export function calculateClientMetrics(invoices: InvoiceRecordForMetrics[]): Cli
   const avgPaymentDelayDays =
     settledInvoicesCount > 0 ? Math.round((totalDelayDays / settledInvoicesCount) * 10) / 10 : 0;
 
+  const roundedOverdue = overdueAmount.toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toNumber();
+
   // Determine dynamic risk status:
   // - CRITICAL: overdue balance AND average delay > 14 days, or severe delay > 21 days
   // - WATCHLIST: overdue balance OR average delay > 3 days
   // - HEALTHY: timely settlements (<= 3 days delay) and zero overdue invoices
   let riskStatus: ClientRiskStatus = "HEALTHY";
-  if ((overdueAmount > 0 && avgPaymentDelayDays > 14) || avgPaymentDelayDays > 21) {
+  if ((roundedOverdue > 0 && avgPaymentDelayDays > 14) || avgPaymentDelayDays > 21) {
     riskStatus = "CRITICAL";
-  } else if (overdueAmount > 0 || avgPaymentDelayDays > 3) {
+  } else if (roundedOverdue > 0 || avgPaymentDelayDays > 3) {
     riskStatus = "WATCHLIST";
   }
 
   return {
-    totalBilled: Math.round(totalBilled * 100) / 100,
-    totalPaid: Math.round(totalPaid * 100) / 100,
-    outstandingBalance: Math.round(outstandingBalance * 100) / 100,
-    overdueAmount: Math.round(overdueAmount * 100) / 100,
+    totalBilled: totalBilled.toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toNumber(),
+    totalPaid: totalPaid.toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toNumber(),
+    outstandingBalance: outstandingBalance.toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toNumber(),
+    overdueAmount: roundedOverdue,
     avgPaymentDelayDays,
     settledInvoicesCount,
     openInvoicesCount,
@@ -345,6 +371,7 @@ export async function getClients(
           status: true,
           dueDate: true,
           paidAt: true,
+          totalAmount: true,
           baseTotalAmount: true,
           paidAmount: true,
         },
@@ -400,59 +427,226 @@ export async function getARAgingBuckets(companyId: string): Promise<ARAgingBucke
     },
     select: {
       dueDate: true,
+      totalAmount: true,
       baseTotalAmount: true,
       paidAmount: true,
     },
   });
 
   const now = new Date();
-  const buckets: ARAgingBuckets = {
-    current: 0,
-    days1to30: 0,
-    days31to60: 0,
-    days61to90: 0,
-    days90Plus: 0,
-    totalOutstanding: 0,
-    totalOverdue: 0,
-  };
+  let current = new Decimal(0);
+  let days1to30 = new Decimal(0);
+  let days31to60 = new Decimal(0);
+  let days61to90 = new Decimal(0);
+  let days90Plus = new Decimal(0);
+  let totalOutstanding = new Decimal(0);
+  let totalOverdue = new Decimal(0);
 
   for (const inv of openInvoices) {
-    const total = Number(inv.baseTotalAmount) || 0;
-    const paid = Number(inv.paidAmount) || 0;
-    const remaining = Math.max(0, total - paid);
+    const baseTotal = toDecimal(inv.baseTotalAmount);
+    const nativePaid = toDecimal(inv.paidAmount);
+    const nativeTotal =
+      inv.totalAmount !== undefined && inv.totalAmount !== null
+        ? toDecimal(inv.totalAmount)
+        : null;
 
-    if (remaining <= 0) continue;
+    const basePaid =
+      nativeTotal && nativeTotal.gt(0)
+        ? nativePaid.div(nativeTotal).mul(baseTotal)
+        : nativePaid;
 
-    buckets.totalOutstanding += remaining;
+    const remaining = Decimal.max(new Decimal(0), baseTotal.sub(basePaid));
+
+    if (remaining.toDecimalPlaces(2, Decimal.ROUND_HALF_UP).lte(0)) continue;
+
+    totalOutstanding = totalOutstanding.plus(remaining);
 
     const dueTime = new Date(inv.dueDate).getTime();
     const diffDays = Math.floor((now.getTime() - dueTime) / (1000 * 60 * 60 * 24));
 
     if (diffDays <= 0) {
-      buckets.current += remaining;
+      current = current.plus(remaining);
     } else {
-      buckets.totalOverdue += remaining;
+      totalOverdue = totalOverdue.plus(remaining);
       if (diffDays <= 30) {
-        buckets.days1to30 += remaining;
+        days1to30 = days1to30.plus(remaining);
       } else if (diffDays <= 60) {
-        buckets.days31to60 += remaining;
+        days31to60 = days31to60.plus(remaining);
       } else if (diffDays <= 90) {
-        buckets.days61to90 += remaining;
+        days61to90 = days61to90.plus(remaining);
       } else {
-        buckets.days90Plus += remaining;
+        days90Plus = days90Plus.plus(remaining);
       }
     }
   }
 
-  buckets.current = Math.round(buckets.current * 100) / 100;
-  buckets.days1to30 = Math.round(buckets.days1to30 * 100) / 100;
-  buckets.days31to60 = Math.round(buckets.days31to60 * 100) / 100;
-  buckets.days61to90 = Math.round(buckets.days61to90 * 100) / 100;
-  buckets.days90Plus = Math.round(buckets.days90Plus * 100) / 100;
-  buckets.totalOutstanding = Math.round(buckets.totalOutstanding * 100) / 100;
-  buckets.totalOverdue = Math.round(buckets.totalOverdue * 100) / 100;
+  return {
+    current: current.toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toNumber(),
+    days1to30: days1to30.toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toNumber(),
+    days31to60: days31to60.toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toNumber(),
+    days61to90: days61to90.toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toNumber(),
+    days90Plus: days90Plus.toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toNumber(),
+    totalOutstanding: totalOutstanding.toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toNumber(),
+    totalOverdue: totalOverdue.toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toNumber(),
+  };
+}
 
-  return buckets;
+/**
+ * Bulk imports up to 500 clients in a single database transaction with duplicate handling and audit logging.
+ */
+export async function bulkImportClients(
+  companyId: string,
+  rows: BulkClientRowInput[],
+  options?: BulkImportClientsOptions,
+  userId?: string
+): Promise<BulkImportClientsResult> {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    throw new Error("At least one client row is required for import.");
+  }
+  if (rows.length > 500) {
+    throw new Error("Maximum 500 client rows allowed per import.");
+  }
+
+  const duplicateMode = options?.duplicateMode === "fail" ? "fail" : "skip";
+
+  const existingClients = await db.client.findMany({
+    where: {
+      companyId,
+      deletedAt: null,
+    },
+    select: {
+      email: true,
+    },
+  });
+
+  const existingEmailSet = new Set(
+    existingClients.map((c) => c.email.trim().toLowerCase())
+  );
+  const seenCsvEmails = new Set<string>();
+
+  const skipped: BulkClientRowFeedback[] = [];
+  const errors: BulkClientRowFeedback[] = [];
+  const validRows: Array<{
+    clientName: string;
+    email: string;
+    phone: string | null;
+    address: string | null;
+    paymentTermsDays: number;
+  }> = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const rowNumber = row.rowNumber ?? i + 2;
+    const normalizedTerms = parsePaymentTerms(row.paymentTermsDays);
+
+    const parsed = createClientSchema.safeParse({
+      clientName: row.clientName,
+      email: row.email,
+      phone: row.phone ?? null,
+      address: row.address ?? null,
+      paymentTermsDays: normalizedTerms,
+    });
+
+    if (!parsed.success) {
+      errors.push({
+        rowNumber,
+        clientName: typeof row.clientName === "string" ? row.clientName : undefined,
+        email: typeof row.email === "string" ? row.email : undefined,
+        message: parsed.error.issues[0]?.message || "Invalid client row.",
+      });
+      continue;
+    }
+
+    const normalizedEmail = parsed.data.email.toLowerCase();
+
+    if (seenCsvEmails.has(normalizedEmail)) {
+      errors.push({
+        rowNumber,
+        clientName: parsed.data.clientName,
+        email: normalizedEmail,
+        message: `Duplicate email "${normalizedEmail}" found in CSV.`,
+      });
+      continue;
+    }
+    seenCsvEmails.add(normalizedEmail);
+
+    if (existingEmailSet.has(normalizedEmail)) {
+      if (duplicateMode === "fail") {
+        errors.push({
+          rowNumber,
+          clientName: parsed.data.clientName,
+          email: normalizedEmail,
+          message: `A client with billing email "${normalizedEmail}" already exists.`,
+        });
+      } else {
+        skipped.push({
+          rowNumber,
+          clientName: parsed.data.clientName,
+          email: normalizedEmail,
+          message: `Client with email "${normalizedEmail}" already exists (skipped).`,
+        });
+      }
+      continue;
+    }
+
+    validRows.push({
+      clientName: parsed.data.clientName,
+      email: normalizedEmail,
+      phone: parsed.data.phone || null,
+      address: parsed.data.address || null,
+      paymentTermsDays: parsed.data.paymentTermsDays,
+    });
+  }
+
+  let createdClients: ClientRecord[] = [];
+
+  if (validRows.length > 0) {
+    createdClients = await db.$transaction(
+      async (tx) => {
+        const inserted = await tx.client.createManyAndReturn({
+          data: validRows.map((item) => ({
+            companyId,
+            clientName: item.clientName,
+            email: item.email,
+            phone: item.phone,
+            address: item.address,
+            paymentTermsDays: item.paymentTermsDays,
+            riskStatus: "HEALTHY",
+          })),
+        });
+
+        const sanitized = inserted.map(sanitizeClientRecord);
+
+        await tx.auditLog.create({
+          data: {
+            companyId,
+            userId: userId || null,
+            entityType: "CLIENT",
+            entityId: sanitized[0]?.id || companyId,
+            action: "CREATE",
+            details: JSON.stringify({
+              source: "CSV_BULK_IMPORT",
+              createdCount: sanitized.length,
+              skippedCount: skipped.length,
+              failedCount: errors.length,
+            }),
+          },
+        });
+
+        return sanitized;
+      },
+      { maxWait: 15000, timeout: 30000 }
+    );
+  }
+
+  return {
+    createdCount: createdClients.length,
+    skippedCount: skipped.length,
+    failedCount: errors.length,
+    createdClients,
+    skipped,
+    errors,
+  };
 }
 
 /**

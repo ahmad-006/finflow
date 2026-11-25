@@ -7,6 +7,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { X, LogOut, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { canMutateLedger } from "@/modules/auth/rbac";
 import { logoutAction } from "@/modules/auth/actions";
 
 export interface MobileMenuProps {
@@ -242,14 +243,16 @@ export function MobileMenu({
         <div className="border-t border-line p-5 flex flex-col gap-3 shrink-0">
           {user ? (
             <>
-              <Link
-                href="/invoices/new"
-                onClick={onClose}
-                className="inline-flex items-center justify-center gap-2 min-h-[44px] h-12 w-full rounded-full bg-ink text-white font-medium text-[15px] hover:bg-ink-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
-              >
-                <Plus className="h-4 w-4 stroke-[2]" />
-                <span>New invoice</span>
-              </Link>
+              {(user.role ? canMutateLedger(user.role) : true) && (
+                <Link
+                  href="/invoices/new"
+                  onClick={onClose}
+                  className="inline-flex items-center justify-center gap-2 min-h-[44px] h-12 w-full rounded-full bg-ink text-white font-medium text-[15px] hover:bg-ink-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
+                >
+                  <Plus className="h-4 w-4 stroke-[2]" />
+                  <span>New invoice</span>
+                </Link>
+              )}
 
               <button
                 type="button"

@@ -8,7 +8,7 @@ describe("Shell & Responsive Navigation Architecture", () => {
     id: "usr_1",
     fullName: "Kamran Siddiqui",
     email: "kamran@finflow.io",
-    role: "FINANCE_DIRECTOR",
+    role: "ADMIN",
   };
 
   const mockCompany = {
@@ -102,6 +102,13 @@ describe("Shell & Responsive Navigation Architecture", () => {
       expect(html).toContain("Sign in");
       expect(html).toContain("Create workspace");
     });
+
+    it("hides New invoice CTA for VIEWER role", () => {
+      const html = renderToString(
+        <TopNav user={{ ...mockUser, role: "VIEWER" }} company={mockCompany} />
+      );
+      expect(html).not.toContain("New invoice");
+    });
   });
 
   describe("MobileMenu Component", () => {
@@ -157,6 +164,18 @@ describe("Shell & Responsive Navigation Architecture", () => {
       );
 
       expect(html).toBe("");
+    });
+
+    it("hides New invoice CTA in mobile menu for VIEWER role", () => {
+      const html = renderToString(
+        <MobileMenu
+          isOpen={true}
+          onClose={() => {}}
+          user={{ ...mockUser, role: "VIEWER" }}
+          company={mockCompany}
+        />
+      );
+      expect(html).not.toContain("New invoice");
     });
   });
 

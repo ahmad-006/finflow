@@ -84,3 +84,32 @@ export interface ClientActionResult<T = unknown> {
   errors?: Record<string, string[]>;
   data?: T;
 }
+
+export interface BulkClientRowInput {
+  rowNumber?: number;
+  clientName: string;
+  email: string;
+  phone?: string | null;
+  address?: string | null;
+  paymentTermsDays?: number | string;
+}
+
+export interface BulkClientRowFeedback {
+  rowNumber: number;
+  clientName?: string;
+  email?: string;
+  message: string;
+}
+
+export interface BulkImportClientsOptions {
+  duplicateMode?: "skip" | "fail";
+}
+
+export interface BulkImportClientsResult {
+  createdCount: number;
+  skippedCount: number;
+  failedCount: number;
+  createdClients: ClientRecord[];
+  skipped: BulkClientRowFeedback[];
+  errors: BulkClientRowFeedback[];
+}

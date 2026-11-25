@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import {
   Plus,
   Search,
@@ -9,7 +10,6 @@ import {
   AlertCircle,
   Trash2,
   Edit2,
-  Loader2,
   ChevronDown,
 } from "lucide-react";
 import type {
@@ -20,9 +20,11 @@ import type {
   ExpenseStatus,
 } from "@/modules/expenses/types";
 import { formatMoney } from "@/lib/format";
+import { canManageBilling, canMutateLedger } from "@/modules/auth/rbac";
 import { ExpenseStatusBadge } from "./ExpenseStatusBadge";
 import { ExpenseFormDrawer } from "./ExpenseFormDrawer";
 import { MarkPaidModal } from "./MarkPaidModal";
+import { ConfirmModal } from "@/components/ui/Modal";
 import { deleteExpenseAction } from "@/modules/expenses/actions";
 import { Button } from "@/components/ui/button";
 
@@ -57,10 +59,16 @@ export function ExpenseDirectoryView({
   kpis,
   baseCurrency = "PKR",
   companyName = "FinFlow",
-  role,
+  role = "MEMBER",
 }: ExpenseDirectoryViewProps) {
-  const isViewer = role?.toUpperCase() === "VIEWER";
-  const [expenses, setExpenses] = React.useState<ExpenseRecord[]>(initialExpenses);
+  const router = useRouter();
+  const canMutate = canMutateLedger(role);
+  const canPayBilling = canManageBilling(role);
+  const [deletedIds, setDeletedIds] = React.useState<string[]>([]);
+  const expenses = React.useMemo(
+    () => initialExpenses.filter((exp) => !deletedIds.includes(exp.id)),
+    [initialExpenses, deletedIds]
+  );
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<ExpenseStatus | "ALL">("ALL");
   const [categoryFilter, setCategoryFilter] = React.useState<ExpenseCategory | "ALL">("ALL");
@@ -70,13 +78,10 @@ export function ExpenseDirectoryView({
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
   const [expenseToEdit, setExpenseToEdit] = React.useState<ExpenseRecord | null>(null);
   const [expenseToPay, setExpenseToPay] = React.useState<ExpenseRecord | null>(null);
-  const [isDeletingId, setIsDeletingId] = React.useState<string | null>(null);
+  const [expenseToDelete, setExpenseToDelete] = React.useState<ExpenseRecord | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [deleteError, setDeleteError] = React.useState<string | null>(null);
   const [actionError, setActionError] = React.useState<string | null>(null);
-
-  // Sync state if initialExpenses updates
-  React.useEffect(() => {
-    setExpenses(initialExpenses);
-  }, [initialExpenses]);
 
   // Compute status counts dynamically
   const statusCounts = React.useMemo(() => {
@@ -150,26 +155,27 @@ export function ExpenseDirectoryView({
     setExpenseToPay(exp);
   };
 
-  const handleDelete = async (expenseId: string) => {
-    if (!window.confirm("Are you sure you want to delete this scheduled expense?")) {
-      return;
-    }
+  const handleConfirmDelete = async () => {
+    if (!expenseToDelete) return;
 
+    setDeleteError(null);
     setActionError(null);
-    setIsDeletingId(expenseId);
+    setIsDeleting(true);
     try {
-      const res = await deleteExpenseAction(expenseId);
+      const res = await deleteExpenseAction(expenseToDelete.id);
       if (!res.success) {
-        setActionError(res.error || "Failed to delete expense.");
+        setDeleteError(res.error || "Failed to delete expense.");
       } else {
-        setExpenses((prev) => prev.filter((item) => item.id !== expenseId));
+        setDeletedIds((prev) => [...prev, expenseToDelete.id]);
+        setExpenseToDelete(null);
+        router.refresh();
       }
     } catch (err: unknown) {
-      setActionError(
+      setDeleteError(
         err instanceof Error ? err.message : "An unexpected error occurred while deleting."
       );
     } finally {
-      setIsDeletingId(null);
+      setIsDeleting(false);
     }
   };
 
@@ -197,7 +203,7 @@ export function ExpenseDirectoryView({
           </p>
         </div>
 
-        {!isViewer && (
+        {canMutate && (
           <Button
             type="button"
             onClick={handleOpenAdd}
@@ -411,7 +417,7 @@ export function ExpenseDirectoryView({
               >
                 Clear all filters
               </Button>
-            ) : !isViewer ? (
+            ) : canMutate ? (
               <Button
                 type="button"
                 onClick={handleOpenAdd}
@@ -442,7 +448,6 @@ export function ExpenseDirectoryView({
                   {filteredExpenses.map((exp) => {
                     const isPaid = exp.status === "PAID";
                     const isOverdue = exp.status === "OVERDUE";
-                    const isDeleting = isDeletingId === exp.id;
 
                     return (
                       <tr
@@ -497,7 +502,7 @@ export function ExpenseDirectoryView({
                         {/* Actions */}
                         <td className="py-3.5 px-4 whitespace-nowrap text-right">
                           <div className="inline-flex items-center justify-end gap-2">
-                            {!isPaid && !isViewer && (
+                            {!isPaid && canPayBilling && (
                               <button
                                 type="button"
                                 onClick={() => handleOpenPay(exp)}
@@ -509,7 +514,7 @@ export function ExpenseDirectoryView({
                               </button>
                             )}
 
-                            {!isPaid && !isViewer && (
+                            {!isPaid && canMutate && (
                               <button
                                 type="button"
                                 onClick={() => handleOpenEdit(exp)}
@@ -521,20 +526,18 @@ export function ExpenseDirectoryView({
                               </button>
                             )}
 
-                            {!isPaid && !isViewer && (
+                            {!isPaid && canMutate && (
                               <button
                                 type="button"
-                                onClick={() => handleDelete(exp.id)}
-                                disabled={isDeleting}
+                                onClick={() => {
+                                  setDeleteError(null);
+                                  setExpenseToDelete(exp);
+                                }}
                                 aria-label={`Delete ${exp.title}`}
-                                className="min-h-[36px] min-w-[36px] p-2 inline-flex items-center justify-center rounded-full text-ink-3 hover:text-ember-ink hover:bg-ember-tint/50 transition-colors disabled:opacity-50"
+                                className="min-h-[36px] min-w-[36px] p-2 inline-flex items-center justify-center rounded-full text-ink-3 hover:text-ember-ink hover:bg-ember-tint/50 transition-colors"
                                 title="Delete scheduled expense"
                               >
-                                {isDeleting ? (
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                ) : (
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                )}
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             )}
                           </div>
@@ -551,7 +554,6 @@ export function ExpenseDirectoryView({
               {filteredExpenses.map((exp) => {
                 const isPaid = exp.status === "PAID";
                 const isOverdue = exp.status === "OVERDUE";
-                const isDeleting = isDeletingId === exp.id;
 
                 return (
                   <div
@@ -609,44 +611,48 @@ export function ExpenseDirectoryView({
                         <CheckCircle2 className="w-4 h-4 shrink-0" />
                         <span>Payment settled</span>
                       </div>
-                    ) : isViewer ? null : (
+                    ) : !canMutate && !canPayBilling ? null : (
                       <div className="flex items-center gap-2 pt-1 flex-wrap sm:flex-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenPay(exp)}
-                          className="flex-1 min-h-[44px] inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-medium bg-fog text-ink hover:bg-fog-2 border border-line transition-colors"
-                          title="Mark as Paid"
-                        >
-                          <CheckCircle2 className="w-4 h-4 text-moss shrink-0" />
-                          <span>Mark as Paid</span>
-                        </button>
+                        {canPayBilling && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenPay(exp)}
+                            className="flex-1 min-h-[44px] inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-medium bg-fog text-ink hover:bg-fog-2 border border-line transition-colors"
+                            title="Mark as Paid"
+                          >
+                            <CheckCircle2 className="w-4 h-4 text-moss shrink-0" />
+                            <span>Mark as Paid</span>
+                          </button>
+                        )}
 
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEdit(exp)}
-                          aria-label={`Edit ${exp.title}`}
-                          className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-ink-2 hover:text-ink hover:bg-fog border border-line transition-colors px-3.5 py-2.5 text-xs font-medium"
-                          title="Edit expense"
-                        >
-                          <Edit2 className="w-4 h-4 shrink-0" />
-                          <span className="ml-1.5">Edit</span>
-                        </button>
+                        {canMutate && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEdit(exp)}
+                            aria-label={`Edit ${exp.title}`}
+                            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-ink-2 hover:text-ink hover:bg-fog border border-line transition-colors px-3.5 py-2.5 text-xs font-medium"
+                            title="Edit expense"
+                          >
+                            <Edit2 className="w-4 h-4 shrink-0" />
+                            <span className="ml-1.5">Edit</span>
+                          </button>
+                        )}
 
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(exp.id)}
-                          disabled={isDeleting}
-                          aria-label={`Delete ${exp.title}`}
-                          className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-ink-3 hover:text-ember-ink hover:bg-ember-tint border border-line transition-colors px-3.5 py-2.5 text-xs font-medium disabled:opacity-50"
-                          title="Delete scheduled expense"
-                        >
-                          {isDeleting ? (
-                            <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                          ) : (
+                        {canMutate && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDeleteError(null);
+                              setExpenseToDelete(exp);
+                            }}
+                            aria-label={`Delete ${exp.title}`}
+                            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-ink-3 hover:text-ember-ink hover:bg-ember-tint border border-line transition-colors px-3.5 py-2.5 text-xs font-medium"
+                            title="Delete scheduled expense"
+                          >
                             <Trash2 className="w-4 h-4 shrink-0 text-ink-3" />
-                          )}
-                          <span className="ml-1.5">Delete</span>
-                        </button>
+                            <span className="ml-1.5">Delete</span>
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -657,26 +663,50 @@ export function ExpenseDirectoryView({
         )}
       </div>
 
-      {/* Slide-over Form Drawer */}
-      <ExpenseFormDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        expenseToEdit={expenseToEdit}
-        baseCurrency={baseCurrency}
-        onSuccess={() => {
-          window.location.reload();
-        }}
-      />
+      {/* Expense Form Modal */}
+      {canMutate && (
+        <ExpenseFormDrawer
+          isOpen={isDrawerOpen}
+          onClose={() => setIsDrawerOpen(false)}
+          expenseToEdit={expenseToEdit}
+          baseCurrency={baseCurrency}
+          onSuccess={() => {
+            router.refresh();
+          }}
+        />
+      )}
 
       {/* Mark as Paid Modal */}
-      <MarkPaidModal
-        isOpen={Boolean(expenseToPay)}
-        onClose={() => setExpenseToPay(null)}
-        expense={expenseToPay}
-        baseCurrency={baseCurrency}
-        onSuccess={() => {
-          window.location.reload();
+      {canPayBilling && (
+        <MarkPaidModal
+          isOpen={Boolean(expenseToPay)}
+          onClose={() => setExpenseToPay(null)}
+          expense={expenseToPay}
+          baseCurrency={baseCurrency}
+          onSuccess={() => {
+            router.refresh();
+          }}
+        />
+      )}
+
+      {/* Delete Expense Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(expenseToDelete)}
+        onClose={() => {
+          if (!isDeleting) {
+            setExpenseToDelete(null);
+            setDeleteError(null);
+          }
         }}
+        onConfirm={handleConfirmDelete}
+        variant="danger"
+        eyebrow="Accounts Payable"
+        title={expenseToDelete ? `Delete "${expenseToDelete.title}"?` : "Delete Expense"}
+        description="This removes the scheduled outflow from your cash flow forecast. Settled payments cannot be deleted here."
+        confirmLabel="Delete Expense"
+        cancelLabel="Cancel"
+        isPending={isDeleting}
+        errorMessage={deleteError}
       />
     </div>
   );

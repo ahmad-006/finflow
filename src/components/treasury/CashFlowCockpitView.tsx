@@ -6,16 +6,9 @@ import { useRouter } from "next/navigation";
 import {
   SlidersHorizontal,
   Plus,
-  AlertTriangle,
-  ArrowUpRight,
-  ArrowDownRight,
   ArrowRight,
   Calendar,
-  CheckCircle2,
-  Clock,
-  Layers,
   HelpCircle,
-  Filter,
 } from "lucide-react";
 import type {
   ForecastSummary,
@@ -23,6 +16,7 @@ import type {
   DailyForecastPoint,
 } from "@/modules/treasury/types";
 import { getForecastAction } from "@/modules/treasury/actions";
+import { canManageWorkspace, canMutateLedger } from "@/modules/auth/rbac";
 import { InkLine } from "@/components/line/InkLine";
 import { Ruler } from "@/components/line/Ruler";
 import { Figure } from "@/components/line/Figure";
@@ -40,19 +34,26 @@ import { cn } from "@/lib/utils";
 
 export interface CashFlowCockpitViewProps {
   initialForecast: ForecastSummary;
+  role?: string;
 }
 
 type TableFilter = "ALL" | "INFLOWS" | "OUTFLOWS" | "DEFICITS";
 
 export function CashFlowCockpitView({
   initialForecast,
+  role = "MEMBER",
 }: CashFlowCockpitViewProps) {
   const router = useRouter();
+  const canAdjustReserve = canManageWorkspace(role);
+  const canScheduleOutflow = canMutateLedger(role);
 
   // Mode and active scrubber day
   const [mode, setMode] = React.useState<ForecastMode>("expected");
   const [activeDay, setActiveDay] = React.useState<number>(0);
-  const [summary, setSummary] = React.useState<ForecastSummary>(initialForecast);
+  const [forecastOverride, setForecastOverride] = React.useState<{
+    base: ForecastSummary;
+    data: ForecastSummary;
+  } | null>(null);
   const [tableFilter, setTableFilter] = React.useState<TableFilter>("ALL");
   const [isPendingMode, startModeTransition] = React.useTransition();
 
@@ -60,10 +61,10 @@ export function CashFlowCockpitView({
   const [isSettingsOpen, setIsSettingsOpen] = React.useState<boolean>(false);
   const [isExpenseDrawerOpen, setIsExpenseDrawerOpen] = React.useState<boolean>(false);
 
-  // Sync state if initialForecast changes from server
-  React.useEffect(() => {
-    setSummary(initialForecast);
-  }, [initialForecast]);
+  const summary =
+    forecastOverride && forecastOverride.base === initialForecast
+      ? forecastOverride.data
+      : initialForecast;
 
   const baseCurrency = summary.baseCurrency || "PKR";
 
@@ -76,7 +77,7 @@ export function CashFlowCockpitView({
       try {
         const res = await getForecastAction(newMode);
         if (res.success && res.data) {
-          setSummary(res.data);
+          setForecastOverride({ base: initialForecast, data: res.data });
         }
       } catch (err) {
         console.error("Failed to switch forecast scenario:", err);
@@ -160,26 +161,32 @@ export function CashFlowCockpitView({
           </div>
 
           {/* Action pills */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto shrink-0 self-start md:self-end">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setIsSettingsOpen(true)}
-              className="min-h-[44px] px-4 rounded-full text-xs font-medium border border-line hover:border-ink-3 flex items-center justify-center"
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5 shrink-0" />
-              <span>Adjust liquidity reserve</span>
-            </Button>
-            <Button
-              type="button"
-              variant="primary"
-              onClick={() => setIsExpenseDrawerOpen(true)}
-              className="min-h-[44px] px-5 rounded-full text-xs font-medium bg-ink text-white hover:bg-ink-hover flex items-center justify-center"
-            >
-              <Plus className="w-3.5 h-3.5 mr-1.5 shrink-0" />
-              <span>Schedule outflow</span>
-            </Button>
-          </div>
+          {(canAdjustReserve || canScheduleOutflow) && (
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto shrink-0 self-start md:self-end">
+              {canAdjustReserve && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="min-h-[44px] px-4 rounded-full text-xs font-medium border border-line hover:border-ink-3 flex items-center justify-center"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+                  <span>Adjust liquidity reserve</span>
+                </Button>
+              )}
+              {canScheduleOutflow && (
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={() => setIsExpenseDrawerOpen(true)}
+                  className="min-h-[44px] px-5 rounded-full text-xs font-medium bg-ink text-white hover:bg-ink-hover flex items-center justify-center"
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+                  <span>Schedule outflow</span>
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
@@ -892,30 +899,37 @@ export function CashFlowCockpitView({
       </footer>
 
       {/* Modals and Drawers */}
-      <TreasurySettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        currentReserve={summary.openingBalance}
-        currentBuffer={summary.safetyBuffer}
-        baseCurrency={baseCurrency}
-        onSuccess={(newReserve, newBuffer) => {
-          setSummary((prev) => ({
-            ...prev,
-            openingBalance: newReserve,
-            safetyBuffer: newBuffer,
-          }));
-          router.refresh();
-        }}
-      />
+      {canAdjustReserve && (
+        <TreasurySettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          currentReserve={summary.openingBalance}
+          currentBuffer={summary.safetyBuffer}
+          baseCurrency={baseCurrency}
+          onSuccess={(newReserve, newBuffer) => {
+            setForecastOverride({
+              base: initialForecast,
+              data: {
+                ...summary,
+                openingBalance: newReserve,
+                safetyBuffer: newBuffer,
+              },
+            });
+            router.refresh();
+          }}
+        />
+      )}
 
-      <ExpenseFormDrawer
-        isOpen={isExpenseDrawerOpen}
-        onClose={() => setIsExpenseDrawerOpen(false)}
-        baseCurrency={baseCurrency}
-        onSuccess={() => {
-          router.refresh();
-        }}
-      />
+      {canScheduleOutflow && (
+        <ExpenseFormDrawer
+          isOpen={isExpenseDrawerOpen}
+          onClose={() => setIsExpenseDrawerOpen(false)}
+          baseCurrency={baseCurrency}
+          onSuccess={() => {
+            router.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }

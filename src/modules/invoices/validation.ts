@@ -118,8 +118,86 @@ export const invoiceFilterSchema = z.object({
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
 });
 
+export const bulkInvoiceRowSchema = z.object({
+  rowNumber: z.coerce.number().int().positive().optional(),
+  invoiceGroup: z.string().trim().max(100, "Invoice group must be under 100 characters").optional(),
+  clientEmail: z
+    .string()
+    .trim()
+    .email("Please provide a valid client email address")
+    .toLowerCase(),
+  clientName: z
+    .string()
+    .trim()
+    .max(120, "Client name must be under 120 characters")
+    .optional(),
+  currency: z.preprocess(
+    (val) => (typeof val === "string" && val.trim() !== "" ? val.trim().toUpperCase() : undefined),
+    z
+      .enum(INVOICE_CURRENCIES, {
+        message: "Currency must be one of PKR, USD, EUR, GBP, AED",
+      })
+      .optional()
+  ),
+  exchangeRate: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : val),
+    z.coerce.number().positive("Exchange rate must be positive").optional()
+  ),
+  issueDate: z.coerce.date({
+    message: "Please enter a valid issue date",
+  }),
+  dueDate: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : val),
+    z.coerce.date({ message: "Please enter a valid due date" }).optional()
+  ),
+  taxRate: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? 0 : val),
+    z.coerce
+      .number()
+      .min(0, "Tax rate cannot be negative")
+      .max(100, "Tax rate cannot exceed 100%")
+      .default(0)
+  ),
+  status: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return "DRAFT";
+      if (typeof val === "string") {
+        const trimmed = val.trim().toUpperCase();
+        return trimmed === "" ? "DRAFT" : trimmed;
+      }
+      return val;
+    },
+    z.enum(["DRAFT", "SENT"], {
+      message: 'Status must be "DRAFT" or "SENT"',
+    })
+  ),
+  description: z
+    .string()
+    .trim()
+    .min(1, "Item description is required")
+    .max(255, "Description must be under 255 characters"),
+  quantity: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? 1 : val),
+    z.coerce
+      .number()
+      .positive("Quantity must be greater than 0")
+      .max(999999, "Quantity is too large")
+      .default(1)
+  ),
+  unitPrice: z.coerce
+    .number()
+    .min(0, "Unit price cannot be negative")
+    .max(999999999.99, "Unit price is too large"),
+  notes: z
+    .string()
+    .trim()
+    .max(1000, "Notes must be under 1000 characters")
+    .optional(),
+});
+
 export type InvoiceItemSchemaInput = z.infer<typeof invoiceItemSchema>;
 export type CreateInvoiceSchemaInput = z.infer<typeof createInvoiceSchema>;
 export type UpdateInvoiceSchemaInput = z.infer<typeof updateInvoiceSchema>;
 export type RecordPaymentSchemaInput = z.infer<typeof recordPaymentSchema>;
 export type InvoiceFilterSchemaInput = z.infer<typeof invoiceFilterSchema>;
+export type BulkInvoiceRowSchemaInput = z.infer<typeof bulkInvoiceRowSchema>;

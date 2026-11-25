@@ -25,6 +25,7 @@ async function ClientDirectoryDataLoader() {
 
   const currentUser = await getCurrentUser();
   const currency = currentUser?.company?.baseCurrency || "PKR";
+  const role = currentUser?.role || session.role || "MEMBER";
 
   const [clients, aging] = await Promise.all([
     getCachedClients(session.companyId),
@@ -36,6 +37,7 @@ async function ClientDirectoryDataLoader() {
       initialClients={clients}
       aging={aging}
       currency={currency}
+      role={role}
     />
   );
 }

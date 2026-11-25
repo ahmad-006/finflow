@@ -6,8 +6,10 @@ import { formatUserError } from "@/lib/errors";
 import {
   getSessionTokenFromCookies,
   verifySessionToken,
+  getSession,
 } from "@/modules/auth/session";
 import type { SessionPayload } from "@/modules/auth/types";
+import { assertCanManageWorkspace } from "@/modules/auth/rbac";
 import {
   updateTreasurySettings,
   get30DayForecast,
@@ -45,7 +47,18 @@ function extractData(input: unknown): Record<string, unknown> {
 /**
  * Verifies session token and extracts authenticated tenant identity.
  */
-export async function requireAuthSession(): Promise<SessionPayload> {
+export async function requireAuthSession(
+  sessionOverride?: SessionPayload
+): Promise<SessionPayload> {
+  if (sessionOverride?.userId && sessionOverride?.companyId) {
+    return sessionOverride;
+  }
+
+  const session = await getSession();
+  if (session?.userId && session?.companyId) {
+    return session;
+  }
+
   let token: string | null = null;
   try {
     token = await getSessionTokenFromCookies();
@@ -56,12 +69,12 @@ export async function requireAuthSession(): Promise<SessionPayload> {
     throw new Error("Unauthorized: Please sign in to manage treasury settings.");
   }
 
-  const session = await verifySessionToken(token);
-  if (!session || !session.companyId) {
+  const verified = await verifySessionToken(token);
+  if (!verified || !verified.companyId) {
     throw new Error("Session expired or invalid: Please sign in again.");
   }
 
-  return session;
+  return verified;
 }
 
 /**
@@ -106,10 +119,13 @@ function invalidateTreasuryTags(companyId: string) {
  * Server Action: Updates company liquid reserve and safety buffer thresholds.
  */
 export async function updateTreasurySettingsAction(
-  input: UpdateTreasurySettingsInput | FormData
+  input: UpdateTreasurySettingsInput | FormData,
+  sessionOverride?: SessionPayload
 ): Promise<TreasuryActionResult<TreasurySettings>> {
   try {
-    const session = await requireAuthSession();
+    const session = await requireAuthSession(sessionOverride);
+    assertCanManageWorkspace(session.role);
+
     const rawData = extractData(input);
     const validated = updateTreasurySettingsSchema.parse(rawData);
 
@@ -120,8 +136,13 @@ export async function updateTreasurySettingsAction(
     );
 
     invalidateTreasuryTags(session.companyId);
-    revalidatePath("/dashboard");
-    revalidatePath("/treasury");
+    for (const path of ["/dashboard", "/cash-flow", "/calendar"]) {
+      try {
+        revalidatePath(path);
+      } catch {
+        // Best effort revalidation
+      }
+    }
 
     return {
       success: true,

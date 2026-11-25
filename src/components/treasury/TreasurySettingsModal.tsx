@@ -1,18 +1,23 @@
 "use client";
 
 import * as React from "react";
+import Decimal from "decimal.js";
 import { z } from "zod";
-import { X, AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { formatMoney } from "@/lib/format";
 import { formatUserError } from "@/lib/errors";
+import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updateTreasurySettingsAction } from "@/modules/treasury/actions";
 
 function hasMaxTwoDecimals(val: number): boolean {
-  const scaled = Math.round(val * 100);
-  return Math.abs(val - scaled / 100) < 1e-6;
+  try {
+    return new Decimal(val).decimalPlaces() <= 2;
+  } catch {
+    return false;
+  }
 }
 
 const settingsSchema = z.object({
@@ -37,30 +42,20 @@ export interface TreasurySettingsModalProps {
   onSuccess?: (newReserve: number, newBuffer: number) => void;
 }
 
-export function TreasurySettingsModal({
-  isOpen,
+const TREASURY_SETTINGS_FORM_ID = "treasury-settings-modal-form";
+
+function TreasurySettingsModalContent({
   onClose,
   currentReserve,
   currentBuffer,
   baseCurrency = "PKR",
   onSuccess,
-}: TreasurySettingsModalProps) {
+}: Omit<TreasurySettingsModalProps, "isOpen">) {
   const [isPending, startTransition] = React.useTransition();
-  const [reserveInput, setReserveInput] = React.useState<string>(String(currentReserve));
-  const [bufferInput, setBufferInput] = React.useState<string>(String(currentBuffer));
+  const [reserveInput, setReserveInput] = React.useState<string>(() => String(currentReserve));
+  const [bufferInput, setBufferInput] = React.useState<string>(() => String(currentBuffer));
   const [errorBanner, setErrorBanner] = React.useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
-
-  React.useEffect(() => {
-    if (isOpen) {
-      setReserveInput(String(currentReserve));
-      setBufferInput(String(currentBuffer));
-      setErrorBanner(null);
-      setFieldErrors({});
-    }
-  }, [isOpen, currentReserve, currentBuffer]);
-
-  if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,41 +112,36 @@ export function TreasurySettingsModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="treasury-settings-modal-title"
-    >
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-ink/30 backdrop-blur-md transition-opacity"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      {/* Modal surface */}
-      <div className="relative w-full max-w-[520px] rounded-[18px] bg-white border border-line p-6 sm:p-7 z-10 flex flex-col gap-5">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4 pb-3 border-b border-line">
-          <div>
-            <span className="text-[11px] font-mono uppercase tracking-wider text-ink-3">
-              Liquidity Controls
-            </span>
-            <h2 id="treasury-settings-modal-title" className="text-xl font-serif text-ink tracking-tight mt-0.5">
-              Adjust Liquidity Reserve &amp; Safety Buffer
-            </h2>
-          </div>
-          <button
+    <Modal
+      isOpen
+      onClose={onClose}
+      size="md"
+      eyebrow="Liquidity Controls"
+      title="Adjust Liquidity Reserve & Safety Buffer"
+      preventClose={isPending}
+      footer={
+        <>
+          <Button
             type="button"
+            variant="secondary"
             onClick={onClose}
-            aria-label="Close dialog"
-            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full text-ink-3 hover:text-ink hover:bg-fog transition-colors"
+            disabled={isPending}
+            className="min-h-[44px] h-11 px-5 rounded-full text-sm font-medium"
           >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form={TREASURY_SETTINGS_FORM_ID}
+            isLoading={isPending}
+            className="min-h-[44px] h-11 px-6 rounded-full text-sm font-medium"
+          >
+            {isPending ? "Updating..." : "Save settings"}
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
         {errorBanner && (
           <div className="flex items-center gap-2 p-3 rounded-[10px] border border-ember/30 bg-ember-tint text-ember-ink text-xs">
             <AlertCircle className="w-4 h-4 shrink-0" />
@@ -159,31 +149,28 @@ export function TreasurySettingsModal({
           </div>
         )}
 
-        {/* Current values reference */}
         <div className="p-3.5 rounded-[12px] bg-fog/50 border border-line grid grid-cols-2 gap-3 text-xs">
           <div>
             <span className="text-ink-3 block">Current reserve</span>
-            <span className="text-sm font-serif font-bold text-ink mt-0.5 block">
+            <span className="text-sm font-sans font-semibold text-ink mt-0.5 block num">
               {formatMoney(currentReserve, baseCurrency)}
             </span>
           </div>
           <div>
             <span className="text-ink-3 block">Current safety buffer</span>
-            <span className="text-sm font-serif font-bold text-ink mt-0.5 block">
+            <span className="text-sm font-sans font-semibold text-ink mt-0.5 block num">
               {formatMoney(currentBuffer, baseCurrency)}
             </span>
           </div>
         </div>
 
-        {/* Form fields */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {/* Liquid Reserve */}
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="liquidReserve" className="text-xs font-mono uppercase tracking-wider text-ink-3">
+        <form id={TREASURY_SETTINGS_FORM_ID} onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label htmlFor="liquidReserve" className="mb-0">
                 Liquid cash reserve ({baseCurrency}) *
               </Label>
-              <span className="text-[11px] text-ink-3">Opening cash on hand</span>
+              <span className="text-xs text-ink-3">Opening cash on hand</span>
             </div>
             <Input
               id="liquidReserve"
@@ -194,20 +181,19 @@ export function TreasurySettingsModal({
               onChange={(e) => setReserveInput(e.target.value)}
               required
               isInvalid={Boolean(fieldErrors.liquidReserve)}
-              className="h-11 text-sm rounded-[10px]"
+              className="h-11 text-sm rounded-[10px] num"
             />
             {fieldErrors.liquidReserve && (
-              <span className="text-[11px] text-ember-ink">{fieldErrors.liquidReserve}</span>
+              <span className="mt-1 block text-xs text-ember-ink">{fieldErrors.liquidReserve}</span>
             )}
           </div>
 
-          {/* Safety Buffer */}
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="safetyBuffer" className="text-xs font-mono uppercase tracking-wider text-ink-3">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label htmlFor="safetyBuffer" className="mb-0">
                 Safety buffer threshold ({baseCurrency}) *
               </Label>
-              <span className="text-[11px] text-ink-3">Red-alert floor</span>
+              <span className="text-xs text-ink-3">Red-alert floor</span>
             </div>
             <Input
               id="safetyBuffer"
@@ -218,15 +204,14 @@ export function TreasurySettingsModal({
               onChange={(e) => setBufferInput(e.target.value)}
               required
               isInvalid={Boolean(fieldErrors.safetyBuffer)}
-              className="h-11 text-sm rounded-[10px]"
+              className="h-11 text-sm rounded-[10px] num"
             />
             {fieldErrors.safetyBuffer && (
-              <span className="text-[11px] text-ember-ink">{fieldErrors.safetyBuffer}</span>
+              <span className="mt-1 block text-xs text-ember-ink">{fieldErrors.safetyBuffer}</span>
             )}
           </div>
 
-          {/* Operational explanation */}
-          <div className="p-3 rounded-[10px] bg-fog border border-line text-[12px] text-ink-2 leading-relaxed flex flex-col gap-1">
+          <div className="p-3 rounded-[10px] bg-fog border border-line text-xs text-ink-2 leading-relaxed flex flex-col gap-1">
             <p>
               Your liquid reserve sets the opening balance for 30-day cash projections.
             </p>
@@ -234,35 +219,29 @@ export function TreasurySettingsModal({
               When projected balance dips below the safety buffer, the forecast marks deficit days in red.
             </p>
           </div>
-
-          {/* Action buttons */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-line">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={onClose}
-              disabled={isPending}
-              className="min-h-[44px] h-11 px-5 rounded-full text-xs font-medium"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isPending}
-              className="min-h-[44px] h-11 px-6 rounded-full bg-ink text-white hover:bg-ink-hover text-xs font-medium"
-            >
-              {isPending ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                  Updating...
-                </>
-              ) : (
-                "Save settings"
-              )}
-            </Button>
-          </div>
         </form>
       </div>
-    </div>
+    </Modal>
+  );
+}
+
+export function TreasurySettingsModal({
+  isOpen,
+  onClose,
+  currentReserve,
+  currentBuffer,
+  baseCurrency = "PKR",
+  onSuccess,
+}: TreasurySettingsModalProps) {
+  if (!isOpen) return null;
+  return (
+    <TreasurySettingsModalContent
+      key={`${currentReserve}-${currentBuffer}`}
+      onClose={onClose}
+      currentReserve={currentReserve}
+      currentBuffer={currentBuffer}
+      baseCurrency={baseCurrency}
+      onSuccess={onSuccess}
+    />
   );
 }

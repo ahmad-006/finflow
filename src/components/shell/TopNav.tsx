@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { canMutateLedger } from "@/modules/auth/rbac";
 import { UserMenu } from "./UserMenu";
 import { MobileMenu } from "./MobileMenu";
 
@@ -153,12 +154,14 @@ export function TopNav({
             </>
           ) : (
             <>
-              <Link
-                href="/invoices/new"
-                className="hidden sm:inline-flex items-center justify-center min-h-[36px] h-9 px-4 rounded-full bg-ink text-white text-[14px] font-medium hover:bg-ink-hover transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
-              >
-                New invoice
-              </Link>
+              {(user?.role ? canMutateLedger(user.role) : true) && (
+                <Link
+                  href="/invoices/new"
+                  className="hidden sm:inline-flex items-center justify-center min-h-[36px] h-9 px-4 rounded-full bg-ink text-white text-[14px] font-medium hover:bg-ink-hover transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
+                >
+                  New invoice
+                </Link>
+              )}
               <UserMenu user={user} company={company} onSignOut={onSignOut} />
             </>
           )}

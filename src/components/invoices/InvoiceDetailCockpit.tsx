@@ -11,8 +11,6 @@ import {
   Send,
   CreditCard,
   Ban,
-  Calendar,
-  Building2,
   Clock,
   CheckCircle2,
   AlertTriangle,
@@ -20,10 +18,12 @@ import {
   Loader2,
   Bell,
 } from "lucide-react";
-import type { InvoiceWithItemsAndClient } from "@/modules/invoices/types";
+import type { InvoiceCurrency, InvoiceWithItemsAndClient } from "@/modules/invoices/types";
 import { formatMoney } from "@/modules/invoices/currency";
+import { canManageBilling, canMutateLedger } from "@/modules/auth/rbac";
 import { InvoiceStatusBadge } from "./InvoiceStatusBadge";
 import { RecordPaymentModal } from "./RecordPaymentModal";
+import { ConfirmModal } from "@/components/ui/Modal";
 import { formatUserError } from "@/lib/errors";
 import { downloadInvoicePDF } from "@/modules/documents";
 import {
@@ -36,16 +36,22 @@ interface InvoiceDetailCockpitProps {
   invoice: InvoiceWithItemsAndClient;
   companyName: string;
   baseCurrency?: string;
+  role?: string;
 }
 
 export function InvoiceDetailCockpit({
   invoice,
   companyName,
   baseCurrency = "PKR",
+  role = "MEMBER",
 }: InvoiceDetailCockpitProps) {
+  const canMutate = canMutateLedger(role);
+  const canPayBilling = canManageBilling(role);
   const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
   const [isPaymentModalOpen, setIsPaymentModalOpen] = React.useState(false);
+  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = React.useState(false);
+  const [cancelError, setCancelError] = React.useState<string | null>(null);
   const [copiedLink, setCopiedLink] = React.useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = React.useState(false);
   const [isSendingReminder, setIsSendingReminder] = React.useState(false);
@@ -105,21 +111,20 @@ export function InvoiceDetailCockpit({
     });
   };
 
-  const handleCancelInvoice = () => {
-    if (!confirm("Are you sure you want to cancel this invoice? This cannot be undone.")) {
-      return;
-    }
+  const handleConfirmCancelInvoice = () => {
+    setCancelError(null);
     setActionError(null);
     startTransition(async () => {
       try {
         const res = await cancelInvoiceAction(invoice.id);
         if (!res.success) {
-          setActionError(res.error || "Failed to cancel invoice.");
+          setCancelError(res.error || "Failed to cancel invoice.");
         } else {
+          setIsCancelConfirmOpen(false);
           router.refresh();
         }
       } catch (err) {
-        setActionError(formatUserError(err, "Unable to cancel invoice. Please check your connection."));
+        setCancelError(formatUserError(err, "Unable to cancel invoice. Please check your connection."));
       }
     });
   };
@@ -146,10 +151,6 @@ export function InvoiceDetailCockpit({
     } finally {
       setIsSendingReminder(false);
     }
-  };
-
-  const handlePrint = () => {
-    window.print();
   };
 
   return (
@@ -231,7 +232,7 @@ export function InvoiceDetailCockpit({
           </Link>
 
           {/* Mark Sent (if DRAFT) */}
-          {invoice.status === "DRAFT" && (
+          {canMutate && invoice.status === "DRAFT" && (
             <button
               type="button"
               disabled={isPending}
@@ -272,7 +273,7 @@ export function InvoiceDetailCockpit({
           )}
 
           {/* Record Payment (if SENT or OVERDUE) */}
-          {(invoice.status === "SENT" || invoice.status === "OVERDUE") && (
+          {canPayBilling && (invoice.status === "SENT" || invoice.status === "OVERDUE") && (
             <button
               type="button"
               onClick={() => setIsPaymentModalOpen(true)}
@@ -284,11 +285,14 @@ export function InvoiceDetailCockpit({
           )}
 
           {/* Cancel Invoice */}
-          {invoice.status !== "PAID" && invoice.status !== "CANCELLED" && (
+          {canMutate && invoice.status !== "PAID" && invoice.status !== "CANCELLED" && (
             <button
               type="button"
               disabled={isPending}
-              onClick={handleCancelInvoice}
+              onClick={() => {
+                setCancelError(null);
+                setIsCancelConfirmOpen(true);
+              }}
               className="min-h-[44px] inline-flex items-center gap-1 px-4 py-2 rounded-full border border-line text-xs text-ember/80 hover:bg-ember/5 hover:text-ember transition-colors disabled:opacity-50"
             >
               <Ban className="w-3 h-3" />
@@ -501,7 +505,7 @@ export function InvoiceDetailCockpit({
                   1 {invoice.currency} = {invoice.exchangeRate} {baseCurrency}
                 </span>
                 <span className="text-[10px] text-ink/50 mt-0.5">
-                  Base Total: {formatMoney(invoice.baseTotalAmount, baseCurrency as any)}
+                  Base Total: {formatMoney(invoice.baseTotalAmount, baseCurrency as InvoiceCurrency)}
                 </span>
               </div>
             )}
@@ -589,15 +593,37 @@ export function InvoiceDetailCockpit({
       </div>
 
       {/* Payment Modal */}
-      <RecordPaymentModal
-        isOpen={isPaymentModalOpen}
-        onClose={() => setIsPaymentModalOpen(false)}
-        invoiceId={invoice.id}
-        invoiceNumber={invoice.invoiceNumber}
-        totalAmount={invoice.totalAmount}
-        paidAmount={invoice.paidAmount}
-        currency={invoice.currency}
-        onSuccess={() => router.refresh()}
+      {canPayBilling && (
+        <RecordPaymentModal
+          isOpen={isPaymentModalOpen}
+          onClose={() => setIsPaymentModalOpen(false)}
+          invoiceId={invoice.id}
+          invoiceNumber={invoice.invoiceNumber}
+          totalAmount={invoice.totalAmount}
+          paidAmount={invoice.paidAmount}
+          currency={invoice.currency}
+          onSuccess={() => router.refresh()}
+        />
+      )}
+
+      {/* Cancel Invoice Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isCancelConfirmOpen}
+        onClose={() => {
+          if (!isPending) {
+            setIsCancelConfirmOpen(false);
+            setCancelError(null);
+          }
+        }}
+        onConfirm={handleConfirmCancelInvoice}
+        variant="danger"
+        eyebrow="Invoice Action"
+        title={`Cancel ${invoice.invoiceNumber}?`}
+        description="This voids the commercial invoice and excludes it from receivable projections. This action cannot be undone."
+        confirmLabel="Cancel Invoice"
+        cancelLabel="Keep Invoice"
+        isPending={isPending}
+        errorMessage={cancelError}
       />
     </div>
   );

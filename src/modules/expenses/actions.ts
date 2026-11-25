@@ -97,6 +97,9 @@ function invalidateTenantTags(companyId: string, extraTags: string[] = []) {
   const tags = [
     `expenses-${companyId}`,
     `kpis-${companyId}`,
+    `treasury-${companyId}`,
+    `dashboard-${companyId}`,
+    `calendar-${companyId}`,
     ...extraTags,
   ];
 
@@ -116,6 +119,20 @@ function invalidateTenantTags(companyId: string, extraTags: string[] = []) {
     revalidateTag(`expenses-${companyId}`, { expire: 0 });
   } catch {
     // Best effort
+  }
+}
+
+/**
+ * Safely revalidates expense-related routes across Next.js App Router and test environments.
+ */
+function revalidateExpensePaths() {
+  const paths = ["/expenses", "/dashboard", "/cash-flow", "/calendar"];
+  for (const path of paths) {
+    try {
+      revalidatePath(path);
+    } catch {
+      // Revalidation best effort
+    }
   }
 }
 
@@ -155,12 +172,7 @@ export async function createExpenseAction(
     const expense = await createExpense(session.companyId, validated);
 
     invalidateTenantTags(session.companyId);
-    try {
-      revalidatePath("/expenses");
-      revalidatePath("/dashboard");
-    } catch {
-      // Revalidation best effort
-    }
+    revalidateExpensePaths();
 
     return {
       success: true,
@@ -186,10 +198,12 @@ export async function createExpenseAction(
  */
 export async function updateExpenseAction(
   idOrInputOrPrevState: string | UpdateExpenseInput | unknown,
-  maybeData?: UpdateExpenseInput | FormData
+  maybeData?: UpdateExpenseInput | FormData,
+  sessionOverride?: SessionPayload
 ): Promise<ExpenseActionResult<ExpenseRecord>> {
   try {
-    const session = await requireAuthSession();
+    const session = await requireAuthSession(sessionOverride);
+    assertCanMutateLedger(session.role);
 
     let expenseId = "";
     let rawData: Record<string, unknown> = {};
@@ -197,7 +211,7 @@ export async function updateExpenseAction(
     if (typeof idOrInputOrPrevState === "string") {
       expenseId = idOrInputOrPrevState;
       rawData = extractData(maybeData);
-    } else if (maybeData instanceof FormData) {
+    } else if (typeof FormData !== "undefined" && maybeData instanceof FormData) {
       rawData = extractData(maybeData);
       expenseId = String(rawData.id || "");
     } else {
@@ -227,12 +241,7 @@ export async function updateExpenseAction(
     const expense = await updateExpense(session.companyId, expenseId, validated);
 
     invalidateTenantTags(session.companyId, [`expense-${session.companyId}-${expenseId}`]);
-    try {
-      revalidatePath("/expenses");
-      revalidatePath("/dashboard");
-    } catch {
-      // Revalidation best effort
-    }
+    revalidateExpensePaths();
 
     return {
       success: true,
@@ -257,10 +266,12 @@ export async function updateExpenseAction(
  * Server Action: Deletes an unpaid expense.
  */
 export async function deleteExpenseAction(
-  expenseId: string
+  expenseId: string,
+  sessionOverride?: SessionPayload
 ): Promise<ExpenseActionResult<{ success: boolean; id: string }>> {
   try {
-    const session = await requireAuthSession();
+    const session = await requireAuthSession(sessionOverride);
+    assertCanMutateLedger(session.role);
 
     if (!expenseId || typeof expenseId !== "string") {
       return {
@@ -272,12 +283,7 @@ export async function deleteExpenseAction(
     const result = await deleteExpense(session.companyId, expenseId);
 
     invalidateTenantTags(session.companyId, [`expense-${session.companyId}-${expenseId}`]);
-    try {
-      revalidatePath("/expenses");
-      revalidatePath("/dashboard");
-    } catch {
-      // Revalidation best effort
-    }
+    revalidateExpensePaths();
 
     return {
       success: true,
@@ -321,12 +327,7 @@ export async function markExpensePaidAction(
     );
 
     invalidateTenantTags(session.companyId, [`expense-${session.companyId}-${expenseId}`]);
-    try {
-      revalidatePath("/expenses");
-      revalidatePath("/dashboard");
-    } catch {
-      // Revalidation best effort
-    }
+    revalidateExpensePaths();
 
     return {
       success: true,

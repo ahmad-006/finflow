@@ -106,18 +106,23 @@ export function calculateInvoiceTotals(
   items: Array<{ quantity: Decimal | number | string; unitPrice: Decimal | number | string }>,
   taxRatePercent: Decimal | number | string = 0,
   currency: InvoiceCurrency = "PKR",
-  customExchangeRate?: Decimal | number | string
+  customExchangeRate?: Decimal | number | string,
+  baseCurrency: InvoiceCurrency = "PKR"
 ): InvoiceCalculations {
   const taxRate = toDecimal(taxRatePercent);
 
-  // Determine spot FX rate
+  // Determine spot FX rate relative to company baseCurrency
   let fxRate: Decimal;
-  if (currency === "PKR") {
+  if (currency === baseCurrency) {
     fxRate = new Decimal(1.0);
   } else if (customExchangeRate !== undefined && customExchangeRate !== null && toDecimal(customExchangeRate).gt(0)) {
     fxRate = roundFx(customExchangeRate);
-  } else {
+  } else if (baseCurrency === "PKR") {
     fxRate = roundFx(DEFAULT_EXCHANGE_RATES[currency] ?? 1.0);
+  } else {
+    const curRate = toDecimal(DEFAULT_EXCHANGE_RATES[currency] ?? 1.0);
+    const baseRate = toDecimal(DEFAULT_EXCHANGE_RATES[baseCurrency] ?? 1.0);
+    fxRate = baseRate.gt(0) ? roundFx(curRate.div(baseRate)) : new Decimal(1.0);
   }
 
   let subtotal = new Decimal(0);
@@ -141,10 +146,11 @@ export function calculateInvoiceTotals(
 
   const totalAmount = subtotal.plus(taxAmount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
 
-  // Normalize to base currency (PKR)
-  const baseTotalAmount = currency === "PKR"
-    ? totalAmount
-    : totalAmount.mul(fxRate).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+  // Normalize to company baseCurrency
+  const baseTotalAmount =
+    currency === baseCurrency
+      ? totalAmount
+      : totalAmount.mul(fxRate).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
 
   return {
     subtotal: subtotal.toNumber(),

@@ -2,6 +2,41 @@ import { z } from "zod";
 
 export const PAYMENT_TERMS_OPTIONS = [7, 15, 30, 45, 60, 90] as const;
 
+/**
+ * Normalizes payment terms inputs such as "Net 30", "30 days", "30", 30, or "" to a numeric day count.
+ */
+export function parsePaymentTerms(val: unknown): number {
+  if (val === undefined || val === null) {
+    return 30;
+  }
+  if (typeof val === "number") {
+    return Number.isFinite(val) ? val : NaN;
+  }
+  if (typeof val === "string") {
+    const trimmed = val.trim();
+    if (trimmed === "") {
+      return 30;
+    }
+    const match = trimmed.match(/^(?:net\s*[-]?\s*)?(\d+)(?:\s*days?)?$/i);
+    if (match) {
+      return parseInt(match[1], 10);
+    }
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : NaN;
+  }
+  return NaN;
+}
+
+const paymentTermsSchema = z.preprocess(
+  (val) => parsePaymentTerms(val),
+  z
+    .number({ message: "Payment terms must be a valid number of days" })
+    .int("Payment terms must be an integer")
+    .refine((val) => [7, 15, 30, 45, 60, 90].includes(val), {
+      message: "Payment terms must be one of: 7, 15, 30, 45, 60, or 90 days",
+    })
+);
+
 export const createClientSchema = z.object({
   clientName: z
     .string()
@@ -27,14 +62,7 @@ export const createClientSchema = z.object({
     .optional()
     .nullable()
     .or(z.literal("")),
-  paymentTermsDays: z
-    .coerce
-    .number()
-    .int("Payment terms must be an integer")
-    .refine((val) => [7, 15, 30, 45, 60, 90].includes(val), {
-      message: "Payment terms must be one of: 7, 15, 30, 45, 60, or 90 days",
-    })
-    .default(30),
+  paymentTermsDays: paymentTermsSchema.default(30),
 });
 
 export const updateClientSchema = z.object({
@@ -82,6 +110,29 @@ export const clientFilterSchema = z.object({
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
 });
 
+export const bulkClientRowSchema = z.object({
+  rowNumber: z.coerce.number().int().positive().optional(),
+  clientName: createClientSchema.shape.clientName,
+  email: createClientSchema.shape.email,
+  phone: createClientSchema.shape.phone,
+  address: createClientSchema.shape.address,
+  paymentTermsDays: paymentTermsSchema.default(30),
+});
+
+export const bulkImportClientsSchema = z.object({
+  rows: z
+    .array(bulkClientRowSchema)
+    .min(1, "At least one client row is required")
+    .max(500, "Maximum 500 client rows allowed per import"),
+  options: z
+    .object({
+      duplicateMode: z.enum(["skip", "fail"]).default("skip"),
+    })
+    .optional(),
+});
+
 export type CreateClientSchemaInput = z.infer<typeof createClientSchema>;
 export type UpdateClientSchemaInput = z.infer<typeof updateClientSchema>;
 export type ClientFilterSchemaInput = z.infer<typeof clientFilterSchema>;
+export type BulkClientRowSchemaInput = z.infer<typeof bulkClientRowSchema>;
+export type BulkImportClientsSchemaInput = z.infer<typeof bulkImportClientsSchema>;

@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   Bell,
   Check,
+  Upload,
 } from "lucide-react";
 import type {
   InvoiceWithItemsAndClient,
@@ -23,12 +24,17 @@ import type {
   InvoiceCurrency,
 } from "@/modules/invoices/types";
 import { formatMoney, SUPPORTED_CURRENCIES } from "@/modules/invoices/currency";
+import { canManageBilling, canMutateLedger } from "@/modules/auth/rbac";
 import { InvoiceStatusBadge } from "./InvoiceStatusBadge";
 import { InvoiceKPIStrip } from "./InvoiceKPIStrip";
 import { RecordPaymentModal } from "./RecordPaymentModal";
+import { CreateInvoiceModal } from "./CreateInvoiceModal";
+import { BulkImportInvoicesModal } from "./BulkImportInvoicesModal";
+import type { ClientOption } from "./InvoiceBuilderView";
 import { downloadInvoicePDF } from "@/modules/documents";
 import { formatUserError } from "@/lib/errors";
 import { sendInvoiceReminderAction } from "@/modules/notifications/actions";
+import { Button } from "@/components/ui/button";
 
 export interface InvoiceDirectoryViewProps {
   initialInvoices: InvoiceWithItemsAndClient[];
@@ -36,6 +42,8 @@ export interface InvoiceDirectoryViewProps {
   baseCurrency?: string;
   companyName?: string;
   role?: string;
+  clients?: ClientOption[];
+  initialExchangeRates?: Record<InvoiceCurrency, number>;
 }
 
 export function InvoiceDirectoryView({
@@ -43,15 +51,20 @@ export function InvoiceDirectoryView({
   kpis,
   baseCurrency = "PKR",
   companyName = "FinFlow Commercial Services",
-  role,
+  role = "MEMBER",
+  clients = [],
+  initialExchangeRates,
 }: InvoiceDirectoryViewProps) {
-  const isViewer = role?.toUpperCase() === "VIEWER";
+  const canMutate = canMutateLedger(role);
+  const canPayBilling = canManageBilling(role);
   const router = useRouter();
   const [downloadingId, setDownloadingId] = React.useState<string | null>(null);
   const [sendingReminderId, setSendingReminderId] = React.useState<string | null>(null);
   const [reminderSuccessId, setReminderSuccessId] = React.useState<string | null>(null);
   const [feedbackMessage, setFeedbackMessage] = React.useState<{ text: string; isError?: boolean } | null>(null);
   const [paymentInvoice, setPaymentInvoice] = React.useState<InvoiceWithItemsAndClient | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<InvoiceStatus | "ALL">("ALL");
   const [currencyFilter, setCurrencyFilter] = React.useState<InvoiceCurrency | "ALL">("ALL");
@@ -59,17 +72,14 @@ export function InvoiceDirectoryView({
   // Client-side instant filtering
   const filteredInvoices = React.useMemo(() => {
     return initialInvoices.filter((inv) => {
-      // Status filter
       if (statusFilter !== "ALL" && inv.status !== statusFilter) {
         return false;
       }
 
-      // Currency filter
       if (currencyFilter !== "ALL" && inv.currency !== currencyFilter) {
         return false;
       }
 
-      // Search query
       if (search.trim()) {
         const query = search.trim().toLowerCase();
         const matchesNumber = inv.invoiceNumber.toLowerCase().includes(query);
@@ -110,6 +120,7 @@ export function InvoiceDirectoryView({
   };
 
   const handleDownloadPDF = async (inv: InvoiceWithItemsAndClient) => {
+    setFeedbackMessage(null);
     setDownloadingId(inv.id);
     try {
       await new Promise((resolve) => setTimeout(resolve, 60));
@@ -119,6 +130,10 @@ export function InvoiceDirectoryView({
       });
     } catch (err) {
       console.error("Quick PDF download failed:", err);
+      setFeedbackMessage({
+        text: formatUserError(err, `Unable to generate PDF for ${inv.invoiceNumber}.`),
+        isError: true,
+      });
     } finally {
       setDownloadingId(null);
     }
@@ -173,24 +188,37 @@ export function InvoiceDirectoryView({
           </p>
         </div>
 
-        {!isViewer && (
-          <Link
-            href="/invoices/new"
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 min-h-[44px] rounded-full bg-ink text-white text-sm font-medium hover:bg-ink-hover transition-colors w-full sm:w-auto shrink-0"
-          >
-            <Plus className="w-4 h-4 shrink-0" />
-            <span>New Invoice</span>
-          </Link>
+        {canMutate && (
+          <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto shrink-0">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsImportModalOpen(true)}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] h-11 rounded-full border border-line bg-white hover:bg-fog text-sm font-medium flex-1 sm:flex-initial"
+            >
+              <Upload className="w-4 h-4 shrink-0" />
+              <span>Import CSV</span>
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 min-h-[44px] h-11 rounded-full text-sm font-medium flex-1 sm:flex-initial"
+            >
+              <Plus className="w-4 h-4 shrink-0" />
+              <span>New Invoice</span>
+            </Button>
+          </div>
         )}
       </div>
 
       {/* Feedback Banner */}
       {feedbackMessage && (
         <div
-          className={`p-3 rounded-[8px] border text-xs flex items-center justify-between gap-2 ${
+          className={`p-3 rounded-[10px] border text-xs flex items-center justify-between gap-2 ${
             feedbackMessage.isError
-              ? "border-ember/30 bg-ember/5 text-ember"
-              : "border-moss/30 bg-moss/5 text-moss"
+              ? "border-ember/30 bg-ember-tint text-ember-ink"
+              : "border-moss/30 bg-moss-tint text-moss"
           }`}
         >
           <div className="flex items-center gap-2">
@@ -216,7 +244,6 @@ export function InvoiceDirectoryView({
 
       {/* 3. Filter & Search Toolbar */}
       <div className="flex flex-col gap-3">
-        {/* Status Filter Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-2 px-2 sm:mx-0 sm:px-0">
           {(["ALL", "DRAFT", "SENT", "PAID", "OVERDUE"] as const).map((status) => {
             const isActive = statusFilter === status;
@@ -245,9 +272,7 @@ export function InvoiceDirectoryView({
           })}
         </div>
 
-        {/* Currency Selector & Search Input */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
-          {/* Search Box */}
           <div className="relative flex-1 min-w-0">
             <Search className="w-4 h-4 text-ink/40 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
@@ -259,12 +284,11 @@ export function InvoiceDirectoryView({
             />
           </div>
 
-          {/* Currency Dropdown Filter */}
           <div className="relative w-full sm:w-auto shrink-0">
             <select
               aria-label="Filter by currency"
               value={currencyFilter}
-              onChange={(e) => setCurrencyFilter(e.target.value as any)}
+              onChange={(e) => setCurrencyFilter(e.target.value as InvoiceCurrency | "ALL")}
               className="appearance-none w-full sm:w-auto pl-3.5 pr-9 h-11 text-xs font-mono rounded-[10px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50 cursor-pointer"
             >
               <option value="ALL">All Currencies</option>
@@ -301,13 +325,27 @@ export function InvoiceDirectoryView({
             >
               Reset Filters
             </button>
-          ) : !isViewer ? (
-            <Link
-              href="/invoices/new"
-              className="min-h-[44px] px-5 py-2 text-xs rounded-full bg-ink text-white font-medium hover:bg-ink-hover transition-colors inline-flex items-center justify-center"
-            >
-              Create First Invoice
-            </Link>
+          ) : canMutate ? (
+            <div className="flex flex-wrap items-center justify-center gap-2.5">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setIsImportModalOpen(true)}
+                className="min-h-[44px] px-5 py-2 text-xs rounded-full border border-line bg-white"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span>Import CSV</span>
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                onClick={() => setIsCreateModalOpen(true)}
+                className="min-h-[44px] px-5 py-2 text-xs rounded-full"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Create First Invoice</span>
+              </Button>
+            </div>
           ) : null}
         </div>
       ) : (
@@ -333,7 +371,7 @@ export function InvoiceDirectoryView({
                     inv.status !== "PAID" &&
                     inv.status !== "CANCELLED" &&
                     new Date(inv.dueDate).getTime() < new Date().getTime();
-                  const canPay = !isViewer && inv.status !== "PAID" && inv.status !== "CANCELLED";
+                  const canPay = canPayBilling && inv.status !== "PAID" && inv.status !== "CANCELLED";
                   const canRemind = inv.status === "SENT" || inv.status === "OVERDUE";
 
                   return (
@@ -341,7 +379,6 @@ export function InvoiceDirectoryView({
                       key={inv.id}
                       className="hover:bg-fog/30 transition-colors group"
                     >
-                      {/* Invoice # */}
                       <td className="py-3 px-4 font-mono font-medium text-ink">
                         <Link
                           href={`/invoices/${inv.id}`}
@@ -351,7 +388,6 @@ export function InvoiceDirectoryView({
                         </Link>
                       </td>
 
-                      {/* Client */}
                       <td className="py-3 px-4">
                         <div className="flex flex-col">
                           <span className="font-medium text-ink">
@@ -363,12 +399,10 @@ export function InvoiceDirectoryView({
                         </div>
                       </td>
 
-                      {/* Issue Date */}
                       <td className="py-3 px-4 text-ink/70">
                         {formatDate(inv.issueDate)}
                       </td>
 
-                      {/* Due Date */}
                       <td className="py-3 px-4">
                         <span
                           className={
@@ -379,7 +413,6 @@ export function InvoiceDirectoryView({
                         </span>
                       </td>
 
-                      {/* Amount & Dual Currency Display */}
                       <td className="py-3 px-4 text-right">
                         <div className="flex flex-col items-end">
                           <span className="font-mono font-medium text-ink num">
@@ -387,18 +420,16 @@ export function InvoiceDirectoryView({
                           </span>
                           {isForeign && (
                             <span className="text-[10px] font-mono text-ink/50">
-                              ≈ {formatMoney(inv.baseTotalAmount, baseCurrency as any)}
+                              ≈ {formatMoney(inv.baseTotalAmount, baseCurrency as InvoiceCurrency)}
                             </span>
                           )}
                         </div>
                       </td>
 
-                      {/* Status */}
                       <td className="py-3 px-4 text-center">
                         <InvoiceStatusBadge status={inv.status} />
                       </td>
 
-                      {/* Action */}
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           {canPay && (
@@ -464,7 +495,7 @@ export function InvoiceDirectoryView({
             </table>
           </div>
 
-          {/* B. Mobile Card Stack Layout (< 768px) with min 44px Touch Targets */}
+          {/* B. Mobile Card Stack Layout (< 768px) */}
           <div className="md:hidden divide-y divide-line">
             {filteredInvoices.map((inv) => {
               const isForeign = inv.currency !== baseCurrency;
@@ -472,7 +503,7 @@ export function InvoiceDirectoryView({
                 inv.status !== "PAID" &&
                 inv.status !== "CANCELLED" &&
                 new Date(inv.dueDate).getTime() < new Date().getTime();
-              const canPay = !isViewer && inv.status !== "PAID" && inv.status !== "CANCELLED";
+              const canPay = canPayBilling && inv.status !== "PAID" && inv.status !== "CANCELLED";
               const canRemind = inv.status === "SENT" || inv.status === "OVERDUE";
 
               return (
@@ -480,7 +511,6 @@ export function InvoiceDirectoryView({
                   key={inv.id}
                   className="flex flex-col gap-3 p-4 hover:bg-fog/20 transition-colors"
                 >
-                  {/* Card Header: Invoice Number & Status Badge */}
                   <div className="flex items-center justify-between gap-2 min-h-[44px]">
                     <Link
                       href={`/invoices/${inv.id}`}
@@ -491,7 +521,6 @@ export function InvoiceDirectoryView({
                     <InvoiceStatusBadge status={inv.status} />
                   </div>
 
-                  {/* Card Client & Amount */}
                   <div className="flex items-baseline justify-between gap-2">
                     <div className="flex flex-col min-w-0">
                       <span className="font-medium text-sm text-ink truncate">
@@ -507,13 +536,12 @@ export function InvoiceDirectoryView({
                       </div>
                       {isForeign && (
                         <div className="text-[10px] font-mono text-ink/50">
-                          ≈ {formatMoney(inv.baseTotalAmount, baseCurrency as any)}
+                          ≈ {formatMoney(inv.baseTotalAmount, baseCurrency as InvoiceCurrency)}
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Card Meta: Due Date */}
                   <div className="flex items-center justify-between pt-2 border-t border-line/60 text-xs text-ink/60">
                     <div className="flex items-center gap-1.5">
                       <Calendar className="w-3.5 h-3.5 text-ink/40 shrink-0" />
@@ -526,7 +554,6 @@ export function InvoiceDirectoryView({
                     </div>
                   </div>
 
-                  {/* Card Action Buttons (>= 44px Touch Targets) */}
                   <div className="flex items-center gap-2 pt-1 flex-wrap">
                     {canPay && (
                       <button
@@ -598,6 +625,52 @@ export function InvoiceDirectoryView({
         </span>
       </div>
 
+      {/* Create Invoice Modal */}
+      {canMutate && (
+        <CreateInvoiceModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          clients={clients}
+          baseCurrency={baseCurrency}
+          initialExchangeRates={initialExchangeRates}
+          onSuccess={(created) => {
+            setFeedbackMessage({
+              text: `Created invoice ${created.invoiceNumber} for ${created.client.clientName}.`,
+              isError: false,
+            });
+            router.refresh();
+          }}
+        />
+      )}
+
+      {/* Bulk CSV Import Invoices Modal */}
+      {canMutate && (
+        <BulkImportInvoicesModal
+          isOpen={isImportModalOpen}
+          onClose={() => setIsImportModalOpen(false)}
+          clients={clients}
+          baseCurrency={baseCurrency}
+          initialExchangeRates={initialExchangeRates}
+          onSuccess={(result) => {
+            if (result.createdCount > 0) {
+              setFeedbackMessage({
+                text: `Imported ${result.createdCount} ${
+                  result.createdCount === 1 ? "invoice" : "invoices"
+                }${
+                  result.autoCreatedClientsCount > 0
+                    ? ` and created ${result.autoCreatedClientsCount} ${
+                        result.autoCreatedClientsCount === 1 ? "client" : "clients"
+                      }`
+                    : ""
+                }.`,
+                isError: false,
+              });
+              router.refresh();
+            }
+          }}
+        />
+      )}
+
       {/* Record Customer Payment Modal */}
       {paymentInvoice && (
         <RecordPaymentModal
@@ -609,7 +682,11 @@ export function InvoiceDirectoryView({
           paidAmount={paymentInvoice.paidAmount}
           currency={paymentInvoice.currency}
           onSuccess={() => {
-            window.location.reload();
+            setFeedbackMessage({
+              text: `Payment recorded for ${paymentInvoice.invoiceNumber}.`,
+              isError: false,
+            });
+            router.refresh();
           }}
         />
       )}
@@ -617,5 +694,4 @@ export function InvoiceDirectoryView({
   );
 }
 
-// Named alias export for InvoiceListView
 export const InvoiceListView = InvoiceDirectoryView;

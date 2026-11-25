@@ -2,6 +2,9 @@ import * as React from "react";
 import { redirect } from "next/navigation";
 import { getSession, getCurrentUser } from "@/modules/auth";
 import { getCachedInvoices, getCachedInvoiceKPIs } from "@/modules/invoices/service";
+import { getCachedClients } from "@/modules/clients/service";
+import { getLiveExchangeRates } from "@/modules/invoices/rates";
+import type { InvoiceCurrency } from "@/modules/invoices/types";
 import { InvoiceDirectoryView } from "@/components/invoices/InvoiceDirectoryView";
 import { InvoiceDirectorySkeleton } from "@/components/invoices/InvoiceDirectorySkeleton";
 import { Band } from "@/components/shell/Band";
@@ -20,13 +23,22 @@ async function InvoiceDirectoryDataLoader() {
 
   const currentUser = await getCurrentUser();
   const companyName = currentUser?.company?.name || "FinFlow Commercial Services";
-  const baseCurrency = currentUser?.company?.baseCurrency || "PKR";
+  const baseCurrency = (currentUser?.company?.baseCurrency || "PKR") as InvoiceCurrency;
   const role = currentUser?.role || session.role || "MEMBER";
 
-  const [invoicesData, kpis] = await Promise.all([
+  const [invoicesData, kpis, clients, liveRates] = await Promise.all([
     getCachedInvoices(session.companyId),
     getCachedInvoiceKPIs(session.companyId),
+    getCachedClients(session.companyId),
+    getLiveExchangeRates(baseCurrency),
   ]);
+
+  const clientOptions = clients.map((c) => ({
+    id: c.id,
+    clientName: c.clientName,
+    email: c.email,
+    paymentTermsDays: c.paymentTermsDays,
+  }));
 
   return (
     <InvoiceDirectoryView
@@ -35,6 +47,8 @@ async function InvoiceDirectoryDataLoader() {
       baseCurrency={baseCurrency}
       companyName={companyName}
       role={role}
+      clients={clientOptions}
+      initialExchangeRates={liveRates}
     />
   );
 }

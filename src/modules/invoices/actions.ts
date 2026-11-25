@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath, revalidateTag, updateTag } from "next/cache";
-import { ZodError } from "zod";
+import { ZodError, z } from "zod";
 import { formatUserError } from "@/lib/errors";
 import {
   getSessionTokenFromCookies,
@@ -19,6 +19,7 @@ import {
   markInvoiceSent,
   recordInvoicePayment,
   cancelInvoice,
+  bulkImportInvoices,
 } from "./service";
 import {
   createInvoiceSchema,
@@ -31,6 +32,9 @@ import type {
   CreateInvoiceInput,
   UpdateInvoiceInput,
   RecordPaymentInput,
+  BulkInvoiceRowInput,
+  BulkImportInvoicesOptions,
+  BulkImportInvoicesResult,
 } from "./types";
 
 /**
@@ -83,6 +87,9 @@ function invalidateTenantTags(companyId: string, extraTags: string[] = []) {
     `clients-${companyId}`,
     `aging-${companyId}`,
     `kpis-${companyId}`,
+    `treasury-${companyId}`,
+    `dashboard-${companyId}`,
+    `calendar-${companyId}`,
     ...extraTags,
   ];
 
@@ -100,6 +107,33 @@ function invalidateTenantTags(companyId: string, extraTags: string[] = []) {
 }
 
 /**
+ * Safely revalidates invoice-related routes across Next.js App Router and test environments.
+ */
+function revalidateInvoicePaths(extraPaths: string[] = []) {
+  const paths = [
+    "/invoices",
+    "/clients",
+    "/dashboard",
+    "/cash-flow",
+    "/calendar",
+    ...extraPaths,
+  ];
+  for (const path of paths) {
+    try {
+      revalidatePath(path);
+    } catch {
+      // Best effort revalidation
+    }
+  }
+}
+
+const bulkImportInvoicesOptionsSchema = z
+  .object({
+    autoCreateMissingClients: z.boolean().optional(),
+  })
+  .optional();
+
+/**
  * Server Action: Creates a new invoice with atomic sequential numbering.
  */
 export async function createInvoiceAction(
@@ -114,13 +148,7 @@ export async function createInvoiceAction(
     const invoice = await createInvoice(session.companyId, validated);
 
     invalidateTenantTags(session.companyId);
-    try {
-      revalidatePath("/invoices");
-      revalidatePath("/clients");
-      revalidatePath("/dashboard");
-    } catch {
-      // Best effort revalidation
-    }
+    revalidateInvoicePaths();
 
     return {
       success: true,
@@ -145,22 +173,18 @@ export async function createInvoiceAction(
  * Server Action: Updates an existing invoice (modifications restricted to DRAFT).
  */
 export async function updateInvoiceAction(
-  data: UpdateInvoiceInput
+  data: UpdateInvoiceInput,
+  sessionOverride?: SessionPayload
 ): Promise<InvoiceActionResult<InvoiceWithItemsAndClient>> {
   try {
-    const session = await requireAuthSession();
+    const session = await requireAuthSession(sessionOverride);
+    assertCanMutateLedger(session.role);
     const validated = updateInvoiceSchema.parse(data);
 
     const invoice = await updateInvoice(session.companyId, validated);
 
     invalidateTenantTags(session.companyId, [`invoice-${session.companyId}-${data.id}`]);
-    try {
-      revalidatePath("/invoices");
-      revalidatePath(`/invoices/${data.id}`);
-      revalidatePath("/dashboard");
-    } catch {
-      // Revalidation best effort
-    }
+    revalidateInvoicePaths([`/invoices/${data.id}`]);
 
     return {
       success: true,
@@ -185,10 +209,13 @@ export async function updateInvoiceAction(
  * Server Action: Marks an invoice as SENT.
  */
 export async function markInvoiceSentAction(
-  invoiceId: string
+  invoiceId: string,
+  sessionOverride?: SessionPayload
 ): Promise<InvoiceActionResult<InvoiceWithItemsAndClient>> {
   try {
-    const session = await requireAuthSession();
+    const session = await requireAuthSession(sessionOverride);
+    assertCanMutateLedger(session.role);
+
     if (!invoiceId) {
       return { success: false, error: "Invoice ID is required." };
     }
@@ -196,14 +223,7 @@ export async function markInvoiceSentAction(
     const invoice = await markInvoiceSent(session.companyId, invoiceId);
 
     invalidateTenantTags(session.companyId, [`invoice-${session.companyId}-${invoiceId}`]);
-    try {
-      revalidatePath("/invoices");
-      revalidatePath(`/invoices/${invoiceId}`);
-      revalidatePath("/clients");
-      revalidatePath("/dashboard");
-    } catch {
-      // Revalidation best effort
-    }
+    revalidateInvoicePaths([`/invoices/${invoiceId}`]);
 
     return {
       success: true,
@@ -232,14 +252,7 @@ export async function recordPaymentAction(
     const invoice = await recordInvoicePayment(session.companyId, validated);
 
     invalidateTenantTags(session.companyId, [`invoice-${session.companyId}-${data.invoiceId}`]);
-    try {
-      revalidatePath("/invoices");
-      revalidatePath(`/invoices/${data.invoiceId}`);
-      revalidatePath("/clients");
-      revalidatePath("/dashboard");
-    } catch {
-      // Revalidation best effort
-    }
+    revalidateInvoicePaths([`/invoices/${data.invoiceId}`]);
 
     return {
       success: true,
@@ -264,10 +277,13 @@ export async function recordPaymentAction(
  * Server Action: Cancels an invoice.
  */
 export async function cancelInvoiceAction(
-  invoiceId: string
+  invoiceId: string,
+  sessionOverride?: SessionPayload
 ): Promise<InvoiceActionResult<InvoiceWithItemsAndClient>> {
   try {
-    const session = await requireAuthSession();
+    const session = await requireAuthSession(sessionOverride);
+    assertCanMutateLedger(session.role);
+
     if (!invoiceId) {
       return { success: false, error: "Invoice ID is required." };
     }
@@ -275,13 +291,7 @@ export async function cancelInvoiceAction(
     const invoice = await cancelInvoice(session.companyId, invoiceId);
 
     invalidateTenantTags(session.companyId, [`invoice-${session.companyId}-${invoiceId}`]);
-    try {
-      revalidatePath("/invoices");
-      revalidatePath(`/invoices/${invoiceId}`);
-      revalidatePath("/dashboard");
-    } catch {
-      // Revalidation best effort
-    }
+    revalidateInvoicePaths([`/invoices/${invoiceId}`]);
 
     return {
       success: true,
@@ -291,6 +301,64 @@ export async function cancelInvoiceAction(
     return {
       success: false,
       error: formatUserError(err, "Failed to cancel invoice."),
+    };
+  }
+}
+
+/**
+ * Server Action: Bulk imports up to 500 invoice rows from CSV.
+ */
+export async function bulkImportInvoicesAction(
+  rows: BulkInvoiceRowInput[],
+  options?: BulkImportInvoicesOptions,
+  sessionOverride?: SessionPayload
+): Promise<InvoiceActionResult<BulkImportInvoicesResult>> {
+  try {
+    const session = await requireAuthSession(sessionOverride);
+    assertCanMutateLedger(session.role);
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return {
+        success: false,
+        error: "At least one invoice row is required for import.",
+      };
+    }
+
+    if (rows.length > 500) {
+      return {
+        success: false,
+        error: "Maximum 500 invoice rows allowed per import.",
+      };
+    }
+
+    const parsedOptions = bulkImportInvoicesOptionsSchema.parse(options);
+    const result = await bulkImportInvoices(
+      session.companyId,
+      rows,
+      parsedOptions,
+      session.userId
+    );
+
+    if (result.createdCount > 0) {
+      invalidateTenantTags(session.companyId);
+      revalidateInvoicePaths();
+    }
+
+    return {
+      success: true,
+      data: result,
+    };
+  } catch (err: unknown) {
+    if (err instanceof ZodError) {
+      return {
+        success: false,
+        error: "Please check your import options.",
+        errors: formatZodErrors(err),
+      };
+    }
+    return {
+      success: false,
+      error: formatUserError(err, "Failed to import invoices."),
     };
   }
 }

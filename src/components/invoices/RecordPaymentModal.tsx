@@ -1,11 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { X, CheckCircle2, AlertCircle } from "lucide-react";
+import Decimal from "decimal.js";
+import { AlertCircle } from "lucide-react";
 import { formatMoney } from "@/modules/invoices/currency";
 import type { InvoiceCurrency } from "@/modules/invoices/types";
 import { formatUserError } from "@/lib/errors";
 import { recordPaymentAction } from "@/modules/invoices/actions";
+import { Modal } from "@/components/ui/Modal";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 interface RecordPaymentModalProps {
   isOpen: boolean;
@@ -18,8 +23,9 @@ interface RecordPaymentModalProps {
   onSuccess?: () => void;
 }
 
-export function RecordPaymentModal({
-  isOpen,
+const RECORD_PAYMENT_FORM_ID = "record-payment-modal-form";
+
+function RecordPaymentModalContent({
   onClose,
   invoiceId,
   invoiceNumber,
@@ -27,26 +33,21 @@ export function RecordPaymentModal({
   paidAmount,
   currency,
   onSuccess,
-}: RecordPaymentModalProps) {
+}: Omit<RecordPaymentModalProps, "isOpen">) {
   const [isPending, startTransition] = React.useTransition();
-  const remaining = Math.max(0, totalAmount - paidAmount);
+  const remaining = React.useMemo(() => {
+    const diff = new Decimal(totalAmount).minus(new Decimal(paidAmount));
+    return diff.gt(0) ? diff.toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toNumber() : 0;
+  }, [totalAmount, paidAmount]);
 
-  const [paymentAmount, setPaymentAmount] = React.useState<string>(String(remaining));
-  const todayIso = new Date().toISOString().split("T")[0];
-  const [paymentDate, setPaymentDate] = React.useState<string>(todayIso);
+  const [paymentAmount, setPaymentAmount] = React.useState<string>(() =>
+    remaining > 0 ? String(remaining) : ""
+  );
+  const [paymentDate, setPaymentDate] = React.useState<string>(() =>
+    new Date().toISOString().split("T")[0]
+  );
   const [notes, setNotes] = React.useState<string>("");
   const [errorBanner, setErrorBanner] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    if (isOpen) {
-      setPaymentAmount(String(remaining));
-      setPaymentDate(new Date().toISOString().split("T")[0]);
-      setNotes("");
-      setErrorBanner(null);
-    }
-  }, [isOpen, remaining]);
-
-  if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,111 +75,128 @@ export function RecordPaymentModal({
           onClose();
         }
       } catch (actionErr) {
-        setErrorBanner(formatUserError(actionErr, "Unable to record payment. Please check your connection."));
+        setErrorBanner(
+          formatUserError(actionErr, "Unable to record payment. Please check your connection.")
+        );
       }
     });
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-md">
-      <div className="relative w-full max-w-md rounded-[10px] border border-line bg-white p-6 flex flex-col gap-5">
-        {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-line">
-          <div className="flex flex-col">
-            <h3 className="text-base font-serif text-ink">Record Customer Payment</h3>
-            <span className="text-xs font-mono text-ink/60">{invoiceNumber}</span>
-          </div>
-          <button
+    <Modal
+      isOpen
+      onClose={onClose}
+      size="sm"
+      eyebrow="Accounts Receivable Settlement"
+      title="Record Customer Payment"
+      description={invoiceNumber}
+      preventClose={isPending}
+      footer={
+        <>
+          <Button
             type="button"
+            variant="secondary"
             onClick={onClose}
-            aria-label="Close modal"
-            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-ink/50 hover:text-ink hover:bg-fog transition-colors"
+            disabled={isPending}
+            className="min-h-[44px] h-11 px-5 rounded-full text-sm font-medium"
           >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form={RECORD_PAYMENT_FORM_ID}
+            variant="primary"
+            isLoading={isPending}
+            className="min-h-[44px] h-11 px-6 rounded-full text-sm font-medium"
+          >
+            {isPending ? "Recording..." : "Confirm Payment"}
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
         {errorBanner && (
-          <div className="flex items-center gap-2 p-2.5 rounded-[8px] border border-ember/30 bg-ember/5 text-ember text-xs">
+          <div className="flex items-center gap-2 p-3 rounded-[10px] border border-ember/30 bg-ember-tint text-ember-ink text-xs">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{errorBanner}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {/* Outstanding Balance Info */}
-          <div className="flex items-center justify-between p-3 rounded-[8px] bg-fog/30 border border-line text-xs">
-            <span className="text-ink/60">Outstanding Balance:</span>
-            <span className="font-mono font-semibold text-ink">
-              {formatMoney(remaining, currency)}
-            </span>
-          </div>
+        <div className="flex items-center justify-between p-3.5 rounded-[10px] bg-fog border border-line text-xs">
+          <span className="text-ink-2 font-medium">Outstanding Balance</span>
+          <span className="font-mono font-semibold text-ink num">
+            {formatMoney(remaining, currency)}
+          </span>
+        </div>
 
-          {/* Payment Amount Input */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-mono uppercase tracking-wider text-ink/60">
+        <form id={RECORD_PAYMENT_FORM_ID} onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div>
+            <Label htmlFor="record-payment-amount">
               Payment Amount ({currency}) *
-            </label>
-            <input
+            </Label>
+            <Input
+              id="record-payment-amount"
               type="number"
               step="0.01"
               min="0.01"
-              max={remaining * 1.5}
               value={paymentAmount}
               onChange={(e) => setPaymentAmount(e.target.value)}
               required
-              className="w-full h-11 px-3 py-2 text-sm font-mono rounded-[8px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50"
+              className="h-11 text-sm font-mono num rounded-[10px]"
             />
           </div>
 
-          {/* Payment Date Input */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-mono uppercase tracking-wider text-ink/60">
-              Payment Date *
-            </label>
-            <input
+          <div>
+            <Label htmlFor="record-payment-date">Payment Date *</Label>
+            <Input
+              id="record-payment-date"
               type="date"
               value={paymentDate}
               onChange={(e) => setPaymentDate(e.target.value)}
               required
-              className="w-full h-11 px-3 py-2 text-xs rounded-[8px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50"
+              className="h-11 text-sm rounded-[10px]"
             />
           </div>
 
-          {/* Payment Reference Notes */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-mono uppercase tracking-wider text-ink/60">
+          <div>
+            <Label htmlFor="record-payment-notes" optional>
               Reference / Bank Wire Details
-            </label>
-            <input
+            </Label>
+            <Input
+              id="record-payment-notes"
               type="text"
-              placeholder="e.g. Wire Ref #881290 / Stripe Transfer"
+              placeholder="e.g. Wire Ref #881290 / Bank Transfer"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full h-11 px-3 py-2 text-xs rounded-[8px] border border-line bg-white text-ink placeholder:text-ink/30 focus:outline-none focus:border-ink/50"
+              className="h-11 text-sm rounded-[10px]"
             />
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-line">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isPending}
-              className="min-h-[44px] px-5 py-2 rounded-full border border-line text-xs font-medium text-ink/70 hover:bg-fog transition-colors inline-flex items-center justify-center"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isPending}
-              className="min-h-[44px] px-6 py-2 rounded-full bg-ink text-white text-xs font-medium hover:bg-ink-hover transition-colors disabled:opacity-50 inline-flex items-center justify-center"
-            >
-              {isPending ? "Recording..." : "Confirm Payment"}
-            </button>
           </div>
         </form>
       </div>
-    </div>
+    </Modal>
+  );
+}
+
+export function RecordPaymentModal({
+  isOpen,
+  onClose,
+  invoiceId,
+  invoiceNumber,
+  totalAmount,
+  paidAmount,
+  currency,
+  onSuccess,
+}: RecordPaymentModalProps) {
+  if (!isOpen) return null;
+  return (
+    <RecordPaymentModalContent
+      onClose={onClose}
+      invoiceId={invoiceId}
+      invoiceNumber={invoiceNumber}
+      totalAmount={totalAmount}
+      paidAmount={paidAmount}
+      currency={currency}
+      onSuccess={onSuccess}
+    />
   );
 }

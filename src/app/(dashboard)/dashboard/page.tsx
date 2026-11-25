@@ -1,9 +1,11 @@
 import * as React from "react";
+import Decimal from "decimal.js";
 import { redirect } from "next/navigation";
-import { getSession } from "@/modules/auth";
+import { getSession, getCurrentUser } from "@/modules/auth";
 import { getCached30DayForecast } from "@/modules/treasury";
 import { getInvoices } from "@/modules/invoices";
 import { getCachedExpenses } from "@/modules/expenses";
+import type { ExpenseRecord } from "@/modules/expenses/types";
 import {
   DashboardOverviewClientView,
   type ActionableInvoice,
@@ -18,6 +20,31 @@ export const metadata = {
     "Real-time 30-day predictive cash runway, liquidity buffer alerts, accounts receivable collection, and scheduled operational outflows.",
 };
 
+function computeRemainingInvoiceAmounts(
+  totalAmount: number,
+  paidAmount: number,
+  baseTotalAmount: number
+): { remainingNativeAmount: number; remainingBaseAmount: number } {
+  const totalNative = new Decimal(totalAmount);
+  const paidNative = new Decimal(paidAmount || 0);
+  const remainingNative = Decimal.max(0, totalNative.minus(paidNative)).toDecimalPlaces(
+    2,
+    Decimal.ROUND_HALF_UP
+  );
+
+  const remainingBase = totalNative.gt(0)
+    ? remainingNative
+        .div(totalNative)
+        .mul(new Decimal(baseTotalAmount))
+        .toDecimalPlaces(2, Decimal.ROUND_HALF_UP)
+    : new Decimal(0);
+
+  return {
+    remainingNativeAmount: remainingNative.toNumber(),
+    remainingBaseAmount: remainingBase.toNumber(),
+  };
+}
+
 async function DashboardDataLoader() {
   const session = await getSession();
 
@@ -25,19 +52,22 @@ async function DashboardDataLoader() {
     redirect("/login");
   }
 
-  const [expectedForecast, onTimeForecast, invoiceResult, rawExpenses] = await Promise.all([
-    getCached30DayForecast(session.companyId, "expected"),
-    getCached30DayForecast(session.companyId, "onTime"),
-    getInvoices(session.companyId, { limit: 100 }),
-    getCachedExpenses(session.companyId),
-  ]);
+  const [currentUser, expectedForecast, onTimeForecast, invoiceResult, rawExpenses] =
+    await Promise.all([
+      getCurrentUser(),
+      getCached30DayForecast(session.companyId, "expected"),
+      getCached30DayForecast(session.companyId, "onTime"),
+      getInvoices(session.companyId, { limit: 100 }),
+      getCachedExpenses(session.companyId),
+    ]);
 
+  const role = currentUser?.role || session.role || "MEMBER";
   const baseCurrency = expectedForecast.baseCurrency || "PKR";
 
   const allInvoices = invoiceResult.invoices || [];
-  const allExpenses = Array.isArray(rawExpenses)
+  const allExpenses: ExpenseRecord[] = Array.isArray(rawExpenses)
     ? rawExpenses
-    : (rawExpenses as { expenses: any[] }).expenses || [];
+    : (rawExpenses as { expenses: ExpenseRecord[] }).expenses || [];
 
   const now = new Date();
   const todayTimestamp = new Date(
@@ -61,12 +91,20 @@ async function DashboardDataLoader() {
     .map((inv) => {
       const due = new Date(inv.dueDate).getTime();
       const diffDays = Math.max(1, Math.floor((todayTimestamp - due) / 86400000));
+      const { remainingNativeAmount, remainingBaseAmount } =
+        computeRemainingInvoiceAmounts(
+          inv.totalAmount,
+          inv.paidAmount,
+          inv.baseTotalAmount || inv.totalAmount
+        );
       return {
         id: inv.id,
         client: inv.client?.clientName || "Commercial Client",
         number: inv.invoiceNumber,
         dueText: `${diffDays} ${diffDays === 1 ? "day" : "days"} overdue`,
-        amount: Number(inv.baseTotalAmount || inv.totalAmount),
+        amount: remainingBaseAmount,
+        remainingNativeAmount,
+        currency: inv.currency,
         status: "OVERDUE" as const,
         daysOverdue: diffDays,
         dueDate: formatDocumentDate(inv.dueDate),
@@ -82,12 +120,20 @@ async function DashboardDataLoader() {
     })
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
     .map((inv) => {
+      const { remainingNativeAmount, remainingBaseAmount } =
+        computeRemainingInvoiceAmounts(
+          inv.totalAmount,
+          inv.paidAmount,
+          inv.baseTotalAmount || inv.totalAmount
+        );
       return {
         id: inv.id,
         client: inv.client?.clientName || "Commercial Client",
         number: inv.invoiceNumber,
         dueText: `Due ${formatDocumentDate(inv.dueDate)}`,
-        amount: Number(inv.baseTotalAmount || inv.totalAmount),
+        amount: remainingBaseAmount,
+        remainingNativeAmount,
+        currency: inv.currency,
         status: "SENT" as const,
         dueDate: formatDocumentDate(inv.dueDate),
       };
@@ -96,7 +142,7 @@ async function DashboardDataLoader() {
   // 3. Upcoming Expenses (next 14 days)
   const upcomingExpenses: ActionableExpense[] = allExpenses
     .filter((exp) => {
-      if (exp.isPaid) return false;
+      if (exp.status === "PAID") return false;
       const due = new Date(exp.dueDate).getTime();
       return due >= todayTimestamp && due <= fourteenDaysLater;
     })
@@ -121,6 +167,7 @@ async function DashboardDataLoader() {
       initialUpcomingInvoices={upcomingInvoices}
       initialUpcomingExpenses={upcomingExpenses}
       baseCurrency={baseCurrency}
+      role={role}
     />
   );
 }

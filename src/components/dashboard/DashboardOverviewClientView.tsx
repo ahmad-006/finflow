@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import Decimal from "decimal.js";
 import { InkLine } from "@/components/line/InkLine";
 import { Ruler } from "@/components/line/Ruler";
 import { Figure } from "@/components/line/Figure";
@@ -9,9 +11,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { renderOverviewBreach, renderOverviewNoBreach, StatementSentence } from "@/lib/sentences";
 import { formatMoney } from "@/lib/format";
+import { canManageBilling } from "@/modules/auth/rbac";
 import { recordPaymentAction } from "@/modules/invoices/actions";
 import { markExpensePaidAction } from "@/modules/expenses/actions";
 import { getForecastAction } from "@/modules/treasury/actions";
+import type { InvoiceCurrency } from "@/modules/invoices/types";
 import type { ForecastSummary, ForecastMode, DailyForecastPoint } from "@/modules/treasury/types";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +25,8 @@ export interface ActionableInvoice {
   number: string;
   dueText: string;
   amount: number;
+  remainingNativeAmount?: number;
+  currency?: InvoiceCurrency;
   status: "SENT" | "OVERDUE" | "PAID";
   daysOverdue?: number;
   dueDate: string;
@@ -43,6 +49,7 @@ export interface DashboardOverviewClientViewProps {
   initialUpcomingInvoices: ActionableInvoice[];
   initialUpcomingExpenses: ActionableExpense[];
   baseCurrency?: string;
+  role?: string;
 }
 
 export function DashboardOverviewClientView({
@@ -52,53 +59,103 @@ export function DashboardOverviewClientView({
   initialUpcomingInvoices,
   initialUpcomingExpenses,
   baseCurrency = "PKR",
+  role = "MEMBER",
 }: DashboardOverviewClientViewProps) {
+  const router = useRouter();
+  const canPayBilling = canManageBilling(role);
+
   const [forecastMode, setForecastMode] = React.useState<ForecastMode>("expected");
-  const [currentForecast, setCurrentForecast] = React.useState<ForecastSummary>(initialForecast);
+  const [forecastOverride, setForecastOverride] = React.useState<{
+    base: ForecastSummary;
+    mode: ForecastMode;
+    data: ForecastSummary;
+  } | null>(null);
   const [activeDay, setActiveDay] = React.useState<number>(0);
-  const [overdueInvoices, setOverdueInvoices] = React.useState<ActionableInvoice[]>(initialOverdueInvoices);
-  const [upcomingInvoices, setUpcomingInvoices] = React.useState<ActionableInvoice[]>(initialUpcomingInvoices);
-  const [upcomingExpenses, setUpcomingExpenses] = React.useState<ActionableExpense[]>(initialUpcomingExpenses);
-  const [liquidCash, setLiquidCash] = React.useState<number>(initialForecast.openingBalance);
+  const [settledInvoiceIds, setSettledInvoiceIds] = React.useState<string[]>([]);
+  const [settledExpenseIds, setSettledExpenseIds] = React.useState<string[]>([]);
   const [recentlySettledId, setRecentlySettledId] = React.useState<string | null>(null);
   const [recentlySettledExpenseId, setRecentlySettledExpenseId] = React.useState<string | null>(null);
   const [isSettlingExpenseId, setIsSettlingExpenseId] = React.useState<string | null>(null);
   const [, startTransition] = React.useTransition();
 
-  React.useEffect(() => {
-    setCurrentForecast(
-      forecastMode === "onTime" && initialOnTimeForecast
-        ? initialOnTimeForecast
-        : initialForecast
-    );
-    setOverdueInvoices(initialOverdueInvoices);
-    setUpcomingInvoices(initialUpcomingInvoices);
-    setUpcomingExpenses(initialUpcomingExpenses);
-    setLiquidCash(initialForecast.openingBalance);
+  const currentForecast = React.useMemo(() => {
+    if (
+      forecastOverride &&
+      forecastOverride.base === initialForecast &&
+      forecastOverride.mode === forecastMode
+    ) {
+      return forecastOverride.data;
+    }
+    if (forecastMode === "onTime" && initialOnTimeForecast) {
+      return initialOnTimeForecast;
+    }
+    return initialForecast;
+  }, [forecastOverride, forecastMode, initialForecast, initialOnTimeForecast]);
+
+  const overdueInvoices = React.useMemo(
+    () =>
+      initialOverdueInvoices.map((inv) =>
+        settledInvoiceIds.includes(inv.id) ? { ...inv, status: "PAID" as const } : inv
+      ),
+    [initialOverdueInvoices, settledInvoiceIds]
+  );
+
+  const upcomingInvoices = React.useMemo(
+    () =>
+      initialUpcomingInvoices.map((inv) =>
+        settledInvoiceIds.includes(inv.id) ? { ...inv, status: "PAID" as const } : inv
+      ),
+    [initialUpcomingInvoices, settledInvoiceIds]
+  );
+
+  const upcomingExpenses = React.useMemo(
+    () =>
+      initialUpcomingExpenses.map((exp) =>
+        settledExpenseIds.includes(exp.id) ? { ...exp, isPaid: true } : exp
+      ),
+    [initialUpcomingExpenses, settledExpenseIds]
+  );
+
+  const liquidCash = React.useMemo(() => {
+    let cash = new Decimal(initialForecast.openingBalance);
+    for (const inv of initialOverdueInvoices) {
+      if (settledInvoiceIds.includes(inv.id)) {
+        cash = cash.plus(inv.amount);
+      }
+    }
+    for (const inv of initialUpcomingInvoices) {
+      if (settledInvoiceIds.includes(inv.id)) {
+        cash = cash.plus(inv.amount);
+      }
+    }
+    for (const exp of initialUpcomingExpenses) {
+      if (settledExpenseIds.includes(exp.id)) {
+        cash = Decimal.max(0, cash.minus(exp.amount));
+      }
+    }
+    return cash.toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toNumber();
   }, [
-    initialForecast,
-    initialOnTimeForecast,
+    initialForecast.openingBalance,
     initialOverdueInvoices,
     initialUpcomingInvoices,
     initialUpcomingExpenses,
-    forecastMode,
+    settledInvoiceIds,
+    settledExpenseIds,
   ]);
 
   const handleModeChange = (newMode: ForecastMode) => {
     if (newMode === forecastMode) return;
     setForecastMode(newMode);
 
-    if (newMode === "onTime" && initialOnTimeForecast) {
-      setCurrentForecast(initialOnTimeForecast);
-    } else if (newMode === "expected" && initialForecast) {
-      setCurrentForecast(initialForecast);
-    }
-
     startTransition(async () => {
       try {
         const res = await getForecastAction(newMode);
         if (res.success && res.data) {
-          setCurrentForecast(res.data);
+          setForecastOverride({
+            base: initialForecast,
+            mode: newMode,
+            data: res.data,
+          });
         }
       } catch (err) {
         console.error("Failed to switch forecast scenario:", err);
@@ -141,69 +198,33 @@ export function DashboardOverviewClientView({
   const netDelta = activePoint.closingBalance - day0Base;
   const bufferMargin = activePoint.closingBalance - currentForecast.safetyBuffer;
 
-  const handleMarkPaid = async (id: string, amount: number) => {
-    setOverdueInvoices((prev) =>
-      prev.map((inv) => (inv.id === id ? { ...inv, status: "PAID" as const } : inv))
-    );
-    setLiquidCash((prev) => prev + amount);
-    setRecentlySettledId(id);
+  const handleMarkInvoicePaid = async (inv: ActionableInvoice) => {
+    const nativeAmount = inv.remainingNativeAmount ?? inv.amount;
+    if (nativeAmount <= 0) return;
+
+    setSettledInvoiceIds((prev) => (prev.includes(inv.id) ? prev : [...prev, inv.id]));
+    setRecentlySettledId(inv.id);
 
     try {
       const res = await recordPaymentAction({
-        invoiceId: id,
-        paidAmount: amount,
+        invoiceId: inv.id,
+        paidAmount: nativeAmount,
       });
       if (!res.success) {
-        setOverdueInvoices((prev) =>
-          prev.map((inv) => (inv.id === id ? { ...inv, status: "OVERDUE" as const } : inv))
-        );
-        setLiquidCash((prev) => prev - amount);
+        setSettledInvoiceIds((prev) => prev.filter((itemId) => itemId !== inv.id));
+      } else {
+        router.refresh();
       }
     } catch (err) {
       console.error("Failed to mark invoice as paid:", err);
-      setOverdueInvoices((prev) =>
-        prev.map((inv) => (inv.id === id ? { ...inv, status: "OVERDUE" as const } : inv))
-      );
-      setLiquidCash((prev) => prev - amount);
+      setSettledInvoiceIds((prev) => prev.filter((itemId) => itemId !== inv.id));
     }
 
     setTimeout(() => setRecentlySettledId(null), 1200);
   };
 
-  const handleMarkUpcomingInvoicePaid = async (id: string, amount: number) => {
-    setUpcomingInvoices((prev) =>
-      prev.map((inv) => (inv.id === id ? { ...inv, status: "PAID" as const } : inv))
-    );
-    setLiquidCash((prev) => prev + amount);
-    setRecentlySettledId(id);
-
-    try {
-      const res = await recordPaymentAction({
-        invoiceId: id,
-        paidAmount: amount,
-      });
-      if (!res.success) {
-        setUpcomingInvoices((prev) =>
-          prev.map((inv) => (inv.id === id ? { ...inv, status: "SENT" as const } : inv))
-        );
-        setLiquidCash((prev) => prev - amount);
-      }
-    } catch (err) {
-      console.error("Failed to mark invoice as paid:", err);
-      setUpcomingInvoices((prev) =>
-        prev.map((inv) => (inv.id === id ? { ...inv, status: "SENT" as const } : inv))
-      );
-      setLiquidCash((prev) => prev - amount);
-    }
-
-    setTimeout(() => setRecentlySettledId(null), 1200);
-  };
-
-  const handleMarkExpensePaid = async (id: string, amount: number) => {
-    setUpcomingExpenses((prev) =>
-      prev.map((exp) => (exp.id === id ? { ...exp, isPaid: true } : exp))
-    );
-    setLiquidCash((prev) => Math.max(0, prev - amount));
+  const handleMarkExpensePaid = async (id: string) => {
+    setSettledExpenseIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
     setRecentlySettledExpenseId(id);
     setIsSettlingExpenseId(id);
 
@@ -211,17 +232,13 @@ export function DashboardOverviewClientView({
       const res = await markExpensePaidAction(id);
       if (!res.success) {
         console.error("Failed to mark expense as paid:", res.error);
-        setUpcomingExpenses((prev) =>
-          prev.map((exp) => (exp.id === id ? { ...exp, isPaid: false } : exp))
-        );
-        setLiquidCash((prev) => prev + amount);
+        setSettledExpenseIds((prev) => prev.filter((itemId) => itemId !== id));
+      } else {
+        router.refresh();
       }
     } catch (err) {
       console.error("Failed to mark expense as paid:", err);
-      setUpcomingExpenses((prev) =>
-        prev.map((exp) => (exp.id === id ? { ...exp, isPaid: false } : exp))
-      );
-      setLiquidCash((prev) => prev + amount);
+      setSettledExpenseIds((prev) => prev.filter((itemId) => itemId !== id));
     } finally {
       setIsSettlingExpenseId(null);
       setTimeout(() => setRecentlySettledExpenseId(null), 1200);
@@ -566,16 +583,16 @@ export function DashboardOverviewClientView({
                         <Figure value={inv.amount} currency={baseCurrency} size="row" />
                         {inv.status === "PAID" ? (
                           <Badge variant="paid" className="hidden sm:inline-flex">Paid</Badge>
-                        ) : (
+                        ) : canPayBilling ? (
                           <Button
                             variant="secondary"
                             size="compact"
-                            onClick={() => handleMarkPaid(inv.id, inv.amount)}
+                            onClick={() => handleMarkInvoicePaid(inv)}
                             className="min-h-[44px] lg:min-h-[36px]"
                           >
                             Mark paid
                           </Button>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   ))
@@ -632,16 +649,16 @@ export function DashboardOverviewClientView({
                           <Figure value={inv.amount} currency={baseCurrency} size="row" />
                           {inv.status === "PAID" ? (
                             <Badge variant="paid" className="hidden sm:inline-flex">Paid</Badge>
-                          ) : (
+                          ) : canPayBilling ? (
                             <Button
                               variant="secondary"
                               size="compact"
-                              onClick={() => handleMarkUpcomingInvoicePaid(inv.id, inv.amount)}
+                              onClick={() => handleMarkInvoicePaid(inv)}
                               className="min-h-[44px] lg:min-h-[36px]"
                             >
                               Mark paid
                             </Button>
-                          )}
+                          ) : null}
                         </div>
                       </div>
                     ))}
@@ -674,17 +691,17 @@ export function DashboardOverviewClientView({
                           <Figure value={exp.amount} currency={baseCurrency} size="row" />
                           {exp.isPaid ? (
                             <Badge variant="paid" className="hidden sm:inline-flex">Paid</Badge>
-                          ) : (
+                          ) : canPayBilling ? (
                             <Button
                               variant="secondary"
                               size="compact"
-                              onClick={() => handleMarkExpensePaid(exp.id, exp.amount)}
+                              onClick={() => handleMarkExpensePaid(exp.id)}
                               className="min-h-[44px] lg:min-h-[36px]"
                               isLoading={isSettlingExpenseId === exp.id}
                             >
                               Mark paid
                             </Button>
-                          )}
+                          ) : null}
                         </div>
                       </div>
                     ))}

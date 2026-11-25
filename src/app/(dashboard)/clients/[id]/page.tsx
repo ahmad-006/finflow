@@ -1,8 +1,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, Mail, Phone, MapPin, Clock, FileText } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Clock, FileText, Plus } from "lucide-react";
 import { getSession, getCurrentUser } from "@/modules/auth";
+import { canMutateLedger } from "@/modules/auth/rbac";
 import { getCachedClientById } from "@/modules/clients/service";
 import { Band } from "@/components/shell/Band";
 import { StatusBadge } from "@/components/data/StatusBadge";
@@ -31,6 +32,8 @@ async function ClientStatementDataLoader({
 
   const currentUser = await getCurrentUser();
   const currency = currentUser?.company?.baseCurrency || "PKR";
+  const role = currentUser?.role || session.role || "MEMBER";
+  const canCreateInvoice = canMutateLedger(role);
 
   const client = await getCachedClientById(session.companyId, clientId);
 
@@ -98,7 +101,16 @@ async function ClientStatementDataLoader({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {canCreateInvoice && (
+            <Link
+              href={`/invoices/new?clientId=${client.id}`}
+              className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-5 rounded-full text-xs font-medium bg-ink text-white hover:bg-ink-hover transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>New Invoice</span>
+            </Link>
+          )}
           <Link
             href="/clients"
             className="inline-flex items-center justify-center min-h-[44px] px-5 rounded-full text-xs font-medium text-ink bg-fog hover:bg-fog-2 transition-colors border border-line"
@@ -203,9 +215,12 @@ async function ClientStatementDataLoader({
                 return (
                   <div key={inv.id} className="py-3.5 flex flex-col gap-2">
                     <div className="flex items-center justify-between">
-                      <span className="font-mono font-semibold text-sm text-ink">
+                      <Link
+                        href={`/invoices/${inv.id}`}
+                        className="font-mono font-semibold text-sm text-ink hover:underline"
+                      >
                         {inv.invoiceNumber}
-                      </span>
+                      </Link>
                       <StatusBadge status={inv.status as "PAID" | "OVERDUE" | "SENT"} />
                     </div>
                     <div className="flex items-center justify-between text-xs">
@@ -274,7 +289,12 @@ async function ClientStatementDataLoader({
                     >
                       {/* Invoice Number */}
                       <td className="py-3.5 pl-2 pr-4 font-mono font-medium text-ink">
-                        {inv.invoiceNumber}
+                        <Link
+                          href={`/invoices/${inv.id}`}
+                          className="hover:underline"
+                        >
+                          {inv.invoiceNumber}
+                        </Link>
                       </td>
 
                       {/* Issue Date */}
