@@ -4,10 +4,22 @@ import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { canMutateLedger } from "@/modules/auth/rbac";
 import { UserMenu } from "./UserMenu";
 import { MobileMenu } from "./MobileMenu";
+import { QuickCommandModal } from "./QuickCommandModal";
+
+const emptySubscribe = () => () => {};
+function getClientShortcutHint(): string {
+  if (typeof navigator === "undefined") return "⌘K";
+  const platform = navigator.platform || navigator.userAgent || "";
+  return /Mac|iPhone|iPad|iPod/i.test(platform) ? "⌘K" : "Ctrl K";
+}
+function getServerShortcutHint(): string {
+  return "⌘K";
+}
 
 export interface TopNavProps {
   user?: {
@@ -36,8 +48,29 @@ export function TopNav({
   const rawPathname = usePathname();
   const pathname = rawPathname || "";
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const [commandOpen, setCommandOpen] = React.useState(false);
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
+  const shortcutHint = React.useSyncExternalStore(
+    emptySubscribe,
+    getClientShortcutHint,
+    getServerShortcutHint
+  );
+
+  // Global Cmd/Ctrl + K shortcut for Quick Command Palette
+  React.useEffect(() => {
+    if (isMarketing || !user) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCommandOpen((prev) => !prev);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isMarketing, user]);
 
   // Wayfinding ruler on scroll for marketing
   React.useEffect(() => {
@@ -154,10 +187,30 @@ export function TopNav({
             </>
           ) : (
             <>
+              {user && (
+                <button
+                  type="button"
+                  onClick={() => setCommandOpen(true)}
+                  aria-label="Search workspace"
+                  aria-haspopup="dialog"
+                  aria-expanded={commandOpen}
+                  className="inline-flex items-center gap-2 min-h-[36px] h-9 px-3 sm:px-3.5 rounded-full border border-line bg-fog/60 hover:bg-fog text-ink-2 hover:text-ink text-[13px] font-medium transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
+                >
+                  <Search
+                    className="h-3.5 w-3.5 text-ink-3 shrink-0"
+                    strokeWidth={1.75}
+                    aria-hidden="true"
+                  />
+                  <span>Search</span>
+                  <kbd className="hidden md:inline-flex items-center rounded-full border border-line bg-white px-1.5 py-0.5 font-mono text-[11px] font-medium text-ink-3 leading-none">
+                    {shortcutHint}
+                  </kbd>
+                </button>
+              )}
               {(user?.role ? canMutateLedger(user.role) : true) && (
                 <Link
                   href="/invoices/new"
-                  className="hidden sm:inline-flex items-center justify-center min-h-[36px] h-9 px-4 rounded-full bg-ink text-white text-[14px] font-medium hover:bg-ink-hover transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
+                  className="hidden sm:inline-flex items-center justify-center min-h-[36px] h-9 px-4 rounded-full border border-line bg-white hover:bg-fog text-ink text-[14px] font-medium transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
                 >
                   New invoice
                 </Link>
@@ -201,6 +254,15 @@ export function TopNav({
         onSignOut={onSignOut}
         isMarketing={isMarketing}
       />
+
+      {/* Global Quick Command Palette */}
+      {!isMarketing && user && (
+        <QuickCommandModal
+          isOpen={commandOpen}
+          onClose={() => setCommandOpen(false)}
+          userRole={user.role}
+        />
+      )}
     </header>
   );
 }

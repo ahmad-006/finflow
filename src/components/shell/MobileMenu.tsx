@@ -247,7 +247,7 @@ export function MobileMenu({
                 <Link
                   href="/invoices/new"
                   onClick={onClose}
-                  className="inline-flex items-center justify-center gap-2 min-h-[44px] h-12 w-full rounded-full bg-ink text-white font-medium text-[15px] hover:bg-ink-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
+                  className="inline-flex items-center justify-center gap-2 min-h-[44px] h-12 w-full rounded-full border border-line bg-white hover:bg-fog text-ink font-medium text-[15px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
                 >
                   <Plus className="h-4 w-4 stroke-[2]" />
                   <span>New invoice</span>

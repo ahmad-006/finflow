@@ -2,6 +2,12 @@ import { describe, it, expect } from "bun:test";
 import * as React from "react";
 import { renderToString } from "react-dom/server";
 import { TopNav, MobileMenu, Band, UserMenu } from "../src/components/shell";
+import {
+  QuickCommandModal,
+  COCKPIT_SHORTCUTS,
+  filterCockpitShortcuts,
+} from "../src/components/shell/QuickCommandModal";
+import { quickSearchAction } from "../src/modules/search/actions";
 
 describe("Shell & Responsive Navigation Architecture", () => {
   const mockUser = {
@@ -74,8 +80,16 @@ describe("Shell & Responsive Navigation Architecture", () => {
       expect(html).toContain("Cash flow");
       expect(html).toContain("Calendar");
 
-      // New invoice button
+      // New invoice button (understated outlined pill, not competing dark CTA)
       expect(html).toContain("New invoice");
+      expect(html).toContain('href="/invoices/new"');
+      expect(html).toContain("border border-line bg-white hover:bg-fog text-ink");
+      expect(html).not.toContain("bg-ink text-white");
+
+      // Quick command search trigger button
+      expect(html).toContain('aria-label="Search workspace"');
+      expect(html).toContain("Search");
+      expect(html).toContain("⌘K");
 
       // User menu avatar
       expect(html).toContain("KS"); // Kamran Siddiqui initials
@@ -101,6 +115,7 @@ describe("Shell & Responsive Navigation Architecture", () => {
 
       expect(html).toContain("Sign in");
       expect(html).toContain("Create workspace");
+      expect(html).not.toContain('aria-label="Search workspace"');
     });
 
     it("hides New invoice CTA for VIEWER role", () => {
@@ -142,8 +157,11 @@ describe("Shell & Responsive Navigation Architecture", () => {
       expect(html).toContain("FinFlow Treasury Corp");
       expect(html).toContain("PKR");
 
-      // Action buttons
+      // Action buttons (New invoice uses understated outlined pill)
       expect(html).toContain("New invoice");
+      expect(html).toContain('href="/invoices/new"');
+      expect(html).toContain("border border-line bg-white hover:bg-fog text-ink");
+      expect(html).not.toContain("bg-ink text-white");
       expect(html).toContain("Log out");
 
       // Accessible modal attributes
@@ -190,6 +208,47 @@ describe("Shell & Responsive Navigation Architecture", () => {
       expect(html).not.toContain("shadow-lg");
       expect(html).not.toContain("shadow-xl");
       expect(html).not.toContain("shadow-2xl");
+    });
+  });
+
+  describe("QuickCommandModal & quickSearchAction", () => {
+    it("defines all static cockpit route shortcuts", () => {
+      const hrefs = COCKPIT_SHORTCUTS.map((s) => s.href);
+      expect(hrefs).toEqual([
+        "/dashboard",
+        "/invoices",
+        "/invoices/new",
+        "/clients",
+        "/expenses",
+        "/cash-flow",
+        "/calendar",
+        "/settings",
+      ]);
+    });
+
+    it("filters shortcuts by query and excludes /invoices/new for VIEWER role", () => {
+      const cashFlowMatches = filterCockpitShortcuts("cash-flow", "ADMIN");
+      expect(cashFlowMatches.map((m) => m.href)).toEqual(["/cash-flow"]);
+
+      const calendarMatches = filterCockpitShortcuts("calendar", "ADMIN");
+      expect(calendarMatches.map((m) => m.href)).toEqual(["/calendar"]);
+
+      const viewerShortcuts = filterCockpitShortcuts("", "VIEWER");
+      expect(viewerShortcuts.some((s) => s.href === "/invoices/new")).toBe(false);
+    });
+
+    it("renders QuickCommandModal cleanly in SSR without AppRouterContext", () => {
+      const html = renderToString(
+        <QuickCommandModal isOpen={false} onClose={() => {}} userRole="ADMIN" />
+      );
+      expect(html).toBe("");
+    });
+
+    it("returns empty tenant-safe results when quickSearchAction is called without a session", async () => {
+      const result = await quickSearchAction("Alpha");
+      expect(result.clients).toEqual([]);
+      expect(result.invoices).toEqual([]);
+      expect(result.error).toBeDefined();
     });
   });
 });
