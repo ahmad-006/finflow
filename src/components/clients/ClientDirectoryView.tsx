@@ -17,6 +17,7 @@ import {
   AlertCircle,
   CheckCircle2,
   X,
+  MoreHorizontal,
 } from "lucide-react";
 import type { ClientRecord, ClientWithMetrics, ARAgingBuckets, ClientRiskStatus } from "@/modules/clients/types";
 import { deleteClientAction } from "@/modules/clients/actions";
@@ -75,6 +76,31 @@ export function ClientDirectoryView({
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [banner, setBanner] = React.useState<{ text: string; isError?: boolean } | null>(null);
+  const [openMenuClientId, setOpenMenuClientId] = React.useState<string | null>(null);
+  const openMenuRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    if (!openMenuClientId) return;
+
+    function handleMouseDown(event: MouseEvent) {
+      if (openMenuRef.current && !openMenuRef.current.contains(event.target as Node)) {
+        setOpenMenuClientId(null);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpenMenuClientId(null);
+      }
+    }
+
+    document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openMenuClientId]);
 
   // Risk counts
   const counts = React.useMemo(() => {
@@ -147,6 +173,7 @@ export function ClientDirectoryView({
   }, [filteredClients, safeClientPage]);
 
   function handleSort(field: SortField) {
+    setPage(1);
     if (sortBy === field) {
       setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
     } else {
@@ -228,7 +255,7 @@ export function ClientDirectoryView({
       {banner && (
         <div
           className={cn(
-            "flex items-center justify-between gap-3 px-4 py-3 rounded-[10px] border text-xs",
+            "flex items-center justify-between gap-3 px-4 py-3 rounded-[12px] border text-xs",
             banner.isError
               ? "border-ember/30 bg-ember-tint text-ember-ink"
               : "border-moss/30 bg-moss-tint text-moss"
@@ -335,12 +362,15 @@ export function ClientDirectoryView({
       {/* 3. Accounts Receivable Aging Schedule Bar */}
       <ARAgingBar aging={aging} currency={currency} />
 
-      {/* 4. Toolbar: Search, Risk Filter Pills & View Mode Toggle */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-2 px-2 sm:mx-0 sm:px-0 shrink-0">
+      {/* 4. Toolbar: Unified Single-Row Control Bar */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 lg:pb-0 -mx-2 px-2 lg:mx-0 lg:px-0 shrink-0">
           <button
             type="button"
-            onClick={() => setSelectedRisk("ALL")}
+            onClick={() => {
+              setSelectedRisk("ALL");
+              setPage(1);
+            }}
             className={cn(
               "px-3.5 py-2 min-h-[44px] rounded-full text-xs font-medium transition-colors whitespace-nowrap shrink-0 inline-flex items-center",
               selectedRisk === "ALL"
@@ -353,7 +383,10 @@ export function ClientDirectoryView({
 
           <button
             type="button"
-            onClick={() => setSelectedRisk("HEALTHY")}
+            onClick={() => {
+              setSelectedRisk("HEALTHY");
+              setPage(1);
+            }}
             className={cn(
               "px-3.5 py-2 min-h-[44px] rounded-full text-xs font-medium transition-colors whitespace-nowrap shrink-0 inline-flex items-center",
               selectedRisk === "HEALTHY"
@@ -366,7 +399,10 @@ export function ClientDirectoryView({
 
           <button
             type="button"
-            onClick={() => setSelectedRisk("WATCHLIST")}
+            onClick={() => {
+              setSelectedRisk("WATCHLIST");
+              setPage(1);
+            }}
             className={cn(
               "px-3.5 py-2 min-h-[44px] rounded-full text-xs font-medium transition-colors whitespace-nowrap shrink-0 inline-flex items-center",
               selectedRisk === "WATCHLIST"
@@ -379,7 +415,10 @@ export function ClientDirectoryView({
 
           <button
             type="button"
-            onClick={() => setSelectedRisk("CRITICAL")}
+            onClick={() => {
+              setSelectedRisk("CRITICAL");
+              setPage(1);
+            }}
             className={cn(
               "px-3.5 py-2 min-h-[44px] rounded-full text-xs font-medium transition-colors whitespace-nowrap shrink-0 inline-flex items-center",
               selectedRisk === "CRITICAL"
@@ -391,18 +430,21 @@ export function ClientDirectoryView({
           </button>
         </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div className="relative flex-1 min-w-0">
+        <div className="flex items-center gap-2 w-full lg:w-auto lg:justify-end">
+          <div className="relative flex-1 lg:flex-initial lg:w-64 xl:w-72 min-w-0">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-3" />
             <Input
               placeholder="Search by name or email..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-11 pl-10 pr-4 text-xs sm:text-sm rounded-[10px] bg-fog border border-line w-full focus:bg-white"
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
+              className="h-11 pl-10 pr-4 text-xs sm:text-sm rounded-[12px] bg-fog border border-line w-full focus:bg-white"
             />
           </div>
 
-          <div className="hidden lg:flex items-center gap-1 border border-line rounded-[10px] p-1 bg-fog/50 shrink-0">
+          <div className="hidden lg:flex items-center gap-1 border border-line rounded-[12px] p-1 bg-fog/50 shrink-0">
             <button
               type="button"
               onClick={() => setViewMode("grid")}
@@ -446,14 +488,15 @@ export function ClientDirectoryView({
           >
             {paginatedClients.map((client) => {
               const latency = client.metrics.avgPaymentDelayDays;
+              const isMenuOpen = openMenuClientId === client.id;
 
               return (
                 <div
                   key={client.id}
-                  className="flex flex-col justify-between p-4 rounded-[10px] border border-line bg-white hover:border-line-strong transition-colors gap-3.5"
+                  className="flex flex-col justify-between p-4 rounded-[12px] border border-line bg-white hover:border-line-strong transition-colors gap-3"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex flex-col min-w-0">
+                    <div className="flex flex-col min-w-0 flex-1">
                       <Link
                         href={`/clients/${client.id}`}
                         className="text-[15px] font-semibold text-ink hover:underline truncate py-0.5 inline-block"
@@ -464,11 +507,71 @@ export function ClientDirectoryView({
                         {client.email}
                       </span>
                     </div>
-                    <StatusBadge status={client.metrics.riskStatus} className="shrink-0" />
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <StatusBadge status={client.metrics.riskStatus} className="shrink-0" />
+                      {canMutate && (
+                        <div
+                          ref={isMenuOpen ? openMenuRef : undefined}
+                          className="relative"
+                        >
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setOpenMenuClientId((prev) =>
+                                prev === client.id ? null : client.id
+                              )
+                            }
+                            aria-label={`More actions for ${client.clientName}`}
+                            aria-expanded={isMenuOpen}
+                            aria-haspopup="menu"
+                            className="h-8 w-8 inline-flex items-center justify-center rounded-full text-ink-3 hover:text-ink hover:bg-fog transition-colors"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </button>
+
+                          {isMenuOpen && (
+                            <div
+                              role="menu"
+                              className="absolute right-0 top-full mt-1 z-20 min-w-[148px] rounded-[12px] border border-line bg-white py-1 shadow-[var(--shadow-float)]"
+                            >
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => {
+                                  setOpenMenuClientId(null);
+                                  setClientToEdit(client);
+                                  setIsModalOpen(true);
+                                }}
+                                aria-label={`Edit ${client.clientName}`}
+                                className="w-full px-3 py-2 text-left text-xs font-medium text-ink hover:bg-fog transition-colors flex items-center gap-2"
+                              >
+                                <Pencil className="h-3.5 w-3.5 text-ink-3 shrink-0" />
+                                <span>Edit</span>
+                              </button>
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => {
+                                  setOpenMenuClientId(null);
+                                  setDeleteError(null);
+                                  setClientToDelete(client);
+                                }}
+                                aria-label={`Remove ${client.clientName}`}
+                                className="w-full px-3 py-2 text-left text-xs font-medium text-ember-ink hover:bg-ember-tint/60 transition-colors flex items-center gap-2"
+                              >
+                                <Trash2 className="h-3.5 w-3.5 shrink-0" />
+                                <span>Remove</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs pt-1 border-t border-line/60">
-                    <span className="font-mono bg-fog px-2.5 py-1 rounded-full text-[11px] text-ink-2">
+                  <div className="flex items-center justify-between text-xs pt-2.5 border-t border-line/60">
+                    <span className="font-mono bg-fog px-2.5 py-0.5 rounded-full text-[11px] text-ink-2">
                       Net {client.paymentTermsDays}
                     </span>
                     {client.metrics.settledInvoicesCount > 0 ? (
@@ -489,8 +592,8 @@ export function ClientDirectoryView({
                     )}
                   </div>
 
-                  <div className="flex items-center justify-between py-2 bg-fog/50 px-3 rounded-[8px] text-xs">
-                    <div className="flex flex-col">
+                  <div className="flex items-center justify-between pt-2.5 border-t border-line/60 text-xs">
+                    <div className="flex flex-col gap-0.5">
                       <span className="text-[10px] uppercase font-mono tracking-wider text-ink-3">
                         Outstanding
                       </span>
@@ -502,65 +605,37 @@ export function ClientDirectoryView({
                       </span>
                     </div>
 
-                    {client.metrics.overdueAmount > 0 ? (
-                      <div className="flex flex-col items-end">
-                        <span className="text-[10px] uppercase font-mono tracking-wider text-ember-ink">
-                          Overdue
-                        </span>
-                        <span className="font-semibold text-ember-ink text-sm num">
-                          <Money
-                            amount={client.metrics.overdueAmount}
-                            currency={currency}
-                          />
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-end">
-                        <span className="text-[10px] uppercase font-mono tracking-wider text-ink-3">
-                          Status
-                        </span>
-                        <span className="text-xs text-moss font-medium">Current</span>
-                      </div>
-                    )}
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span
+                        className={cn(
+                          "text-[10px] uppercase font-mono tracking-wider",
+                          client.metrics.overdueAmount > 0 ? "text-ember-ink" : "text-ink-3"
+                        )}
+                      >
+                        Overdue
+                      </span>
+                      <span
+                        className={cn(
+                          "font-semibold text-sm num",
+                          client.metrics.overdueAmount > 0 ? "text-ember-ink" : "text-ink-3"
+                        )}
+                      >
+                        <Money
+                          amount={client.metrics.overdueAmount}
+                          currency={currency}
+                        />
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2 pt-1 border-t border-line/60">
+                  <div className="pt-2 border-t border-line/60">
                     <Link
                       href={`/clients/${client.id}`}
-                      className="flex-1 min-h-[44px] inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-medium text-ink bg-fog hover:bg-fog-2 border border-line transition-colors"
+                      className="inline-flex items-center justify-between w-full min-h-[40px] text-xs font-medium text-ink-2 hover:text-ink transition-colors group"
                     >
                       <span>Statement</span>
-                      <ChevronRight className="h-3.5 w-3.5 text-ink-3" />
+                      <ChevronRight className="h-3.5 w-3.5 text-ink-3 group-hover:text-ink transition-colors" />
                     </Link>
-
-                    {canMutate && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setClientToEdit(client);
-                            setIsModalOpen(true);
-                          }}
-                          className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-ink-3 hover:text-ink hover:bg-fog border border-line transition-colors"
-                          title="Edit Client"
-                          aria-label={`Edit ${client.clientName}`}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDeleteError(null);
-                            setClientToDelete(client);
-                          }}
-                          className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-ink-3 hover:text-ember-ink hover:bg-ember-tint border border-line transition-colors"
-                          title="Remove Client"
-                          aria-label={`Remove ${client.clientName}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </>
-                    )}
                   </div>
                 </div>
               );
@@ -568,7 +643,7 @@ export function ClientDirectoryView({
           </div>
 
           {viewMode === "table" && (
-            <div className="hidden lg:block overflow-x-auto border-t border-b border-line bg-white rounded-[10px]">
+            <div className="hidden lg:block overflow-x-auto border border-line bg-white rounded-[12px]">
               <table className="w-full min-w-[800px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-line text-xs font-medium uppercase tracking-[0.06em] text-ink-3 bg-fog/30">
@@ -775,7 +850,10 @@ export function ClientDirectoryView({
               <Button
                 variant="secondary"
                 size="compact"
-                onClick={() => setSearchQuery("")}
+                onClick={() => {
+                  setSearchQuery("");
+                  setPage(1);
+                }}
                 className="mt-3 min-h-[44px] px-5 rounded-full"
               >
                 Clear Search

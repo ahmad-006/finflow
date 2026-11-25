@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Decimal from "decimal.js";
 import {
   Plus,
   Search,
@@ -289,7 +290,7 @@ export function InvoiceDirectoryView({
       {/* Feedback Banner */}
       {feedbackMessage && (
         <div
-          className={`p-3 rounded-[10px] border text-xs flex items-center justify-between gap-2 ${
+          className={`p-3 rounded-[12px] border text-xs flex items-center justify-between gap-2 ${
             feedbackMessage.isError
               ? "border-ember/30 bg-ember-tint text-ember-ink"
               : "border-moss/30 bg-moss-tint text-moss"
@@ -317,8 +318,8 @@ export function InvoiceDirectoryView({
       <InvoiceKPIStrip kpis={kpis} baseCurrency={baseCurrency} />
 
       {/* 3. Filter & Search Toolbar */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-2 px-2 sm:mx-0 sm:px-0">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 lg:pb-0 -mx-2 px-2 lg:mx-0 lg:px-0 shrink-0">
           {(["ALL", "DRAFT", "SENT", "PAID", "OVERDUE"] as const).map((status) => {
             const isActive = statusFilter === status;
             const count = statusCounts[status] ?? 0;
@@ -356,8 +357,8 @@ export function InvoiceDirectoryView({
           })}
         </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
-          <div className="relative flex-1 min-w-0">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full lg:w-auto lg:justify-end">
+          <div className="relative flex-1 lg:flex-initial lg:w-64 min-w-0">
             <Search className="w-4 h-4 text-ink/40 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
@@ -378,7 +379,7 @@ export function InvoiceDirectoryView({
                   }, 300);
                 }
               }}
-              className="w-full pl-10 pr-4 h-11 text-xs sm:text-sm rounded-[10px] border border-line bg-white text-ink placeholder:text-ink/40 focus:outline-none focus:border-ink/50 transition-colors"
+              className="w-full pl-10 pr-4 h-11 text-xs sm:text-sm rounded-[12px] border border-line bg-white text-ink placeholder:text-ink/40 focus:outline-none focus:border-ink/50 transition-colors"
             />
           </div>
 
@@ -398,7 +399,7 @@ export function InvoiceDirectoryView({
                   });
                 }
               }}
-              className="appearance-none w-full sm:w-auto pl-3.5 pr-9 h-11 text-xs font-mono rounded-[10px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50 cursor-pointer"
+              className="appearance-none w-full sm:w-auto pl-3.5 pr-9 h-11 text-xs font-mono rounded-[12px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50 cursor-pointer"
             >
               <option value="ALL">All Currencies</option>
               {SUPPORTED_CURRENCIES.map((cur) => (
@@ -414,15 +415,51 @@ export function InvoiceDirectoryView({
 
       {/* 4. Directory Data Display */}
       {filteredInvoices.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 px-4 rounded-[10px] border border-line bg-fog/20 text-center">
+        <div className="flex flex-col items-center justify-center py-16 px-4 rounded-[12px] border border-line bg-fog/20 text-center">
           <FileText className="w-10 h-10 text-ink/30 mb-3" />
-          <h3 className="text-base font-serif text-ink mb-1">No invoices found</h3>
+          <h3 className="text-base font-serif text-ink mb-1">
+            {currentPage > 1 ? `No invoices on page ${currentPage}` : "No invoices found"}
+          </h3>
           <p className="text-xs text-ink/60 max-w-sm mb-4">
-            {search || statusFilter !== "ALL" || currencyFilter !== "ALL"
+            {currentPage > 1
+              ? "This page has no matching records. Return to page 1 to view available invoices."
+              : search || statusFilter !== "ALL" || currencyFilter !== "ALL"
               ? "No billing records match the selected filter criteria. Try clearing search or status filters."
               : "No invoices have been recorded yet. Create your first dynamic multi-currency invoice."}
           </p>
-          {search || statusFilter !== "ALL" || currencyFilter !== "ALL" ? (
+          {currentPage > 1 ? (
+            <div className="flex flex-wrap items-center justify-center gap-2.5">
+              <Button
+                type="button"
+                variant="primary"
+                onClick={() =>
+                  pushFilterRoute({
+                    page: 1,
+                    status: statusFilter,
+                    currency: currencyFilter,
+                    search,
+                  })
+                }
+                className="min-h-[44px] px-5 py-2 text-xs rounded-full"
+              >
+                Return to Page 1
+              </Button>
+              {(search || statusFilter !== "ALL" || currencyFilter !== "ALL") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch("");
+                    setStatusFilter("ALL");
+                    setCurrencyFilter("ALL");
+                    pushFilterRoute({ page: 1, status: "ALL", currency: "ALL", search: "" });
+                  }}
+                  className="min-h-[44px] px-5 py-2 text-xs rounded-full border border-line bg-white text-ink hover:bg-fog transition-colors font-medium inline-flex items-center justify-center"
+                >
+                  Reset Filters
+                </button>
+              )}
+            </div>
+          ) : search || statusFilter !== "ALL" || currencyFilter !== "ALL" ? (
             <button
               type="button"
               onClick={() => {
@@ -461,7 +498,7 @@ export function InvoiceDirectoryView({
           ) : null}
         </div>
       ) : (
-        <div className="border border-line rounded-[10px] overflow-hidden bg-white">
+        <div className="border border-line rounded-[12px] overflow-hidden bg-white">
           {/* A. Desktop High-Density Table (>= 768px) */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -485,6 +522,15 @@ export function InvoiceDirectoryView({
                     new Date(inv.dueDate).getTime() < new Date().getTime();
                   const canPay = canPayBilling && inv.status !== "PAID" && inv.status !== "CANCELLED";
                   const canRemind = canMutate && (inv.status === "SENT" || inv.status === "OVERDUE");
+                  const totalDec = new Decimal(inv.totalAmount || 0);
+                  const paidDec = new Decimal(inv.paidAmount || 0);
+                  const hasPartialPayment =
+                    paidDec.gt(0) && inv.status !== "PAID" && totalDec.gt(0);
+                  const paidPct = hasPartialPayment
+                    ? Decimal.min(100, Decimal.max(0, paidDec.div(totalDec).mul(100)))
+                        .toDecimalPlaces(1, Decimal.ROUND_HALF_UP)
+                        .toNumber()
+                    : 0;
 
                   return (
                     <tr
@@ -534,6 +580,18 @@ export function InvoiceDirectoryView({
                             <span className="text-[10px] font-mono text-ink/50">
                               ≈ {formatMoney(inv.baseTotalAmount, baseCurrency)}
                             </span>
+                          )}
+                          {hasPartialPayment && (
+                            <div
+                              className="mt-1.5 w-24 h-1 rounded-full bg-fog-2 overflow-hidden"
+                              title={`${paidPct}% paid (${formatMoney(inv.paidAmount, inv.currency)})`}
+                              aria-label={`${paidPct}% paid`}
+                            >
+                              <div
+                                className="h-full rounded-full bg-moss transition-all"
+                                style={{ width: `${paidPct}%` }}
+                              />
+                            </div>
                           )}
                         </div>
                       </td>
@@ -626,6 +684,15 @@ export function InvoiceDirectoryView({
                 new Date(inv.dueDate).getTime() < new Date().getTime();
               const canPay = canPayBilling && inv.status !== "PAID" && inv.status !== "CANCELLED";
               const canRemind = canMutate && (inv.status === "SENT" || inv.status === "OVERDUE");
+              const totalDec = new Decimal(inv.totalAmount || 0);
+              const paidDec = new Decimal(inv.paidAmount || 0);
+              const hasPartialPayment =
+                paidDec.gt(0) && inv.status !== "PAID" && totalDec.gt(0);
+              const paidPct = hasPartialPayment
+                ? Decimal.min(100, Decimal.max(0, paidDec.div(totalDec).mul(100)))
+                    .toDecimalPlaces(1, Decimal.ROUND_HALF_UP)
+                    .toNumber()
+                : 0;
 
               return (
                 <div
@@ -658,6 +725,18 @@ export function InvoiceDirectoryView({
                       {isForeign && (
                         <div className="text-[10px] font-mono text-ink/50">
                           ≈ {formatMoney(inv.baseTotalAmount, baseCurrency)}
+                        </div>
+                      )}
+                      {hasPartialPayment && (
+                        <div
+                          className="mt-1.5 w-20 ml-auto h-1 rounded-full bg-fog-2 overflow-hidden"
+                          title={`${paidPct}% paid (${formatMoney(inv.paidAmount, inv.currency)})`}
+                          aria-label={`${paidPct}% paid`}
+                        >
+                          <div
+                            className="h-full rounded-full bg-moss transition-all"
+                            style={{ width: `${paidPct}%` }}
+                          />
                         </div>
                       )}
                     </div>

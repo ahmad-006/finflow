@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import Decimal from "decimal.js";
 import {
   Plus,
   Search,
@@ -49,6 +50,20 @@ const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   TAX: "Tax",
   OTHER: "Other",
 };
+
+const CATEGORY_ALLOCATION_META: ReadonlyArray<{
+  key: ExpenseCategory;
+  label: string;
+  colorClass: string;
+}> = [
+  { key: "PAYROLL", label: "Payroll", colorClass: "bg-ink" },
+  { key: "RENT", label: "Rent", colorClass: "bg-ink-2" },
+  { key: "UTILITIES", label: "Utilities", colorClass: "bg-ink-3" },
+  { key: "SUPPLIERS", label: "Suppliers", colorClass: "bg-moss" },
+  { key: "SOFTWARE", label: "Software", colorClass: "bg-amber" },
+  { key: "TAX", label: "Tax", colorClass: "bg-ember" },
+  { key: "OTHER", label: "Other", colorClass: "bg-fog-2" },
+];
 
 const RECURRENCE_LABELS: Record<ExpenseRecurrence, string> = {
   NONE: "One-off",
@@ -202,6 +217,33 @@ export function ExpenseDirectoryView({
     return `${formatMoney(kpis.totalScheduledAmount, baseCurrency)} scheduled across ${kpis.counts.scheduled} upcoming expenses. ${formatMoney(kpis.next30DaysOutflow, baseCurrency)} due in the next 30 days.`;
   }, [kpis, baseCurrency, companyName]);
 
+  const categoryAllocation = React.useMemo(() => {
+    const totalDec = CATEGORY_ALLOCATION_META.reduce(
+      (acc, item) => acc.add(new Decimal(kpis.categoryBreakdown?.[item.key] || 0)),
+      new Decimal(0)
+    );
+    const items = CATEGORY_ALLOCATION_META.map((item) => {
+      const amount = kpis.categoryBreakdown?.[item.key] || 0;
+      const pct = totalDec.gt(0)
+        ? new Decimal(amount)
+            .div(totalDec)
+            .mul(100)
+            .toDecimalPlaces(1, Decimal.ROUND_HALF_UP)
+            .toNumber()
+        : 0;
+      return {
+        ...item,
+        amount,
+        pct,
+      };
+    }).filter((item) => item.amount > 0);
+
+    return {
+      total: totalDec.toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toNumber(),
+      items,
+    };
+  }, [kpis.categoryBreakdown]);
+
   return (
     <div className="flex flex-col gap-6">
       {/* 1. Header & Statement Sentence */}
@@ -242,7 +284,7 @@ export function ExpenseDirectoryView({
       </div>
 
       {importBanner && (
-        <div className="flex items-center justify-between gap-2 p-3 rounded-[10px] border border-moss/30 bg-moss-tint text-moss text-xs">
+        <div className="flex items-center justify-between gap-2 p-3 rounded-[12px] border border-moss/30 bg-moss-tint text-moss text-xs">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>{importBanner}</span>
@@ -258,7 +300,7 @@ export function ExpenseDirectoryView({
       )}
 
       {actionError && (
-        <div className="flex items-center gap-2 p-3 rounded-[10px] border border-ember/30 bg-ember-tint text-ember-ink text-xs">
+        <div className="flex items-center gap-2 p-3 rounded-[12px] border border-ember/30 bg-ember-tint text-ember-ink text-xs">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{actionError}</span>
         </div>
@@ -337,10 +379,54 @@ export function ExpenseDirectoryView({
         </div>
       </div>
 
-      {/* 3. Filter Bar (Search, Status tabs, Category dropdown, Recurrence dropdown) */}
-      <div className="flex flex-col gap-3">
+      {/* Category Allocation Stacked Bar */}
+      {categoryAllocation.items.length > 0 && (
+        <div className="flex flex-col gap-2.5 py-4 border-b border-line">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-ink-3">
+              Category Allocation
+            </span>
+            <span className="text-xs font-mono text-ink-2 num">
+              {formatMoney(categoryAllocation.total, baseCurrency)}
+            </span>
+          </div>
+
+          <div
+            className="flex h-2.5 w-full overflow-hidden rounded-full bg-fog border border-line/60"
+            role="img"
+            aria-label="Expense category allocation breakdown"
+          >
+            {categoryAllocation.items.map((item) => (
+              <div
+                key={item.key}
+                style={{ width: `${item.pct}%` }}
+                className={item.colorClass}
+                title={`${item.label}: ${formatMoney(item.amount, baseCurrency)} (${item.pct}%)`}
+              />
+            ))}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
+            {categoryAllocation.items.map((item) => (
+              <div key={item.key} className="inline-flex items-center gap-1.5">
+                <span
+                  className={`h-2 w-2 rounded-full shrink-0 ${item.colorClass}`}
+                  aria-hidden="true"
+                />
+                <span className="text-ink-2">{item.label}</span>
+                <span className="font-mono text-[11px] text-ink-3 num">
+                  {item.pct}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 3. Unified Single-Row Control Toolbar */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
         {/* Status Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-2 px-2 sm:mx-0 sm:px-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 lg:pb-0 -mx-2 px-2 lg:mx-0 lg:px-0 shrink-0">
           {(["ALL", "SCHEDULED", "OVERDUE", "PAID"] as const).map((status) => {
             const isActive = statusFilter === status;
             const count = statusCounts[status] ?? 0;
@@ -357,7 +443,10 @@ export function ExpenseDirectoryView({
               <button
                 key={status}
                 type="button"
-                onClick={() => setStatusFilter(status)}
+                onClick={() => {
+                  setStatusFilter(status);
+                  setPage(1);
+                }}
                 className={`inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] rounded-full text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
                   isActive
                     ? "bg-ink text-white"
@@ -378,28 +467,34 @@ export function ExpenseDirectoryView({
         </div>
 
         {/* Search & Select Dropdowns */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full lg:w-auto lg:justify-end">
           {/* Search Input */}
-          <div className="relative flex-1 min-w-0">
+          <div className="relative flex-1 lg:flex-initial lg:w-52 xl:w-60 min-w-0">
             <Search className="w-4 h-4 text-ink-3 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               placeholder="Search expenses..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 h-11 text-xs sm:text-sm rounded-[10px] border border-line bg-white text-ink placeholder:text-ink-3 focus:outline-none focus:border-ink/50 transition-colors"
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              className="w-full pl-10 pr-4 h-11 text-xs sm:text-sm rounded-[12px] border border-line bg-white text-ink placeholder:text-ink-3 focus:outline-none focus:border-ink/50 transition-colors"
             />
           </div>
 
-          {/* Select Dropdowns Row on Mobile */}
+          {/* Select Dropdowns */}
           <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-2 shrink-0">
             {/* Category Dropdown */}
             <div className="relative">
               <select
                 aria-label="Filter by category"
                 value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value as ExpenseCategory | "ALL")}
-                className="appearance-none w-full sm:w-auto pl-3 pr-8 h-11 text-xs rounded-[10px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50 cursor-pointer"
+                onChange={(e) => {
+                  setCategoryFilter(e.target.value as ExpenseCategory | "ALL");
+                  setPage(1);
+                }}
+                className="appearance-none w-full sm:w-auto pl-3 pr-8 h-11 text-xs rounded-[12px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50 cursor-pointer"
               >
                 <option value="ALL">All Categories</option>
                 <option value="PAYROLL">Payroll</option>
@@ -418,8 +513,11 @@ export function ExpenseDirectoryView({
               <select
                 aria-label="Filter by recurrence"
                 value={recurrenceFilter}
-                onChange={(e) => setRecurrenceFilter(e.target.value as ExpenseRecurrence | "ALL")}
-                className="appearance-none w-full sm:w-auto pl-3 pr-8 h-11 text-xs rounded-[10px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50 cursor-pointer"
+                onChange={(e) => {
+                  setRecurrenceFilter(e.target.value as ExpenseRecurrence | "ALL");
+                  setPage(1);
+                }}
+                className="appearance-none w-full sm:w-auto pl-3 pr-8 h-11 text-xs rounded-[12px] border border-line bg-white text-ink focus:outline-none focus:border-ink/50 cursor-pointer"
               >
                 <option value="ALL">All Schedules</option>
                 <option value="NONE">One-off</option>
@@ -435,7 +533,7 @@ export function ExpenseDirectoryView({
       </div>
 
       {/* 4. Interactive Expense Data Display */}
-      <div className="border border-line rounded-[10px] overflow-hidden bg-white">
+      <div className="border border-line rounded-[12px] overflow-hidden bg-white">
         {filteredExpenses.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
             <Calendar className="w-10 h-10 text-ink-3/40 mb-3 stroke-[1.5]" />
@@ -454,6 +552,7 @@ export function ExpenseDirectoryView({
                   setStatusFilter("ALL");
                   setCategoryFilter("ALL");
                   setRecurrenceFilter("ALL");
+                  setPage(1);
                 }}
                 className="min-h-[44px] px-5 rounded-full text-xs font-medium inline-flex items-center justify-center"
               >
@@ -519,7 +618,7 @@ export function ExpenseDirectoryView({
 
                         {/* Category */}
                         <td className="py-3.5 px-4 whitespace-nowrap">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono bg-fog text-ink-2 border border-line">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-fog text-ink-2 border border-line">
                             {CATEGORY_LABELS[exp.category] || exp.category}
                           </span>
                         </td>
@@ -620,7 +719,7 @@ export function ExpenseDirectoryView({
                     {/* Row 2: Category, Recurrence & Formatted Amount */}
                     <div className="flex items-baseline justify-between gap-2 flex-wrap">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono bg-fog text-ink-2 border border-line whitespace-nowrap">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-fog text-ink-2 border border-line whitespace-nowrap">
                           {CATEGORY_LABELS[exp.category] || exp.category}
                         </span>
                         <span className="text-xs text-ink-3 font-mono whitespace-nowrap">
