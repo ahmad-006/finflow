@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "schedules": {
+    "ledger-maintenance": {
+      "schedule": "0 0 * * *",
+      "path": "/api/cron/ledger-maintenance",
+      "requestMethod": "POST"
+    }
+  }
+}
